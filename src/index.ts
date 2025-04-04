@@ -234,8 +234,8 @@ async function getLookupTableAddress(authority: Address, slot: number): Promise<
 }
 
 /**
- * Main class to operate with DEXnow.io
- * @property {number} originalClientId DEXnow.io main client ID
+ * Main class to operate with Deriverse
+ * @property {number} originalClientId Deriverse main client ID
  * @property {AddressLookupTableAccount} lut Root address lookup table account
  * @property {AddressLookupTableAccount} clientLut Client address lookup table account
  * @property {Map<number, Token>} tokens Tokens data 
@@ -1008,7 +1008,7 @@ export class Engine {
   }
 
   /**
-   * Get Token ID from mint public key if this token registered on DEXnow.io
+   * Get Token ID from mint public key if this token registered on Deriverse
    * @param mint Public key
    * @returns Token ID
    */
@@ -1027,7 +1027,7 @@ export class Engine {
   }
 
   /**
-   * Get intrument ID if this instrument registered on DEXnow.io
+   * Get intrument ID if this instrument registered on Deriverse
    * @param args Base crncy Token ID and asset token ID
    * @returns Instrument ID
    */

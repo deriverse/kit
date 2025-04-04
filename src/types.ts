@@ -385,7 +385,7 @@ export interface PerpOrderCancelArgs {
 
 /**
  * Contains data for deposit function
- *  @property {number} tokenId DEXnow.io SPL token registered ID
+ *  @property {number} tokenId Deriverse SPL token registered ID
  *  @property {number} amount Amount to deposit
  *  @property {number} refId  Referal Link ID for new account. Zero means no ref link
  *  @property {number} refId  Referal Wallet
@@ -399,7 +399,7 @@ export interface DepositArgs {
 
 /**
  * Contains data about SPL tokens on main client account
- * @property {number} tokenId DEXnow.io SPL token registered ID
+ * @property {number} tokenId Deriverse SPL token registered ID
  * @property {number} amount Amount of SPL tokens on main client account
  */
 export interface ClientTokenData {
@@ -410,7 +410,7 @@ export interface ClientTokenData {
 /**
  * Contains data about  Deriverse internal spot LP tokens on main client account
  * @property {number} instrId Instrument ID
- * @property {number} amount Amount of DEXnow.io internal spot LP tokens on main client account
+ * @property {number} amount Amount of Deriverse internal spot LP tokens on main client account
  */
 export interface ClientLpData {
   instrId: number;
@@ -491,7 +491,7 @@ export interface ClientRefProgramData {
  * @property {number} lpTrades All-time lp trades
  * @property {number} perpTrades All-time active perp trades
  * @property {ClientTokenData[]} tokens Client tokens data
- * @property {ClientLpData[]} lp Client data about DEXnow.io internal spot LP tokens
+ * @property {ClientLpData[]} lp Client data about Deriverse internal spot LP tokens
  * @property {ClientSpotData[]} spot Client spot trading data
  * @property {ClientPerpData[]} perp Client perp trading data
  */
@@ -514,7 +514,7 @@ export interface GetClientDataResponse {
 
 /**
  * Contains data for withdrawSplTokenInstruction function
- * @property {number} tokenId DEXnow.io token registered ID
+ * @property {number} tokenId Deriverse token registered ID
  * @property {number} amount Amount to withdraw
  * @property {instrId[]} spot List of instruments ID to withdraw from client temporary instrument accounts
  * client temporary derivative instrument accounts
@@ -553,8 +553,8 @@ export interface PerpForcedCloseArgs {
 
 /**
  * Contains data for getInstrId function
- * @property {number} assetTokenId Asset DEXnow.io token registered ID
- * @property {number} baseCrncyTokenId Base currency DEXnow.io token registered ID
+ * @property {number} assetTokenId Asset Deriverse token registered ID
+ * @property {number} baseCrncyTokenId Base currency Deriverse token registered ID
  */
 export interface GetInstrIdArgs {
   assetTokenId: number;

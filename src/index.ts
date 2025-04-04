@@ -264,24 +264,24 @@ export class Engine {
   commitment: Commitment;
 
   /**
-   * @param connection @solana/web3.js provider connection
+   * @param rpc @solana/kit rpc
    */
   constructor(rpc: Rpc<any>, args?: EngineArgs) {
     
     this.rpc = rpc;
-    if (args.programId == null || args.programId == undefined) {
+    if (args == undefined || args.programId == null || args.programId == undefined) {
       this.programId = PROGRAM_ID;
     }
     else {
       this.programId = args.programId;
     }
-    if (args.version == null || args.version == undefined) {
+    if (args == undefined || args.version == null || args.version == undefined) {
       this.version = VERSION;
     }
     else {
       this.version = args.version;
     }
-    if (args.commitment == null || args.commitment == undefined) {
+    if (args == undefined || args.commitment == null || args.commitment == undefined) {
       this.commitment = 'confirmed';
     }
     else {

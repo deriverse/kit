@@ -1,19 +1,7 @@
 import {
-  Address, SolanaRpcApiDevnet, SolanaRpcApiMainnet, address,
-  DataSlice,
-  Base64EncodedDataResponse,
-  Rpc,
-  getBase64Encoder,
-  getProgramDerivedAddress,
-  getAddressEncoder,
-  IAccountMeta,
-  AccountRole,
-  IInstruction,
-  createAddressWithSeed,
-  TransactionSigner,
-  createNoopSigner,
-  Commitment,
-
+  Address, SolanaRpcApiDevnet, SolanaRpcApiMainnet, address, DataSlice,  Base64EncodedDataResponse,
+  Rpc, getBase64Encoder, getProgramDerivedAddress, getAddressEncoder, IAccountMeta, AccountRole,  IInstruction,
+  createAddressWithSeed, createNoopSigner, Commitment
 } from "@solana/kit";
 import { getCreateAccountWithSeedInstruction } from '@solana-program/system';
 import { encode } from 'bs58';
@@ -23,46 +11,44 @@ import {
   SpotOrderCancelArgs, ClientTokenData, ClientLpData, ClientSpotData, GetClientDataResponse,
   GetClientSpotOrdersInfoArgs, SpotLpArgs, AccountType, getInstrAccountByTagArgs, GetInstrIdArgs,
   VERSION, PROGRAM_ID, MARKET_DEPTH, NewSpotOrderArgs, DepositArgs, updateInstrDataArgs, WithdrawArgs,
-  SpotQuotesReplaceArgs, SpotMassCancelArgs,
-  InstrId,
-  InstrMask,
-  GetClientPerpOrdersInfoArgs,
-  GetClientPerpOrdersInfoResponse,
-  GetClientPerpOrdersArgs,
-  GetClientPerpOrdersResponse,
-  PerpDepositArgs,
-  NewPerpOrderArgs,
-  PerpQuotesReplaceArgs,
-  PerpOrderCancelArgs,
-  PerpMassCancelArgs,
-  PerpForcedCloseArgs,
-  CommunityData,
-  LogMessage,
-  PerpChangeLeverageArgs,
-  PerpStatisticsResetArgs,
-  EngineArgs,
+  SpotQuotesReplaceArgs, SpotMassCancelArgs, InstrId, InstrMask, GetClientPerpOrdersInfoArgs,
+  GetClientPerpOrdersInfoResponse, GetClientPerpOrdersArgs, GetClientPerpOrdersResponse, PerpDepositArgs,
+  NewPerpOrderArgs, PerpQuotesReplaceArgs, PerpOrderCancelArgs, PerpMassCancelArgs, PerpForcedCloseArgs,
+  CommunityData, LogMessage, PerpChangeLeverageArgs, PerpStatisticsResetArgs, EngineArgs
 } from './types';
 
 import {
-  BaseCrncyRecordModel,
-  ClientCommunityAccountHeaderModel,
-  ClientCommunityRecordModel,
-  ClientPrimaryAccountHeaderModel, CommunityAccountHeaderModel, InstrAccountHeaderModel, LineQuotesModel, OrderModel, PerpClientInfo2Model, PerpClientInfo3Model, PerpClientInfo4Model, PerpClientInfo5Model, PerpClientInfoModel, PerpTradeAccountHeaderModel, RootStateModel, SpotClientInfo2Model, SpotClientInfoModel, SpotTradeAccountHeaderModel,
+  BaseCrncyRecordModel, ClientCommunityAccountHeaderModel, ClientCommunityRecordModel, ClientPrimaryAccountHeaderModel,
+  CommunityAccountHeaderModel, InstrAccountHeaderModel, LineQuotesModel, OrderModel, PerpClientInfo2Model,
+  PerpClientInfo3Model, PerpClientInfo4Model, PerpClientInfo5Model, PerpClientInfoModel, PerpTradeAccountHeaderModel,
+  RootStateModel, SpotClientInfo2Model, SpotClientInfoModel, SpotTradeAccountHeaderModel,
   TokenStateModel
 } from "./structure_models";
  
-import { depositData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData, perpForcedCloseData, perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData, spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, upgradeToPerpData, withdrawData } from "./instruction_models";
+import {
+  depositData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData,
+  perpForcedCloseData, perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData,
+  spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, upgradeToPerpData, withdrawData
+} from "./instruction_models";
 import { decode } from 'base64-arraybuffer';
-import { DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel, FeesWithdrawReportModel, LogType, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel, PerpFillOrderReportModel, PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel, PerpOrderCancelReportModel, PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel, PerpSocLossReportModel, PerpWithdrawReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel, SpotMassCancelReportModel, SpotNewOrderReportModel, SpotOrderCancelReportModel, SpotOrderRevokeReportModel, SpotPlaceMassCancelReportModel, SpotPlaceOrderReportModel, WithdrawReportModel } from "./logs_models";
+import {
+  DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel,
+  FeesWithdrawReportModel, LogType, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel,
+  PerpFillOrderReportModel, PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel,
+  PerpOrderCancelReportModel, PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel,
+  PerpSocLossReportModel, PerpWithdrawReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel,
+  SpotMassCancelReportModel, SpotNewOrderReportModel, SpotOrderCancelReportModel, SpotOrderRevokeReportModel,
+  SpotPlaceMassCancelReportModel, SpotPlaceOrderReportModel, WithdrawReportModel
+} from "./logs_models";
 export * from './types';
 export * from './logs_models';
 
 
 const ADDRESS_LOOKUP_TABLE_PROGRAM_ID = address("AddressLookupTab1e1111111111111111111111111");
 const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
-export const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
-export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 const dec = 1000000000;
 const nullOrder = 0xFFFF;
 
@@ -71,7 +57,6 @@ const nullOrder = 0xFFFF;
  * @param price Current market price
  * @returns Price step 
  */
-
 export function getPriceStep(price: number): number {
   if (price <= 0.00001) {
     return 0.000000001;
@@ -198,7 +183,6 @@ async function findAssociatedTokenAddress(owner: Address, tokenProgramId: Addres
   return address;
 }
 
-
 function getMultipleSpotOrders(data: Base64EncodedDataResponse, firstEntry: number): Array<OrderModel> {
   let orders: Array<OrderModel> = [];
   let entry = firstEntry;
@@ -241,9 +225,7 @@ async function getLookupTableAddress(authority: Address, slot: number): Promise<
  * @property {Map<number, Token>} tokens Tokens data 
  * @property {Map<number, Instrument>} instruments Instruments data
  */
-
 export class Engine {
-  
   programId: Address<any>;
   rootStateModel: RootStateModel;
   community: CommunityData;
@@ -289,312 +271,312 @@ export class Engine {
     }
   }
   
-    logsDecode(data: readonly string[]): LogMessage[] {
-      let assetTokenDec = null;
-      let crncyTokenDec = null;
-      let logs = [];
-      for (var log of data) {
-        if (!log.startsWith("Program data: ")) {
-          continue;
+  logsDecode(data: readonly string[]): LogMessage[] {
+    let assetTokenDec = null;
+    let crncyTokenDec = null;
+    let logs = [];
+    for (var log of data) {
+      if (!log.startsWith("Program data: ")) {
+        continue;
+      }
+      const buffer = Buffer.from(decode(log.substring(14)));
+      switch (buffer[0]) {
+        case LogType.deposit: {
+          if (buffer.length == DepositReportModel.LENGTH) {
+            let report = DepositReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(report.tokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
+          }
+          break;
         }
-        const buffer = Buffer.from(decode(log.substring(14)));
-        switch (buffer[0]) {
-          case LogType.deposit: {
-            if (buffer.length == DepositReportModel.LENGTH) {
-              let report = DepositReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(report.tokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+        case LogType.withdraw: {
+          if (buffer.length == WithdrawReportModel.LENGTH) {
+            let report = WithdrawReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(report.tokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.withdraw: {
-            if (buffer.length == WithdrawReportModel.LENGTH) {
-              let report = WithdrawReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(report.tokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpDeposit: {
+          if (buffer.length == PerpDepositReportModel.LENGTH) {
+            let report = PerpDepositReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpDeposit: {
-            if (buffer.length == PerpDepositReportModel.LENGTH) {
-              let report = PerpDepositReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpWithdraw: {
+          if (buffer.length == PerpWithdrawReportModel.LENGTH) {
+            let report = PerpWithdrawReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpWithdraw: {
-            if (buffer.length == PerpWithdrawReportModel.LENGTH) {
-              let report = PerpWithdrawReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.feesDeposit: {
+          if (buffer.length == FeesDepositReportModel.LENGTH) {
+            let report = FeesDepositReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(report.tokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.feesDeposit: {
-            if (buffer.length == FeesDepositReportModel.LENGTH) {
-              let report = FeesDepositReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(report.tokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.feesWithdraw: {
+          if (buffer.length == FeesWithdrawReportModel.LENGTH) {
+            let report = FeesWithdrawReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(report.tokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.feesWithdraw: {
-            if (buffer.length == FeesWithdrawReportModel.LENGTH) {
-              let report = FeesWithdrawReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(report.tokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotLpTrade: {
+          if (buffer.length == SpotlpTradeReportModel.LENGTH) {
+            let report = SpotlpTradeReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.qty /= 10000;
+            report.tokens /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotLpTrade: {
-            if (buffer.length == SpotlpTradeReportModel.LENGTH) {
-              let report = SpotlpTradeReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.qty /= 10000;
-              report.tokens /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.earnings: {
+          if (buffer.length == EarningsReportModel.LENGTH) {
+            let report = EarningsReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(report.tokenId);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.earnings: {
-            if (buffer.length == EarningsReportModel.LENGTH) {
-              let report = EarningsReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(report.tokenId);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.drvsAirdrop: {
+          if (buffer.length == DrvsAirdropReportModel.LENGTH) {
+            let report = DrvsAirdropReportModel.fromBuffer(buffer);
+            crncyTokenDec = this.tokenDec(0);
+            report.amount /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.drvsAirdrop: {
-            if (buffer.length == DrvsAirdropReportModel.LENGTH) {
-              let report = DrvsAirdropReportModel.fromBuffer(buffer);
-              crncyTokenDec = this.tokenDec(0);
-              report.amount /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotPlaceOrder: {
+          if (buffer.length == SpotPlaceOrderReportModel.LENGTH) {
+            let report = SpotPlaceOrderReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.qty /= assetTokenDec;
+            report.price /= dec;
+            logs.push(report);
           }
-          case LogType.spotPlaceOrder: {
-            if (buffer.length == SpotPlaceOrderReportModel.LENGTH) {
-              let report = SpotPlaceOrderReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.qty /= assetTokenDec;
-              report.price /= dec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotFillOrder: {
+          if (buffer.length == SpotFillOrderReportModel.LENGTH) {
+            let report = SpotFillOrderReportModel.fromBuffer(buffer);
+            report.qty /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            report.rebates /= crncyTokenDec;
+            report.price /= dec;
+            logs.push(report);
           }
-          case LogType.spotFillOrder: {
-            if (buffer.length == SpotFillOrderReportModel.LENGTH) {
-              let report = SpotFillOrderReportModel.fromBuffer(buffer);
-              report.qty /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              report.rebates /= crncyTokenDec;
-              report.price /= dec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotNewOrder: {
+          if (buffer.length == SpotNewOrderReportModel.LENGTH) {
+            let report = SpotNewOrderReportModel.fromBuffer(buffer);
+            report.qty /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotNewOrder: {
-            if (buffer.length == SpotNewOrderReportModel.LENGTH) {
-              let report = SpotNewOrderReportModel.fromBuffer(buffer);
-              report.qty /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotOrderCancel: {
+          if (buffer.length == SpotOrderCancelReportModel.LENGTH) {
+            let report = SpotOrderCancelReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.qty /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotOrderCancel: {
-            if (buffer.length == SpotOrderCancelReportModel.LENGTH) {
-              let report = SpotOrderCancelReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.qty /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotOrderRevoke: {
+          if (buffer.length == SpotOrderRevokeReportModel.LENGTH) {
+            let report = SpotOrderRevokeReportModel.fromBuffer(buffer);
+            report.qty /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotOrderRevoke: {
-            if (buffer.length == SpotOrderRevokeReportModel.LENGTH) {
-              let report = SpotOrderRevokeReportModel.fromBuffer(buffer);
-              report.qty /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotFees: {
+          if (buffer.length == SpotFeesReportModel.LENGTH) {
+            let report = SpotFeesReportModel.fromBuffer(buffer);
+            report.fees /= crncyTokenDec;
+            report.refPayment /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotFees: {
-            if (buffer.length == SpotFeesReportModel.LENGTH) {
-              let report = SpotFeesReportModel.fromBuffer(buffer);
-              report.fees /= crncyTokenDec;
-              report.refPayment /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotPlaceMassCancel: {
+          if (buffer.length == SpotPlaceMassCancelReportModel.LENGTH) {
+            let report = SpotPlaceMassCancelReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            logs.push(report);
           }
-          case LogType.spotPlaceMassCancel: {
-            if (buffer.length == SpotPlaceMassCancelReportModel.LENGTH) {
-              let report = SpotPlaceMassCancelReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.spotMassCancel: {
+          if (buffer.length == SpotMassCancelReportModel.LENGTH) {
+            let report = SpotMassCancelReportModel.fromBuffer(buffer);
+            report.qty /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.spotMassCancel: {
-            if (buffer.length == SpotMassCancelReportModel.LENGTH) {
-              let report = SpotMassCancelReportModel.fromBuffer(buffer);
-              report.qty /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpPlaceOrder: {
+          if (buffer.length == PerpPlaceOrderReportModel.LENGTH) {
+            let report = PerpPlaceOrderReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.perps /= assetTokenDec;
+            report.price /= dec;
+            logs.push(report);
           }
-          case LogType.perpPlaceOrder: {
-            if (buffer.length == PerpPlaceOrderReportModel.LENGTH) {
-              let report = PerpPlaceOrderReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.perps /= assetTokenDec;
-              report.price /= dec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpFillOrder: {
+          if (buffer.length == PerpFillOrderReportModel.LENGTH) {
+            let report = PerpFillOrderReportModel.fromBuffer(buffer);
+            report.perps /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            report.rebates /= crncyTokenDec;
+            report.price /= dec;
+            logs.push(report);
           }
-          case LogType.perpFillOrder: {
-            if (buffer.length == PerpFillOrderReportModel.LENGTH) {
-              let report = PerpFillOrderReportModel.fromBuffer(buffer);
-              report.perps /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              report.rebates /= crncyTokenDec;
-              report.price /= dec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpNewOrder: {
+          if (buffer.length == PerpNewOrderReportModel.LENGTH) {
+            let report = PerpNewOrderReportModel.fromBuffer(buffer);
+            report.perps /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpNewOrder: {
-            if (buffer.length == PerpNewOrderReportModel.LENGTH) {
-              let report = PerpNewOrderReportModel.fromBuffer(buffer);
-              report.perps /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpOrderCancel: {
+          if (buffer.length == PerpOrderCancelReportModel.LENGTH) {
+            let report = PerpOrderCancelReportModel.fromBuffer(buffer);
+            const instrInfo = this.instruments.get(report.instrId);
+            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            report.perps /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpOrderCancel: {
-            if (buffer.length == PerpOrderCancelReportModel.LENGTH) {
-              let report = PerpOrderCancelReportModel.fromBuffer(buffer);
-              const instrInfo = this.instruments.get(report.instrId);
-              assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-              crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-              report.perps /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpOrderRevoke: {
+          if (buffer.length == PerpOrderRevokeReportModel.LENGTH) {
+            let report = PerpOrderRevokeReportModel.fromBuffer(buffer);
+            report.perps /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpOrderRevoke: {
-            if (buffer.length == PerpOrderRevokeReportModel.LENGTH) {
-              let report = PerpOrderRevokeReportModel.fromBuffer(buffer);
-              report.perps /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpFees: {
+          if (buffer.length == PerpFeesReportModel.LENGTH) {
+            let report = PerpFeesReportModel.fromBuffer(buffer);
+            report.fees /= crncyTokenDec;
+            report.refPayment /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpFees: {
-            if (buffer.length == PerpFeesReportModel.LENGTH) {
-              let report = PerpFeesReportModel.fromBuffer(buffer);
-              report.fees /= crncyTokenDec;
-              report.refPayment /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpPlaceMassCancel: {
+          if (buffer.length == PerpPlaceMassCancelReportModel.LENGTH) {
+            let report = PerpPlaceMassCancelReportModel.fromBuffer(buffer);
+            logs.push(report);
           }
-          case LogType.perpPlaceMassCancel: {
-            if (buffer.length == PerpPlaceMassCancelReportModel.LENGTH) {
-              let report = PerpPlaceMassCancelReportModel.fromBuffer(buffer);
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpMassCancel: {
+          if (buffer.length == PerpMassCancelReportModel.LENGTH) {
+            let report = PerpMassCancelReportModel.fromBuffer(buffer);
+            report.perps /= assetTokenDec;
+            report.crncy /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpMassCancel: {
-            if (buffer.length == PerpMassCancelReportModel.LENGTH) {
-              let report = PerpMassCancelReportModel.fromBuffer(buffer);
-              report.perps /= assetTokenDec;
-              report.crncy /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpFunding: {
+          if (buffer.length == PerpFundingReportModel.LENGTH) {
+            let report = PerpFundingReportModel.fromBuffer(buffer);
+            report.funding /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpFunding: {
-            if (buffer.length == PerpFundingReportModel.LENGTH) {
-              let report = PerpFundingReportModel.fromBuffer(buffer);
-              report.funding /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpSocLoss: {
+          if (buffer.length == PerpSocLossReportModel.LENGTH) {
+            let report = PerpSocLossReportModel.fromBuffer(buffer);
+            report.socLoss /= crncyTokenDec;
+            logs.push(report);
           }
-          case LogType.perpSocLoss: {
-            if (buffer.length == PerpSocLossReportModel.LENGTH) {
-              let report = PerpSocLossReportModel.fromBuffer(buffer);
-              report.socLoss /= crncyTokenDec;
-              logs.push(report);
-            }
-            break;
+          break;
+        }
+        case LogType.perpChangeLeverage: {
+          if (buffer.length == PerpChangeLeverageReportModel.LENGTH) {
+            let report = PerpChangeLeverageReportModel.fromBuffer(buffer);
+            logs.push(report);
           }
-          case LogType.perpChangeLeverage: {
-            if (buffer.length == PerpChangeLeverageReportModel.LENGTH) {
-              let report = PerpChangeLeverageReportModel.fromBuffer(buffer);
-              logs.push(report);
-            }
-            break;
-          }
+          break;
         }
       }
-      return logs;
     }
+    return logs;
+  }
   
-    private async findAccountsByTag(tag: number, dataSlice?: DataSlice) {
-      let tagBuf = Buffer.alloc(8);
-      tagBuf.writeUInt32LE(tag, 0);
-      tagBuf.writeUInt32LE(this.version, 4);
-      let accounts = await this.rpc.getProgramAccounts(this.programId,
-        {
-          encoding: 'base64',
-          dataSlice: dataSlice,
-          filters: [
-            {
-              memcmp: {
-                offset: BigInt(0),
-                encoding: 'base58',
-                bytes: encode(tagBuf),
-              },
+  private async findAccountsByTag(tag: number, dataSlice?: DataSlice) {
+    let tagBuf = Buffer.alloc(8);
+    tagBuf.writeUInt32LE(tag, 0);
+    tagBuf.writeUInt32LE(this.version, 4);
+    let accounts = await this.rpc.getProgramAccounts(this.programId,
+      {
+        encoding: 'base64',
+        dataSlice: dataSlice,
+        filters: [
+          {
+            memcmp: {
+              offset: BigInt(0),
+              encoding: 'base58',
+              bytes: encode(tagBuf),
             },
-          ],
+          },
+        ],
   
-        }
-      ).send();
-      return accounts;
-    }
+      }
+    ).send();
+    return accounts;
+  }
   
   /**
    * After creation you have to initialize Engine
@@ -1011,8 +993,7 @@ export class Engine {
    * Get Token ID from mint public key if this token registered on Deriverse
    * @param mint Public key
    * @returns Token ID
-   */
-  
+   */ 
   async getTokenId(mint: Address): Promise<number | null> {
     const tokenAddress = await this.getTokenAccount(mint);
     let info = await this.rpc.getAccountInfo(tokenAddress,
@@ -1031,7 +1012,6 @@ export class Engine {
    * @param args Base crncy Token ID and asset token ID
    * @returns Instrument ID
    */
-  
   async getInstrId(args: GetInstrIdArgs): Promise<number | null> {
     let buf = Buffer.alloc(16);
     buf.writeInt32LE(this.version, 0);
@@ -1056,9 +1036,8 @@ export class Engine {
 
   /**
    * Assignes client public key to Engine
-   * @param wallet Client public key
+   * @param signer Client public key
    */
-  
   async setSigner(signer: Address<any>) {
     this.signer = signer;
     let buf = Buffer.alloc(8);
@@ -1173,7 +1152,6 @@ export class Engine {
    * Unpack client accounts
    * @returns All client data that are in client accounts
    */
-  
   async getClientData(): Promise<GetClientDataResponse> {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
@@ -1293,7 +1271,6 @@ export class Engine {
    * @param args Contains data from getClientData function
    * @returns General information about open orders (spot) 
    */
-  
   async getClientSpotOrdersInfo(args: GetClientSpotOrdersInfoArgs): Promise<GetClientSpotOrdersInfoResponse> {
     const instr = this.instruments.get(args.instrId);
     if (instr == undefined) {
@@ -1349,7 +1326,6 @@ export class Engine {
    * @param args Contains data from getClientData function
    * @returns General information about open orders (perp) 
    */
-  
   async getClientPerpOrdersInfo(args: GetClientPerpOrdersInfoArgs): Promise<GetClientPerpOrdersInfoResponse> {
     const instr = this.instruments.get(args.instrId);
     if (instr == undefined) {
@@ -1428,7 +1404,6 @@ export class Engine {
    * @param args Contains data from getClientSpotOrdersInfo
    * @returns List of open orders
    */
-  
   async getClientSpotOrders(args: GetClientSpotOrdersArgs): Promise<GetClientSpotOrdersResponse> {
     const instr = this.instruments.get(args.instrId);
     const bidOrdersAccount = await this.getInstrAccountByTag({
@@ -1529,10 +1504,10 @@ export class Engine {
   }
 
   /**
-     * Get list of open orders (perp) in particular instrument
-     * @param args Contains data from getClientSpotOrdersInfo
-     * @returns List of open orders
-     */
+   * Get list of open orders (perp) in particular instrument
+   * @param args Contains data from getClientSpotOrdersInfo
+   * @returns List of open orders
+   */
   async getClientPerpOrders(args: GetClientPerpOrdersArgs): Promise<GetClientPerpOrdersResponse> {
     const instr = this.instruments.get(args.instrId);
     const bidOrdersAccount = await this.getInstrAccountByTag({
@@ -1749,7 +1724,6 @@ export class Engine {
    * Update market data on Engine fields
    * @param args Instrument ID
    */
-
   async updateInstrData(args: InstrId) {
     const instr = this.instruments.get(args.instrId);
     let instrAccount = await this.getInstrAccountByTag({

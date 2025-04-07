@@ -42,7 +42,6 @@ import {
   PerpStatisticsResetArgs,
   EngineArgs,
 } from './types';
- 
 
 import {
   BaseCrncyRecordModel,
@@ -56,7 +55,8 @@ import { depositData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData
 import { decode } from 'base64-arraybuffer';
 import { DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel, FeesWithdrawReportModel, LogType, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel, PerpFillOrderReportModel, PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel, PerpOrderCancelReportModel, PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel, PerpSocLossReportModel, PerpWithdrawReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel, SpotMassCancelReportModel, SpotNewOrderReportModel, SpotOrderCancelReportModel, SpotOrderRevokeReportModel, SpotPlaceMassCancelReportModel, SpotPlaceOrderReportModel, WithdrawReportModel } from "./logs_models";
 export * from './types';
-export { LogType } from './logs_models';
+export * from './logs_models';
+
 
 const ADDRESS_LOOKUP_TABLE_PROGRAM_ID = address("AddressLookupTab1e1111111111111111111111111");
 const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
@@ -1337,6 +1337,10 @@ export class Engine {
         this.tokenDec(instr.header.assetTokenId),
       tempCrncyTokens: Number(data.readBigInt64LE(SpotClientInfoModel.OFFSET_AVAIL_CRNCY_TOKENS)) /
         this.tokenDec(instr.header.crncyTokenId),
+      inOrdersAssetTokens: Number(data1.readBigInt64LE(SpotClientInfo2Model.OFFSET_IN_ORDERS_ASSET_TOKENS)) /
+        this.tokenDec(instr.header.assetTokenId),
+      inOrdersCrncyTokens: Number(data1.readBigInt64LE(SpotClientInfo2Model.OFFSET_IN_ORDERS_CRNCY_TOKENS)) /
+        this.tokenDec(instr.header.crncyTokenId),
     }
   }
 
@@ -1437,14 +1441,26 @@ export class Engine {
       crncyTokenId: instr.header.crncyTokenId,
       tag: AccountType.SPOT_ASK_ORDERS
     });
+    const assetTokenDec = this.tokenDec(instr.header.assetTokenId);
+    const crncyTokenDec = this.tokenDec(instr.header.crncyTokenId);
     if (args.bidsCount > 1 && args.asksCount > 1) {
       let infos = await this.rpc.getMultipleAccounts(
         [bidOrdersAccount, askOrdersAccount], { commitment: this.commitment, encoding: 'base64' }).send();
+      let bids = getMultipleSpotOrders(infos.value[0].data, args.bidsEntry);
+      for (let i = 0; i < bids.length; ++i) {
+        bids[i].qty /= assetTokenDec;
+        bids[i].sum /= crncyTokenDec;
+      }
+      let asks = getMultipleSpotOrders(infos.value[1].data, args.asksEntry);
+      for (let i = 0; i < asks.length; ++i) {
+        asks[i].qty /= assetTokenDec;
+        asks[i].sum /= crncyTokenDec;
+      }
       return {
         bidContextSlot: Number(infos.context.slot),
         askContextSlot: Number(infos.context.slot),
-        bids: getMultipleSpotOrders(infos.value[0].data, args.bidsEntry),
-        asks: getMultipleSpotOrders(infos.value[1].data, args.asksEntry)
+        bids: bids,
+        asks: asks
       }
     }
     let bids: Array<OrderModel> = [];
@@ -1496,6 +1512,14 @@ export class Engine {
       asks = [OrderModel.fromBuffer(info.value.data)];
       askContextSlot = Number(info.context.slot);
     }
+    for (let i = 0; i < bids.length; ++i) {
+      bids[i].qty /= assetTokenDec;
+      bids[i].sum /= crncyTokenDec;
+    }
+    for (let i = 0; i < asks.length; ++i) {
+      asks[i].qty /= assetTokenDec;
+      asks[i].sum /= crncyTokenDec;
+    }
     return {
       bidContextSlot: bidContextSlot,
       askContextSlot: askContextSlot,
@@ -1521,18 +1545,30 @@ export class Engine {
       crncyTokenId: instr.header.crncyTokenId,
       tag: AccountType.PERP_ASK_ORDERS
     });
+    const assetTokenDec = this.tokenDec(instr.header.assetTokenId);
+    const crncyTokenDec = this.tokenDec(instr.header.crncyTokenId);
     if (args.bidsCount > 1 && args.asksCount > 1) {
       let infos = await this.rpc.getMultipleAccounts(
         [bidOrdersAccount, askOrdersAccount], { commitment: this.commitment, encoding: 'base64' }).send();
+      let bids = getMultiplePerpOrders(infos.value[0].data, args.bidsEntry);
+      for (let i = 0; i < bids.length; ++i) {
+        bids[i].qty /= assetTokenDec;
+        bids[i].sum /= crncyTokenDec;
+      }
+      let asks = getMultiplePerpOrders(infos.value[1].data, args.asksEntry);
+      for (let i = 0; i < asks.length; ++i) {
+        asks[i].qty /= assetTokenDec;
+        asks[i].sum /= crncyTokenDec;
+      }
       return {
         bidContextSlot: Number(infos.context.slot),
         askContextSlot: Number(infos.context.slot),
-        bids: getMultiplePerpOrders(infos.value[0].data, args.bidsEntry),
-        asks: getMultiplePerpOrders(infos.value[1].data, args.asksEntry)
+        bids: bids,
+        asks: asks
       }
     }
-    let bids: Array<OrderModel> = [];
-    let asks: Array<OrderModel> = [];
+    let bids: OrderModel[] = [];
+    let asks: OrderModel[] = [];
     let bidContextSlot = 0;
     let askContextSlot = 0;
     if (args.bidsCount > 1) {
@@ -1572,6 +1608,14 @@ export class Engine {
         }).send();
       asks = [OrderModel.fromBuffer(info.value.data)];
       askContextSlot = Number(info.context.slot);
+    }
+    for (let i = 0; i < bids.length; ++i) {
+      bids[i].qty /= assetTokenDec;
+      bids[i].sum /= crncyTokenDec;
+    }
+    for (let i = 0; i < asks.length; ++i) {
+      asks[i].qty /= assetTokenDec;
+      asks[i].sum /= crncyTokenDec;
     }
     return {
       bidContextSlot: bidContextSlot,
@@ -1705,10 +1749,12 @@ export class Engine {
    * Update market data on Engine fields
    * @param args Instrument ID
    */
-  async updateInstrData(args: updateInstrDataArgs) {
+
+  async updateInstrData(args: InstrId) {
+    const instr = this.instruments.get(args.instrId);
     let instrAccount = await this.getInstrAccountByTag({
-      assetTokenId: args.assetTokenId,
-      crncyTokenId: args.crncyTokenId,
+      assetTokenId: instr.header.assetTokenId,
+      crncyTokenId: instr.header.crncyTokenId,
       tag: AccountType.INSTR
     });
     const info = await this.rpc.getAccountInfo(instrAccount, { commitment: this.commitment, encoding: 'base64' }).send();
@@ -2077,8 +2123,7 @@ export class Engine {
       throw new Error("Invalid Instr ID");
     }
     await this.updateInstrData({
-      assetTokenId: instr.header.assetTokenId,
-      crncyTokenId: instr.header.crncyTokenId
+      instrId: args.instrId
     });
     instr = this.instruments.get(args.instrId);
     if ((instr.header.mask & InstrMask.READY_TO_PERP_UPGRADE) == 0) {

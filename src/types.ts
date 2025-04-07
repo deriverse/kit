@@ -257,6 +257,8 @@ export interface GetClientSpotOrdersInfoResponse {
   contextSlot: number;
   tempAssetTokens: number;
   tempCrncyTokens: number;
+  inOrdersAssetTokens: number;
+  inOrdersCrncyTokens: number;
 }
 
 /**

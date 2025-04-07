@@ -15,6 +15,7 @@ yarn-error.log*
 /build
 /lib
 /coverage
+/docs
 
 # IDE
 .idea/

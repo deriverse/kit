@@ -5,6 +5,7 @@ import {
 } from "@solana/kit";
 import { getCreateAccountWithSeedInstruction } from '@solana-program/system';
 import { encode } from 'bs58';
+import { Buffer } from 'buffer';
 
 import {
   Instrument, GetClientSpotOrdersInfoResponse, GetClientSpotOrdersArgs, GetClientSpotOrdersResponse,

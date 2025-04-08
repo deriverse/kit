@@ -1,3 +1,4 @@
+import { PublicKey } from '@solana/web3.js';
 import { AutoBuffer } from './auto_buffer';
 
 export enum LogType {
@@ -89,15 +90,15 @@ export class EarningsReportModel {
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_CLIENT_ID = 4;
-  static readonly OFFSET_AMOUNT = 8;
-  static readonly OFFSET_TIME = 16;
-  static readonly OFFSET_TOKEN_ID = 20;
+  static readonly OFFSET_TOKEN_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_AMOUNT = 16;
 
   tag: number;
   clientId: number;
-  amount: number;
-  time: number;
   tokenId: number;
+  time: number;
+  amount: number;
   static fromBuffer(buffer: Buffer, offset?: number): EarningsReportModel {
     const result = new EarningsReportModel();
     let autoBuffer = new AutoBuffer(buffer, offset);
@@ -105,9 +106,9 @@ export class EarningsReportModel {
     autoBuffer.readU8();
     autoBuffer.readU16();
     result.clientId = autoBuffer.readU32();
-    result.amount = autoBuffer.readI64();
-    result.time = autoBuffer.readU32();
     result.tokenId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.amount = autoBuffer.readI64();
     return result;
   }
 }

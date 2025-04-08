@@ -1,4 +1,3 @@
-
 export function newOperatorData(tag: number, version: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);

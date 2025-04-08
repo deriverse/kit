@@ -1,4 +1,3 @@
-import { PublicKey } from '@solana/web3.js';
 import { AutoBuffer } from './auto_buffer';
 
 export enum LogType {

@@ -82,6 +82,7 @@ export interface EngineArgs {
   programId?: Address<any>;
   version?: number;
   commitment?: Commitment;
+  uiNumbers?: boolean
 }
 
 /**

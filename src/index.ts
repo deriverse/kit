@@ -245,6 +245,7 @@ export class Engine {
   instruments: Map<number, Instrument>;
   version: number;
   commitment: Commitment;
+  private uiNumbers: boolean;
 
   /**
    * @param rpc @solana/kit rpc
@@ -269,6 +270,12 @@ export class Engine {
     }
     else {
       this.commitment = args.commitment;
+    }
+    if (args == undefined || args.uiNumbers == null || args.uiNumbers == undefined) {
+      this.uiNumbers = true;
+    }
+    else {
+      this.uiNumbers = args.uiNumbers;
     }
   }
   
@@ -1263,8 +1270,18 @@ export class Engine {
   }
 
   private tokenDec(tokenId: number) {
-    const token = this.tokens.get(tokenId);
-    return Math.pow(10, token.mask & 0xFF);
+    if (this.uiNumbers) {
+      const token = this.tokens.get(tokenId);
+      if (token) {
+        return Math.pow(10, token.mask & 0xFF);
+      }
+      else {
+        return 1;
+      }
+    }
+    else {
+      return 1;
+    }
   }
 
   /**

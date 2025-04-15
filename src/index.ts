@@ -50,7 +50,7 @@ const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
 const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-const dec = 1000000000;
+let dec = 1000000000;
 const nullOrder = 0xFFFF;
 
 /**
@@ -276,6 +276,9 @@ export class Engine {
     }
     else {
       this.uiNumbers = args.uiNumbers;
+    }
+    if (!this.uiNumbers) {
+      dec = 1;
     }
   }
   

@@ -74,7 +74,7 @@ export enum AccountType {
   PERP_PRIORITY_TREE = 51,
 }
 
-export const VERSION = 8;
+export const VERSION = 9;
 export const PROGRAM_ID = address("Drvrseg8AQLP8B96DBGmHRjFGviFNYTkHueY9g3k27Gu");
 export const MARKET_DEPTH = 20;
 

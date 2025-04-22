@@ -1221,7 +1221,7 @@ export class PerpClientInfo5Model {
 }
 
 export class ClientPrimaryAccountHeaderModel {
-  static readonly LENGTH = 18 * 4 + 7 * 8 + 5 * 32; // 288 bytes
+  static readonly LENGTH = 18 * 4 + 8 * 8 + 5 * 32; // 296 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -1236,23 +1236,24 @@ export class ClientPrimaryAccountHeaderModel {
   static readonly OFFSET_SECOND_REF_LINK_RATIO = 192;
   static readonly OFFSET_REF_PROGRAM_DISCOUNT = 200;
   static readonly OFFSET_REF_PROGRAM_RATIO = 208;
-  static readonly OFFSET_MASK = 216;
-  static readonly OFFSET_ID = 224;
-  static readonly OFFSET_REF_CLIENT_ID = 228;
-  static readonly OFFSET_REF_COUNTER = 232;
-  static readonly OFFSET_FIRST_REF_LINK_ID = 236;
-  static readonly OFFSET_SECOND_REF_LINK_ID = 240;
-  static readonly OFFSET_FIRST_REF_LINK_EXPIRATION = 244;
-  static readonly OFFSET_SECOND_REF_LINK_EXPIRATION = 248;
-  static readonly OFFSET_REF_PROGRAM_EXPIRATION = 252;
-  static readonly OFFSET_SPOT_TRADES = 256;
-  static readonly OFFSET_PERP_TRADES = 260;
-  static readonly OFFSET_LP_TRADES = 264;
-  static readonly OFFSET_FUTURES_TRADES = 268;
-  static readonly OFFSET_OPTIONS_TRADES = 272;
-  static readonly OFFSET_POINTS = 276;
-  static readonly OFFSET_SLOT = 280;
-  static readonly OFFSET_ASSETS_COUNT = 284;
+  static readonly OFFSET_RESERVED = 216;
+  static readonly OFFSET_MASK = 224;
+  static readonly OFFSET_ID = 232;
+  static readonly OFFSET_REF_CLIENT_ID = 236;
+  static readonly OFFSET_REF_COUNTER = 240;
+  static readonly OFFSET_FIRST_REF_LINK_ID = 244;
+  static readonly OFFSET_SECOND_REF_LINK_ID = 248;
+  static readonly OFFSET_FIRST_REF_LINK_EXPIRATION = 252;
+  static readonly OFFSET_SECOND_REF_LINK_EXPIRATION = 256;
+  static readonly OFFSET_REF_PROGRAM_EXPIRATION = 260;
+  static readonly OFFSET_SPOT_TRADES = 264;
+  static readonly OFFSET_PERP_TRADES = 268;
+  static readonly OFFSET_LP_TRADES = 272;
+  static readonly OFFSET_FUTURES_TRADES = 276;
+  static readonly OFFSET_OPTIONS_TRADES = 280;
+  static readonly OFFSET_POINTS = 284;
+  static readonly OFFSET_SLOT = 288;
+  static readonly OFFSET_ASSETS_COUNT = 292;
 
   tag: number;
   version: number;
@@ -1267,6 +1268,7 @@ export class ClientPrimaryAccountHeaderModel {
   secondRefLinkRatio: number;
   refProgramDiscount: number;
   refProgramRatio: number;
+  reserved: number;
   mask: number;
   id: number;
   refClientId: number;
@@ -1300,6 +1302,7 @@ export class ClientPrimaryAccountHeaderModel {
     result.secondRefLinkRatio = autoData.readF64();
     result.refProgramDiscount = autoData.readF64();
     result.refProgramRatio = autoData.readF64();
+    result.reserved = autoData.readI64();
     result.mask = autoData.readI64();
     result.id = autoData.readU32();
     result.refClientId = autoData.readU32();

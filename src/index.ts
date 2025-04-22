@@ -51,6 +51,7 @@ const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 let dec = 1000000000;
+let lpDec = 10000;
 const nullOrder = 0xFFFF;
 
 /**
@@ -279,6 +280,7 @@ export class Engine {
     }
     if (!this.uiNumbers) {
       dec = 1;
+      lpDec = 1;
     }
   }
   
@@ -354,7 +356,7 @@ export class Engine {
             const instrInfo = this.instruments.get(report.instrId);
             assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
             crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.qty /= 10000;
+            report.qty /= lpDec;
             report.tokens /= assetTokenDec;
             report.crncy /= crncyTokenDec;
             logs.push(report);
@@ -1196,7 +1198,7 @@ export class Engine {
       else if (tag == 2) {
         lp.set(id, {
           instrId: id,
-          amount: Number(primaryData.readBigInt64LE(offset + 8)) / 10000
+          amount: Number(primaryData.readBigInt64LE(offset + 8)) / lpDec
         })
       }
       else if (tag == 3) {
@@ -1627,7 +1629,7 @@ export class Engine {
    */
   async updateInstrDataFromBuffer(data: Base64EncodedDataResponse) {
     let header = InstrAccountHeaderModel.fromBuffer(data);
-    header.ps /= 10000;
+    header.ps /= lpDec;
     const assetTokenDec = this.tokenDec(header.assetTokenId);
     const crncyTokenDec = this.tokenDec(header.crncyTokenId);
     header.assetTokens /= assetTokenDec;
@@ -1936,7 +1938,7 @@ export class Engine {
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * 10000)),
+      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec)),
     };
   }
 

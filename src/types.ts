@@ -343,8 +343,7 @@ export interface GetClientPerpOrdersArgs {
  * @property {OrderModel[]} asks List of client ask spot orders
  */
 export interface GetClientSpotOrdersResponse {
-  bidContextSlot: number;
-  askContextSlot: number;
+  contextSlot: number;
   bids: OrderModel[];
   asks: OrderModel[];
 }
@@ -356,8 +355,7 @@ export interface GetClientSpotOrdersResponse {
  * @property {OrderModel[]} asks List of client ask perp orders
  */
 export interface GetClientPerpOrdersResponse {
-  bidContextSlot: number;
-  askContextSlot: number;
+  contextSlot: number;
   bids: Array<OrderModel>;
   asks: Array<OrderModel>;
 }

@@ -191,7 +191,7 @@ function getMultipleSpotOrders(data: Base64EncodedDataResponse, firstEntry: numb
   while (entry != nullOrder) {
     const offset = entry * 64 + SpotTradeAccountHeaderModel.LENGTH;
     const order = OrderModel.fromBuffer(data, offset);
-    if (order.clientId != clientId) {
+    if (order.origClientId != clientId) {
       break;
     }
     orders.push(order);
@@ -206,7 +206,7 @@ function getMultiplePerpOrders(data: Base64EncodedDataResponse, firstEntry: numb
   while (entry != nullOrder) {
     const offset = entry * 64 + PerpTradeAccountHeaderModel.LENGTH;
     const order = OrderModel.fromBuffer(data, offset);
-    if (order.clientId != clientId) {
+    if (order.origClientId != clientId) {
       break;
     }
     orders.push(order);
@@ -1461,8 +1461,7 @@ export class Engine {
         asks[i].sum /= crncyTokenDec;
       }
       return {
-        bidContextSlot: Number(infos.context.slot),
-        askContextSlot: Number(infos.context.slot),
+        contextSlot: Number(infos.context.slot),
         bids: bids,
         asks: asks
       }
@@ -1492,7 +1491,7 @@ export class Engine {
           }
         }).send();
       const order = OrderModel.fromBuffer(info.value.data);
-      if (order.clientId == this.originalClientId) {
+      if (order.origClientId == this.originalClientId) {
         bids = [order];
       }
       bidContextSlot = Number(info.context.slot);
@@ -1517,7 +1516,7 @@ export class Engine {
           }
         }).send();
       const order = OrderModel.fromBuffer(info.value.data);
-      if (order.clientId == this.originalClientId) {
+      if (order.origClientId == this.originalClientId) {
         asks = [order];
       }
       askContextSlot = Number(info.context.slot);
@@ -1530,9 +1529,20 @@ export class Engine {
       asks[i].qty /= assetTokenDec;
       asks[i].sum /= crncyTokenDec;
     }
+    let contextSlot = 0;
+    if (bidContextSlot > 0 || askContextSlot > 0) {
+      if (bidContextSlot == 0) {
+        contextSlot = askContextSlot;
+      }
+      else if (askContextSlot == 0) {
+        contextSlot = bidContextSlot;
+      }
+      else {
+        contextSlot = Math.min(bidContextSlot, askContextSlot);
+      }
+    }
     return {
-      bidContextSlot: bidContextSlot,
-      askContextSlot: askContextSlot,
+      contextSlot: contextSlot,
       bids: bids,
       asks: asks
     }
@@ -1571,8 +1581,7 @@ export class Engine {
         asks[i].sum /= crncyTokenDec;
       }
       return {
-        bidContextSlot: Number(infos.context.slot),
-        askContextSlot: Number(infos.context.slot),
+        contextSlot: Number(infos.context.slot),
         bids: bids,
         asks: asks
       }
@@ -1598,7 +1607,7 @@ export class Engine {
           }
         }).send();
       const order = OrderModel.fromBuffer(info.value.data);
-      if (order.clientId == this.originalClientId) {
+      if (order.origClientId == this.originalClientId) {
         bids = [order];
       }
       bidContextSlot = Number(info.context.slot);
@@ -1620,7 +1629,7 @@ export class Engine {
           }
         }).send();
       const order = OrderModel.fromBuffer(info.value.data);
-      if (order.clientId == this.originalClientId) {
+      if (order.origClientId == this.originalClientId) {
         asks = [order];
       }
       askContextSlot = Number(info.context.slot);
@@ -1633,9 +1642,20 @@ export class Engine {
       asks[i].qty /= assetTokenDec;
       asks[i].sum /= crncyTokenDec;
     }
+    let contextSlot = 0;
+    if (bidContextSlot > 0 || askContextSlot > 0) {
+      if (bidContextSlot == 0) {
+        contextSlot = askContextSlot;
+      }
+      else if (askContextSlot == 0) {
+        contextSlot = bidContextSlot;
+      }
+      else {
+        contextSlot = Math.min(bidContextSlot, askContextSlot);
+      }
+    }
     return {
-      bidContextSlot: bidContextSlot,
-      askContextSlot: askContextSlot,
+      contextSlot: contextSlot,
       bids: bids,
       asks: asks
     }

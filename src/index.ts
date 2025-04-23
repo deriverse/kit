@@ -185,24 +185,30 @@ async function findAssociatedTokenAddress(owner: Address, tokenProgramId: Addres
   return address;
 }
 
-function getMultipleSpotOrders(data: Base64EncodedDataResponse, firstEntry: number): Array<OrderModel> {
+function getMultipleSpotOrders(data: Base64EncodedDataResponse, firstEntry: number, clientId: number): Array<OrderModel> {
   let orders: Array<OrderModel> = [];
   let entry = firstEntry;
   while (entry != nullOrder) {
     const offset = entry * 64 + SpotTradeAccountHeaderModel.LENGTH;
-    let order = OrderModel.fromBuffer(data, offset);
+    const order = OrderModel.fromBuffer(data, offset);
+    if (order.clientId != clientId) {
+      break;
+    }
     orders.push(order);
     entry = order.clNext;
   }
   return orders;
 }
 
-function getMultiplePerpOrders(data: Base64EncodedDataResponse, firstEntry: number): Array<OrderModel> {
+function getMultiplePerpOrders(data: Base64EncodedDataResponse, firstEntry: number, clientId: number): Array<OrderModel> {
   let orders: Array<OrderModel> = [];
   let entry = firstEntry;
   while (entry != nullOrder) {
     const offset = entry * 64 + PerpTradeAccountHeaderModel.LENGTH;
-    let order = OrderModel.fromBuffer(data, offset);
+    const order = OrderModel.fromBuffer(data, offset);
+    if (order.clientId != clientId) {
+      break;
+    }
     orders.push(order);
     entry = order.clNext;
   }
@@ -1444,12 +1450,12 @@ export class Engine {
     if (args.bidsCount > 1 && args.asksCount > 1) {
       let infos = await this.rpc.getMultipleAccounts(
         [bidOrdersAccount, askOrdersAccount], { commitment: this.commitment, encoding: 'base64' }).send();
-      let bids = getMultipleSpotOrders(infos.value[0].data, args.bidsEntry);
+      let bids = getMultipleSpotOrders(infos.value[0].data, args.bidsEntry, this.originalClientId);
       for (let i = 0; i < bids.length; ++i) {
         bids[i].qty /= assetTokenDec;
         bids[i].sum /= crncyTokenDec;
       }
-      let asks = getMultipleSpotOrders(infos.value[1].data, args.asksEntry);
+      let asks = getMultipleSpotOrders(infos.value[1].data, args.asksEntry, this.originalClientId);
       for (let i = 0; i < asks.length; ++i) {
         asks[i].qty /= assetTokenDec;
         asks[i].sum /= crncyTokenDec;
@@ -1472,7 +1478,7 @@ export class Engine {
           encoding: 'base64'
         }).send();
       bidContextSlot = Number(info.context.slot);
-      bids = getMultipleSpotOrders(info.value.data, args.bidsEntry);
+      bids = getMultipleSpotOrders(info.value.data, args.bidsEntry, this.originalClientId);
     }
     else if (args.bidsCount == 1) {
       let info = await this.rpc.getAccountInfo(bidOrdersAccount,
@@ -1485,7 +1491,10 @@ export class Engine {
             length: 64
           }
         }).send();
-      bids = [OrderModel.fromBuffer(info.value.data)];
+      const order = OrderModel.fromBuffer(info.value.data);
+      if (order.clientId == this.originalClientId) {
+        bids = [order];
+      }
       bidContextSlot = Number(info.context.slot);
     }
     if (args.asksCount > 1) {
@@ -1495,7 +1504,7 @@ export class Engine {
           encoding: 'base64'
         }).send();
       askContextSlot = Number(info.context.slot);
-      asks = getMultipleSpotOrders(info.value.data, args.bidsEntry);
+      asks = getMultipleSpotOrders(info.value.data, args.bidsEntry, this.originalClientId);
     }
     else if (args.asksCount == 1) {
       let info = await this.rpc.getAccountInfo(askOrdersAccount,
@@ -1507,7 +1516,10 @@ export class Engine {
             length: 64
           }
         }).send();
-      asks = [OrderModel.fromBuffer(info.value.data)];
+      const order = OrderModel.fromBuffer(info.value.data);
+      if (order.clientId == this.originalClientId) {
+        asks = [order];
+      }
       askContextSlot = Number(info.context.slot);
     }
     for (let i = 0; i < bids.length; ++i) {
@@ -1548,12 +1560,12 @@ export class Engine {
     if (args.bidsCount > 1 && args.asksCount > 1) {
       let infos = await this.rpc.getMultipleAccounts(
         [bidOrdersAccount, askOrdersAccount], { commitment: this.commitment, encoding: 'base64' }).send();
-      let bids = getMultiplePerpOrders(infos.value[0].data, args.bidsEntry);
+      let bids = getMultiplePerpOrders(infos.value[0].data, args.bidsEntry, this.originalClientId);
       for (let i = 0; i < bids.length; ++i) {
         bids[i].qty /= assetTokenDec;
         bids[i].sum /= crncyTokenDec;
       }
-      let asks = getMultiplePerpOrders(infos.value[1].data, args.asksEntry);
+      let asks = getMultiplePerpOrders(infos.value[1].data, args.asksEntry, this.originalClientId);
       for (let i = 0; i < asks.length; ++i) {
         asks[i].qty /= assetTokenDec;
         asks[i].sum /= crncyTokenDec;
@@ -1572,7 +1584,7 @@ export class Engine {
     if (args.bidsCount > 1) {
       let info = await this.rpc.getAccountInfo(bidOrdersAccount, { commitment: this.commitment, encoding: 'base64' }).send();
       bidContextSlot = Number(info.context.slot);
-      bids = getMultiplePerpOrders(info.value.data, args.bidsEntry);
+      bids = getMultiplePerpOrders(info.value.data, args.bidsEntry, this.originalClientId);
     }
     else if (args.bidsCount == 1) {
       let info = await this.rpc.getAccountInfo(bidOrdersAccount,
@@ -1585,13 +1597,16 @@ export class Engine {
             length: 64
           }
         }).send();
-      bids = [OrderModel.fromBuffer(info.value.data)];
+      const order = OrderModel.fromBuffer(info.value.data);
+      if (order.clientId == this.originalClientId) {
+        bids = [order];
+      }
       bidContextSlot = Number(info.context.slot);
     }
     if (args.asksCount > 1) {
       let info = await this.rpc.getAccountInfo(askOrdersAccount, { commitment: this.commitment, encoding: 'base64' }).send();
       askContextSlot = Number(info.context.slot);
-      asks = getMultiplePerpOrders(info.value.data, args.bidsEntry);
+      asks = getMultiplePerpOrders(info.value.data, args.bidsEntry, this.originalClientId);
     }
     else if (args.asksCount == 1) {
       let info = await this.rpc.getAccountInfo(askOrdersAccount,
@@ -1604,7 +1619,10 @@ export class Engine {
             length: 64
           }
         }).send();
-      asks = [OrderModel.fromBuffer(info.value.data)];
+      const order = OrderModel.fromBuffer(info.value.data);
+      if (order.clientId == this.originalClientId) {
+        asks = [order];
+      }
       askContextSlot = Number(info.context.slot);
     }
     for (let i = 0; i < bids.length; ++i) {

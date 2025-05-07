@@ -291,8 +291,8 @@ export class Engine {
   }
   
   logsDecode(data: readonly string[]): LogMessage[] {
-    let assetTokenDec = null;
-    let crncyTokenDec = null;
+    let assetTokenDec = 1;
+    let crncyTokenDec = 1;
     let logs = [];
     for (var log of data) {
       if (!log.startsWith("Program data: ")) {
@@ -303,8 +303,10 @@ export class Engine {
         case LogType.deposit: {
           if (buffer.length == DepositReportModel.LENGTH) {
             let report = DepositReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(report.tokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(report.tokenId);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -312,8 +314,10 @@ export class Engine {
         case LogType.withdraw: {
           if (buffer.length == WithdrawReportModel.LENGTH) {
             let report = WithdrawReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(report.tokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(report.tokenId);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -321,9 +325,13 @@ export class Engine {
         case LogType.perpDeposit: {
           if (buffer.length == PerpDepositReportModel.LENGTH) {
             let report = PerpDepositReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.amount /= crncyTokenDec;
+              }
+            }
             logs.push(report);
           }
           break;
@@ -331,9 +339,13 @@ export class Engine {
         case LogType.perpWithdraw: {
           if (buffer.length == PerpWithdrawReportModel.LENGTH) {
             let report = PerpWithdrawReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.amount /= crncyTokenDec;
+              }
+            }
             logs.push(report);
           }
           break;
@@ -341,8 +353,10 @@ export class Engine {
         case LogType.feesDeposit: {
           if (buffer.length == FeesDepositReportModel.LENGTH) {
             let report = FeesDepositReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(report.tokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(report.tokenId);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -350,8 +364,10 @@ export class Engine {
         case LogType.feesWithdraw: {
           if (buffer.length == FeesWithdrawReportModel.LENGTH) {
             let report = FeesWithdrawReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(report.tokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(report.tokenId);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -359,12 +375,16 @@ export class Engine {
         case LogType.spotLpTrade: {
           if (buffer.length == SpotlpTradeReportModel.LENGTH) {
             let report = SpotlpTradeReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.qty /= lpDec;
-            report.tokens /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.qty /= lpDec;
+                report.tokens /= assetTokenDec;
+                report.crncy /= crncyTokenDec;
+              }
+            }
             logs.push(report);
           }
           break;
@@ -372,8 +392,10 @@ export class Engine {
         case LogType.earnings: {
           if (buffer.length == EarningsReportModel.LENGTH) {
             let report = EarningsReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(report.tokenId);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(report.tokenId);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -381,8 +403,10 @@ export class Engine {
         case LogType.drvsAirdrop: {
           if (buffer.length == DrvsAirdropReportModel.LENGTH) {
             let report = DrvsAirdropReportModel.fromBuffer(buffer);
-            crncyTokenDec = this.tokenDec(0);
-            report.amount /= crncyTokenDec;
+            if (this.uiNumbers) {
+              crncyTokenDec = this.tokenDec(0);
+              report.amount /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -390,11 +414,15 @@ export class Engine {
         case LogType.spotPlaceOrder: {
           if (buffer.length == SpotPlaceOrderReportModel.LENGTH) {
             let report = SpotPlaceOrderReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.qty /= assetTokenDec;
-            report.price /= dec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.qty /= assetTokenDec;
+              }
+              report.price /= dec;
+            }
             logs.push(report);
           }
           break;
@@ -402,10 +430,12 @@ export class Engine {
         case LogType.spotFillOrder: {
           if (buffer.length == SpotFillOrderReportModel.LENGTH) {
             let report = SpotFillOrderReportModel.fromBuffer(buffer);
-            report.qty /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
-            report.rebates /= crncyTokenDec;
-            report.price /= dec;
+            if (this.uiNumbers) {
+              report.qty /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+              report.rebates /= crncyTokenDec;
+              report.price /= dec;
+            }
             logs.push(report);
           }
           break;
@@ -413,8 +443,10 @@ export class Engine {
         case LogType.spotNewOrder: {
           if (buffer.length == SpotNewOrderReportModel.LENGTH) {
             let report = SpotNewOrderReportModel.fromBuffer(buffer);
-            report.qty /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.qty /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -422,11 +454,15 @@ export class Engine {
         case LogType.spotOrderCancel: {
           if (buffer.length == SpotOrderCancelReportModel.LENGTH) {
             let report = SpotOrderCancelReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.qty /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.qty /= assetTokenDec;
+                report.crncy /= crncyTokenDec;
+              }
+            }
             logs.push(report);
           }
           break;
@@ -434,8 +470,10 @@ export class Engine {
         case LogType.spotOrderRevoke: {
           if (buffer.length == SpotOrderRevokeReportModel.LENGTH) {
             let report = SpotOrderRevokeReportModel.fromBuffer(buffer);
-            report.qty /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.qty /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -443,8 +481,10 @@ export class Engine {
         case LogType.spotFees: {
           if (buffer.length == SpotFeesReportModel.LENGTH) {
             let report = SpotFeesReportModel.fromBuffer(buffer);
-            report.fees /= crncyTokenDec;
-            report.refPayment /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.fees /= crncyTokenDec;
+              report.refPayment /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -452,9 +492,13 @@ export class Engine {
         case LogType.spotPlaceMassCancel: {
           if (buffer.length == SpotPlaceMassCancelReportModel.LENGTH) {
             let report = SpotPlaceMassCancelReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+              }
+            }
             logs.push(report);
           }
           break;
@@ -462,8 +506,10 @@ export class Engine {
         case LogType.spotMassCancel: {
           if (buffer.length == SpotMassCancelReportModel.LENGTH) {
             let report = SpotMassCancelReportModel.fromBuffer(buffer);
-            report.qty /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.qty /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -471,11 +517,15 @@ export class Engine {
         case LogType.perpPlaceOrder: {
           if (buffer.length == PerpPlaceOrderReportModel.LENGTH) {
             let report = PerpPlaceOrderReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.perps /= assetTokenDec;
-            report.price /= dec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.perps /= assetTokenDec;
+              }
+              report.price /= dec;
+            }
             logs.push(report);
           }
           break;
@@ -483,10 +533,12 @@ export class Engine {
         case LogType.perpFillOrder: {
           if (buffer.length == PerpFillOrderReportModel.LENGTH) {
             let report = PerpFillOrderReportModel.fromBuffer(buffer);
-            report.perps /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
-            report.rebates /= crncyTokenDec;
-            report.price /= dec;
+            if (this.uiNumbers) {
+              report.perps /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+              report.rebates /= crncyTokenDec;
+              report.price /= dec;
+            }
             logs.push(report);
           }
           break;
@@ -494,8 +546,10 @@ export class Engine {
         case LogType.perpNewOrder: {
           if (buffer.length == PerpNewOrderReportModel.LENGTH) {
             let report = PerpNewOrderReportModel.fromBuffer(buffer);
-            report.perps /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.perps /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -503,11 +557,15 @@ export class Engine {
         case LogType.perpOrderCancel: {
           if (buffer.length == PerpOrderCancelReportModel.LENGTH) {
             let report = PerpOrderCancelReportModel.fromBuffer(buffer);
-            const instrInfo = this.instruments.get(report.instrId);
-            assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
-            crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
-            report.perps /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.perps /= assetTokenDec;
+                report.crncy /= crncyTokenDec;
+              }
+            }
             logs.push(report);
           }
           break;
@@ -515,8 +573,10 @@ export class Engine {
         case LogType.perpOrderRevoke: {
           if (buffer.length == PerpOrderRevokeReportModel.LENGTH) {
             let report = PerpOrderRevokeReportModel.fromBuffer(buffer);
-            report.perps /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.perps /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -524,8 +584,10 @@ export class Engine {
         case LogType.perpFees: {
           if (buffer.length == PerpFeesReportModel.LENGTH) {
             let report = PerpFeesReportModel.fromBuffer(buffer);
-            report.fees /= crncyTokenDec;
-            report.refPayment /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.fees /= crncyTokenDec;
+              report.refPayment /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -540,8 +602,10 @@ export class Engine {
         case LogType.perpMassCancel: {
           if (buffer.length == PerpMassCancelReportModel.LENGTH) {
             let report = PerpMassCancelReportModel.fromBuffer(buffer);
-            report.perps /= assetTokenDec;
-            report.crncy /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.perps /= assetTokenDec;
+              report.crncy /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -549,7 +613,9 @@ export class Engine {
         case LogType.perpFunding: {
           if (buffer.length == PerpFundingReportModel.LENGTH) {
             let report = PerpFundingReportModel.fromBuffer(buffer);
-            report.funding /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.funding /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;
@@ -557,7 +623,9 @@ export class Engine {
         case LogType.perpSocLoss: {
           if (buffer.length == PerpSocLossReportModel.LENGTH) {
             let report = PerpSocLossReportModel.fromBuffer(buffer);
-            report.socLoss /= crncyTokenDec;
+            if (this.uiNumbers) {
+              report.socLoss /= crncyTokenDec;
+            }
             logs.push(report);
           }
           break;

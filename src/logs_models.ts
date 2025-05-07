@@ -634,14 +634,16 @@ export class SpotFeesReportModel {
 }
 
 export class PerpFundingReportModel {
-  static readonly LENGTH = 2 * 1 + 1 * 2 + 1 * 4 + 1 * 8; // 16 bytes
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_CLIENT_ID = 4;
-  static readonly OFFSET_FUNDING = 8;
+  static readonly OFFSET_TIME = 8;
+  static readonly OFFSET_FUNDING = 16;
 
   tag: number;
   clientId: number;
+  time: number;
   funding: number;
   static fromBuffer(buffer: Buffer, offset?: number): PerpFundingReportModel {
     const result = new PerpFundingReportModel();
@@ -650,6 +652,8 @@ export class PerpFundingReportModel {
     autoBuffer.readU8();
     autoBuffer.readU16();
     result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    autoBuffer.readU32();
     result.funding = autoBuffer.readI64();
     return result;
   }

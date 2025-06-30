@@ -1493,6 +1493,7 @@ export class Engine {
       mask: clientInfo2Model.mask,
       socLossFunds: clientInfo4Model.socLossFunds,
       fundingFunds: clientInfo5Model.fundingFunds,
+      lossCoverage: clientInfo4Model.lossCoverage
     }
   }
 

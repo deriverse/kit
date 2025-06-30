@@ -559,7 +559,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PERP_SOC_LOSS_LONG_RATE = 712;
   static readonly OFFSET_PERP_SOC_LOSS_SHORT_RATE = 720;
   static readonly OFFSET_PERP_OPEN_INT = 728;
-  static readonly OFFSET_RESERVED2 = 736;
+  static readonly OFFSET_PERP_PRICE_DELTA = 736;
   static readonly OFFSET_PERP_FUNDING_RATE = 744;
   static readonly OFFSET_PERP_FUNDING_FUNDS = 752;
   static readonly OFFSET_PERP_SOC_LOSS_FUNDS = 760;
@@ -693,7 +693,7 @@ export class InstrAccountHeaderModel {
   perpSocLossLongRate: number;
   perpSocLossShortRate: number;
   perpOpenInt: number;
-  reserved2: number;
+  perpPriceDelta: number;
   perpFundingRate: number;
   perpFundingFunds: number;
   perpSocLossFunds: number;
@@ -829,7 +829,7 @@ export class InstrAccountHeaderModel {
     result.perpSocLossLongRate = autoData.readF64();
     result.perpSocLossShortRate = autoData.readF64();
     result.perpOpenInt = autoData.readI64();
-    result.reserved2 = autoData.readI64();
+    result.perpPriceDelta = autoData.readF64();
     result.perpFundingRate = autoData.readF64();
     result.perpFundingFunds = autoData.readI64();
     result.perpSocLossFunds = autoData.readI64();
@@ -1177,19 +1177,19 @@ export class PerpClientInfo4Model {
   static readonly OFFSET_LAST_SOC_LOSS_RATE = 0;
   static readonly OFFSET_LAST_SOC_LOSS_PERPS = 8;
   static readonly OFFSET_SOC_LOSS_FUNDS = 16;
-  static readonly OFFSET_RESERVED = 24;
+  static readonly OFFSET_LOSS_COVERAGE = 24;
 
   lastSocLossRate: number;
   lastSocLossPerps: number;
   socLossFunds: number;
-  reserved: number;
+  lossCoverage: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): PerpClientInfo4Model {
     const result = new PerpClientInfo4Model();
     let autoData = new AutoData(data, offset);
     result.lastSocLossRate = autoData.readF64();
     result.lastSocLossPerps = autoData.readI64();
     result.socLossFunds = autoData.readI64();
-    result.reserved = autoData.readI64();
+    result.lossCoverage = autoData.readI64();
     return result;
   }
 }

@@ -174,10 +174,10 @@ export function withdrawData(tag: number, tokenId: number, amount: number): Buff
   return buf;
 }
 
-export function swapData(tag: number, instrId: number, price: number, amount: number): Buffer {
+export function swapData(tag: number, side: number, instrId: number, price: number, amount: number): Buffer {
   let buf = Buffer.alloc(24);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
+  buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
   buf.writeBigInt64LE(BigInt(price), 8);

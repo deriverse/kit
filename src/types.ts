@@ -299,6 +299,7 @@ export interface GetClientPerpOrdersInfoResponse {
   rebates: number;
   socLossFunds: number;
   fundingFunds: number;
+  lossCoverage: number;
   result: number;
   cost: number;
   mask: number;

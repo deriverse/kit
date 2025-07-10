@@ -1138,7 +1138,7 @@ export class Engine {
           commitment: this.commitment,
           encoding: 'base64'
         }).send();
-      if (info != null) {
+      if (info.value) {
         const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(info.value.data);
         if (clientPrimaryAccountHeaderModel.walletAddress == signer) {
           this.clientPrimaryAccount = clientPrimaryAccount;

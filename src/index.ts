@@ -2710,7 +2710,7 @@ export class Engine {
       amount: mapsAccountLamports,
     });
     const slot = Number((await this.rpc.getSlot().send())) - 1;
-    const lutAddress = await getLookupTableAddress(this.signer, slot);
+    const lutAddress = await getLookupTableAddress(this.drvsAuthority, slot);
 
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },

@@ -2248,10 +2248,10 @@ export class Engine {
     });
     const perpMapsAccountSize = 175336;
     const perpMapsAccountLamports = await this.rpc.getMinimumBalanceForRentExemption(BigInt(perpMapsAccountSize)).send();
-    const signer = createNoopSigner(this.signer);
+    //const signer = createNoopSigner(this.signer);
     const createMapsAccountIx = getCreateAccountWithSeedInstruction({
-      payer: signer,
-      baseAccount: signer,
+      payer: this.signer,
+      baseAccount: this.signer,
       base: this.signer,
       newAccount: perpMapsAccount,
       seed: perpMapsAccountSeed,

@@ -15,7 +15,8 @@ import {
   SpotQuotesReplaceArgs, SpotMassCancelArgs, InstrId, InstrMask, GetClientPerpOrdersInfoArgs,
   GetClientPerpOrdersInfoResponse, GetClientPerpOrdersArgs, GetClientPerpOrdersResponse, PerpDepositArgs,
   NewPerpOrderArgs, PerpQuotesReplaceArgs, PerpOrderCancelArgs, PerpMassCancelArgs, PerpForcedCloseArgs,
-  CommunityData, LogMessage, PerpChangeLeverageArgs, PerpStatisticsResetArgs, EngineArgs
+  CommunityData, LogMessage, PerpChangeLeverageArgs, PerpStatisticsResetArgs, EngineArgs,
+  NewInstrumentArgs
 } from './types';
 
 import {
@@ -27,7 +28,7 @@ import {
 } from "./structure_models";
  
 import {
-  depositData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData,
+  depositData, newInstrumentData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData,
   perpForcedCloseData, perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData,
   spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, upgradeToPerpData, withdrawData
 } from "./instruction_models";
@@ -43,7 +44,6 @@ import {
 } from "./logs_models";
 export * from './types';
 export * from './logs_models';
-
 
 const ADDRESS_LOOKUP_TABLE_PROGRAM_ID = address("AddressLookupTab1e1111111111111111111111111");
 const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
@@ -674,7 +674,7 @@ export class Engine {
       this.drvsAuthority = (await getProgramDerivedAddress({ programAddress: this.programId, seeds: ["ndxnt"] }))[0];
       this.rootAccount = await this.getAccountByTag(AccountType.ROOT);
       this.communityAccount = await this.getAccountByTag(AccountType.COMMUNITY);
-      const infos = await this.rpc.getMultipleAccounts([this.rootAccount, this.communityAccount], 
+      const infos = await this.rpc.getMultipleAccounts([this.rootAccount, this.communityAccount],
         {
           commitment: this.commitment,
           encoding: 'base64'
@@ -1080,7 +1080,7 @@ export class Engine {
    * Get Token ID from mint public key if this token registered on Deriverse
    * @param mint Public key
    * @returns Token ID
-   */ 
+   */
   async getTokenId(mint: Address): Promise<number | null> {
     const tokenAddress = await this.getTokenAccount(mint);
     let info = await this.rpc.getAccountInfo(tokenAddress,
@@ -1218,7 +1218,7 @@ export class Engine {
       const info = await this.rpc.getAccountInfo(clientPrimaryAccount,
         {
           commitment: this.commitment,
-          encoding: 'base64' 
+          encoding: 'base64'
         }).send();
       if (info == null) {
         return false;
@@ -1245,7 +1245,7 @@ export class Engine {
     }
     const infos = await this.rpc.getMultipleAccounts([this.clientPrimaryAccount, this.clientCommunityAccount],
       {
-        commitment: this.commitment, 
+        commitment: this.commitment,
         encoding: 'base64'
       }).send();
     if (infos == null) {
@@ -2067,7 +2067,7 @@ export class Engine {
       args.orderType == null || args.orderType == undefined ? 0 : args.orderType,
       args.side,
       args.instrId,
-      Math.round(args.price * dec),
+      Math.round(args.price * 1000000000),
       Math.round(args.qty * this.tokenDec(instr.header.assetTokenId))
     );
     let keys = [
@@ -2112,10 +2112,10 @@ export class Engine {
     let buf = spotQuotesReplaceData(
       34,
       args.instrId,
-      Math.round(args.newBidPrice * dec),
+      Math.round(args.newBidPrice * 1000000000),
       Math.round(args.newBidQty * assetTokenDecFactor),
       args.bidOrderIdToCancel,
-      Math.round(args.newAskPrice * dec),
+      Math.round(args.newAskPrice * 1000000000),
       Math.round(args.newAskQty * assetTokenDecFactor),
       args.askOrderIdToCancel
     );
@@ -2248,7 +2248,6 @@ export class Engine {
     });
     const perpMapsAccountSize = 175336;
     const perpMapsAccountLamports = await this.rpc.getMinimumBalanceForRentExemption(BigInt(perpMapsAccountSize)).send();
-    //const signer = createNoopSigner(this.signer);
     const createMapsAccountIx = getCreateAccountWithSeedInstruction({
       payer: this.signer,
       baseAccount: this.signer,
@@ -2467,7 +2466,7 @@ export class Engine {
         args.orderType == null || args.orderType == undefined ? 0 : args.orderType,
         args.side,
         args.instrId,
-        args.price * dec,
+        args.price * 1000000000,
         args.qty * this.tokenDec(instr.header.assetTokenId)),
     };
   }
@@ -2486,10 +2485,10 @@ export class Engine {
     let buf = perpQuotesReplaceData(
       42,
       args.instrId,
-      Math.round(args.newBidPrice * dec),
+      Math.round(args.newBidPrice * 1000000000),
       Math.round(args.newBidQty * assetTokenDecFactor),
       args.bidOrderIdToCancel,
-      Math.round(args.newAskPrice * dec),
+      Math.round(args.newAskPrice * 1000000000),
       Math.round(args.newAskQty * assetTokenDecFactor),
       args.askOrderIdToCancel
     );
@@ -2663,6 +2662,185 @@ export class Engine {
       data: perpStatisticsResetData(46, args.instrId),
     };
   }
+
+  /**
+     * Build new instrument instructions
+     * @param args New instrument data
+     * @returns Transaction instruction
+     */
+  async newInstrumentInstructions(args: NewInstrumentArgs): Promise<any[]> {
+    if (this.signer == null) {
+      throw new Error("Wallet is not connected");
+    }
+    if (args.initialPrice <= 0) {
+      throw new Error("Invalid initial price");
+    }
+    const assetInfo = await this.rpc.getAccountInfo(args.assetMint).send();
+    if (!assetInfo.value) {
+      throw new Error("Asset mint not found");
+    }
+    const tokenProgramId = assetInfo.value.owner == TOKEN_2022_PROGRAM_ID ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    const crncyTokenId = await this.getTokenId(args.crncyMint);
+    const id = await this.getTokenId(args.assetMint);
+    const newAssetTokenId = id != null;
+    const assetTokenId = id ?? this.rootAccount.tokensCount;
+    if (!crncyTokenId) {
+      throw new Error("Currency mint not found");
+    }
+    const mapsAccountSeed =
+      this.version.toString() + "_" +
+      AccountType.SPOT_MAPS.toString() + "_" +
+      assetTokenId.toString() + "_" +
+      crncyTokenId.toString();
+    const mapsAccount = await createAddressWithSeed({
+      baseAddress: this.signer,
+      programAddress: this.programId,
+      seed: mapsAccountSeed
+    });
+    const mapsAccountSize = 42184;
+    const mapsAccountLamports = await this.rpc.getMinimumBalanceForRentExemption(BigInt(mapsAccountSize)).send();
+    const createMapsAccountIx = getCreateAccountWithSeedInstruction({
+      payer: this.signer,
+      baseAccount: this.signer,
+      base: this.signer,
+      newAccount: mapsAccount,
+      seed: mapsAccountSeed,
+      space: mapsAccountSize,
+      programAddress: this.programId,
+      amount: mapsAccountLamports,
+    });
+    const slot = Number((await this.rpc.getSlot().send())) - 1;
+    const lutAddress = await getLookupTableAddress(this.signer, slot);
+
+    let keys = [
+      { address: this.signer, role: AccountRole.READONLY_SIGNER },
+      { address: this.rootAccount, role: AccountRole.WRITABLE },
+      { address: await this.getTokenAccount(args.assetMint), role: newAssetTokenId ? AccountRole.WRITABLE : AccountRole.READONLY },
+      { address: await this.getTokenAccount(args.crncyMint), role: AccountRole.READONLY },
+      { address: newAssetTokenId ? args.newProgramAccountAddress : this.tokens.get(assetTokenId)!.programAddress, role: newAssetTokenId ? AccountRole.WRITABLE_SIGNER : AccountRole.READONLY },
+      { address: args.assetMint, role: AccountRole.READONLY },
+      { address: lutAddress, role: AccountRole.WRITABLE },
+      { address: tokenProgramId, role: AccountRole.READONLY },
+      { address: ADDRESS_LOOKUP_TABLE_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: this.drvsAuthority, role: AccountRole.READONLY },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.INSTR
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_BIDS_TREE
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_ASKS_TREE
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_BID_ORDERS
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_ASK_ORDERS
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_LINES
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: mapsAccount, role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_CLIENT_INFOS
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_CLIENT_INFOS2
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_CLIENT_ACCOUNTS
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_1M_CANDLES
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_15M_CANDLES
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.SPOT_DAY_CANDLES
+          }), role: AccountRole.WRITABLE
+      },
+      {
+        address: await this.getInstrAccountByTag(
+          {
+            assetTokenId: assetTokenId,
+            crncyTokenId: crncyTokenId,
+            tag: AccountType.INSTR_TRACE
+          }), role: AccountRole.WRITABLE
+      },
+    ];
+    const upgradeIx = {
+      accounts: keys,
+      programAddress: this.programId,
+      data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * 1000000000)
+    };
+    return [createMapsAccountIx, upgradeIx];
+  }
+
 }
+
+
 
 

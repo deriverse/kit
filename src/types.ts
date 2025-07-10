@@ -1,5 +1,4 @@
 import { address, Address, Commitment } from "@solana/kit";
-
 import {
   BaseCrncyRecordModel, ClientCommunityAccountHeaderModel, ClientCommunityRecordModel, CommunityAccountHeaderModel,
   InstrAccountHeaderModel, LineQuotesModel, OrderModel
@@ -614,6 +613,12 @@ export interface NewPerpOrderArgs {
   side: number;
 }
 
+export interface NewInstrumentArgs {
+  assetMint: Address;
+  crncyMint: Address;
+  newProgramAccountAddress?: Address;
+  initialPrice: number;
+}
 
 export type LogMessage = DepositReportModel
   | WithdrawReportModel

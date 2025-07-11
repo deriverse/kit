@@ -680,7 +680,7 @@ export class Engine {
           encoding: 'base64'
         }
       ).send();
-      if (infos == null) {
+      if (infos.value == null) {
         throw new Error("Initialization failed: getMultipleAccountsInfo");
       }
       this.rootStateModel = RootStateModel.fromBuffer(infos.value[0].data);
@@ -721,7 +721,7 @@ export class Engine {
 
   async addToken(tokenAccount: Address) {
     const info = await this.rpc.getAccountInfo(tokenAccount, { commitment: this.commitment, encoding: 'base64' }).send();
-    if (info == null) {
+    if (info.value == null) {
       throw new Error("Add Token Failed: getAccountInfo");
     }
     const tokenStateModel = TokenStateModel.fromBuffer(info.value.data);
@@ -737,7 +737,7 @@ export class Engine {
 
   async addInstr(instrAccount: Address) {
     const info = await this.rpc.getAccountInfo(instrAccount, { commitment: this.commitment, encoding: 'base64' }).send();
-    if (info == null) {
+    if (info.value == null) {
       throw new Error("Add Instrument Failed: getAccountInfo");
     }
     const instrAccountHeaderModel = InstrAccountHeaderModel.fromBuffer(info.value.data);
@@ -776,7 +776,7 @@ export class Engine {
 
   async updateCommunity() {
     const info = await this.rpc.getAccountInfo(this.communityAccount, { commitment: this.commitment, encoding: 'base64' }).send();
-    if (info == null) {
+    if (info.value == null) {
       throw new Error("Community Account: GetAccountInfo Failed");
     }
     this.updateCommunityFromBuffer(info.value.data);
@@ -788,7 +788,7 @@ export class Engine {
 
   async updateRoot() {
     const info = await this.rpc.getAccountInfo(this.rootAccount, { commitment: this.commitment, encoding: 'base64' }).send();
-    if (info == null) {
+    if (info.value == null) {
       throw new Error("Root Account: GetAccountInfo Failed");
     }
     this.updateRootFromBuffer(info.value.data);
@@ -1112,7 +1112,7 @@ export class Engine {
     })
     let info = await this.rpc.getAccountInfo(instrAddress,
       { commitment: this.commitment, encoding: 'base64', dataSlice: { offset: InstrAccountHeaderModel.OFFSET_ID, length: 4 } }).send();
-    if (info == null) {
+    if (info.value == null) {
       return null;
     }
     else {
@@ -1220,7 +1220,7 @@ export class Engine {
           commitment: this.commitment,
           encoding: 'base64'
         }).send();
-      if (info == null) {
+      if (info.value == null) {
         return false;
       }
       const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(info.value.data);
@@ -1248,7 +1248,7 @@ export class Engine {
         commitment: this.commitment,
         encoding: 'base64'
       }).send();
-    if (infos == null) {
+    if (infos.value == null) {
       throw new Error("GetClientData: GetAccountInfo failed");
     }
     const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(infos.value[0].data);
@@ -2682,8 +2682,8 @@ export class Engine {
     const tokenProgramId = assetInfo.value.owner == TOKEN_2022_PROGRAM_ID ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     const crncyTokenId = await this.getTokenId(args.crncyMint);
     const id = await this.getTokenId(args.assetMint);
-    const newAssetTokenId = id == null;
-    const assetTokenId = newAssetTokenId ? this.rootStateModel.tokensCount: id;
+    const newAssetToken = id == null;
+    const assetTokenId = newAssetToken ? this.rootStateModel.tokensCount: id;
     if (!crncyTokenId) {
       throw new Error("Currency mint not found");
     }
@@ -2714,11 +2714,12 @@ export class Engine {
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.WRITABLE },
-      { address: await this.getTokenAccount(args.assetMint), role: newAssetTokenId ? AccountRole.WRITABLE : AccountRole.READONLY },
+      { address: await this.getTokenAccount(args.assetMint), role: newAssetToken ? AccountRole.WRITABLE : AccountRole.READONLY },
       { address: await this.getTokenAccount(args.crncyMint), role: AccountRole.READONLY },
-      { address: newAssetTokenId ? args.newProgramAccountAddress : this.tokens.get(assetTokenId)!.programAddress, role: newAssetTokenId ? AccountRole.WRITABLE_SIGNER : AccountRole.READONLY },
+      { address: newAssetToken ? args.newProgramAccountAddress : this.tokens.get(assetTokenId)!.programAddress, role: newAssetToken ? AccountRole.WRITABLE_SIGNER : AccountRole.READONLY },
       { address: args.assetMint, role: AccountRole.READONLY },
       { address: lutAddress, role: AccountRole.WRITABLE },
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
       { address: tokenProgramId, role: AccountRole.READONLY },
       { address: ADDRESS_LOOKUP_TABLE_PROGRAM_ID, role: AccountRole.READONLY },
       { address: this.drvsAuthority, role: AccountRole.READONLY },

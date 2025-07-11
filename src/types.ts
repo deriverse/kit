@@ -614,9 +614,9 @@ export interface NewPerpOrderArgs {
 }
 
 export interface NewInstrumentArgs {
-  assetMint: Address;
-  crncyMint: Address;
-  newProgramAccountAddress?: Address;
+  assetMint: Address<any>;
+  crncyMint: Address<any>;
+  newProgramAccountAddress?: Address<any>;
   initialPrice: number;
 }
 

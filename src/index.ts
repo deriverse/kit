@@ -1085,7 +1085,7 @@ export class Engine {
     const tokenAddress = await this.getTokenAccount(mint);
     let info = await this.rpc.getAccountInfo(tokenAddress,
       { commitment: this.commitment, encoding: 'base64', dataSlice: { offset: TokenStateModel.OFFSET_ID, length: 4 } }).send();
-    if (info == null) {
+    if (!info.value) {
       return null;
     }
     else {
@@ -2682,8 +2682,8 @@ export class Engine {
     const tokenProgramId = assetInfo.value.owner == TOKEN_2022_PROGRAM_ID ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     const crncyTokenId = await this.getTokenId(args.crncyMint);
     const id = await this.getTokenId(args.assetMint);
-    const newAssetTokenId = id != null;
-    const assetTokenId = id ?? this.rootAccount.tokensCount;
+    const newAssetTokenId = id == null;
+    const assetTokenId = newAssetTokenId ? this.rootStateModel.tokensCount: id;
     if (!crncyTokenId) {
       throw new Error("Currency mint not found");
     }
@@ -2711,7 +2711,6 @@ export class Engine {
     });
     const slot = Number((await this.rpc.getSlot().send())) - 1;
     const lutAddress = await getLookupTableAddress(this.drvsAuthority, slot);
-
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.WRITABLE },

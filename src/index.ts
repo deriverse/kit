@@ -1878,6 +1878,8 @@ export class Engine {
     if (this.signer == null) {
       throw new Error("Wallet is not connected");
     }
+    const amount = args.amount ?? 0;
+    const allFunds = args.all_funds ?? false;
     const token = this.tokens.get(args.tokenId);
     const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     const clientTokenAccount = await findAssociatedTokenAddress(this.signer, tokenProgramId, token.address);
@@ -1904,7 +1906,7 @@ export class Engine {
       return {
         accounts: keys,
         programAddress: this.programId,
-        data: depositData(7, args.tokenId, args.amount * this.tokenDec(args.tokenId), 0, 0)
+        data: depositData(7, args.tokenId, amount * this.tokenDec(args.tokenId), 0, 0, allFunds)
       };
     }
     else {
@@ -1950,7 +1952,7 @@ export class Engine {
       return {
         accounts: keys,
         programAddress: this.programId,
-        data: depositData(7, args.tokenId, args.amount * this.tokenDec(args.tokenId), slot, refId)
+        data: depositData(7, args.tokenId, amount * this.tokenDec(args.tokenId), slot, refId, allFunds)
       };
     }
   }

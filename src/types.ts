@@ -393,9 +393,10 @@ export interface PerpOrderCancelArgs {
  */
 export interface DepositArgs {
   tokenId: number;
-  amount: number;
+  amount?: number;
   refId?: number;
-  refWallet?: Address
+  refWallet?: Address;
+  all_funds?: boolean
 }
 
 /**

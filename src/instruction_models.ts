@@ -103,11 +103,11 @@ export function newInstrumentData(tag: number, crncyTokenId: number, lutSlot: nu
   return buf;
 }
 
-export function depositData(tag: number, tokenId: number, amount: number, lutSlot: number, refId: number): Buffer {
+export function depositData(tag: number, tokenId: number, amount: number, lutSlot: number, refId: number, allFunds: boolean): Buffer {
   let buf = Buffer.alloc(24);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
+  buf.writeUint16LE(allFunds?1:0, 2);
   buf.writeUint32LE(tokenId, 4);
   buf.writeBigInt64LE(BigInt(amount), 8);
   buf.writeUint32LE(lutSlot, 16);

@@ -23,8 +23,8 @@ export function newSpotOrderData(tag: number, ioc: number, orderType: number, si
   buf.writeUint8(orderType, 2);
   buf.writeUint8(side, 3);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(price), 8);
-  buf.writeBigInt64LE(BigInt(amount), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(price)), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 16);
   return buf;
 }
 
@@ -39,8 +39,8 @@ export function newPerpOrderData(tag: number, ioc: number, leverage: number, ord
   buf.writeUint16LE(0, 6);
   buf.writeUint32LE(0, 8);
   buf.writeUint32LE(instrId, 12);
-  buf.writeBigInt64LE(BigInt(price), 16);
-  buf.writeBigInt64LE(BigInt(amount), 24);
+  buf.writeBigInt64LE(BigInt(Math.round(price)), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 24);
   return buf;
 }
 
@@ -68,7 +68,7 @@ export function spotOrderCancelData(tag: number, side: number, instrId: number, 
   buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(orderId), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(orderId)), 8);
   return buf;
 }
 
@@ -87,7 +87,7 @@ export function spotLpData(tag: number, side: number, instrId: number, amount: n
   buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -99,7 +99,7 @@ export function newInstrumentData(tag: number, crncyTokenId: number, lutSlot: nu
   buf.writeUint32LE(0, 4);
   buf.writeUint32LE(crncyTokenId, 8);
   buf.writeUint32LE(lutSlot, 12);
-  buf.writeBigInt64LE(BigInt(price), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(price)), 16);
   return buf;
 }
 
@@ -109,7 +109,7 @@ export function depositData(tag: number, tokenId: number, amount: number, lutSlo
   buf.writeUint8(0, 1);
   buf.writeUint16LE(allFunds?1:0, 2);
   buf.writeUint32LE(tokenId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   buf.writeUint32LE(lutSlot, 16);
   buf.writeUint32LE(refId, 20);
   return buf;
@@ -121,7 +121,7 @@ export function feesDepositData(tag: number, tokenId: number, amount: number): B
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(tokenId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -131,7 +131,7 @@ export function feesWithdrawData(tag: number, tokenId: number, amount: number): 
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(tokenId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -141,7 +141,7 @@ export function perpDepositData(tag: number, instrId: number, amount: number): B
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -160,7 +160,7 @@ export function perpWithdrawData(tag: number, instrId: number, amount: number): 
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -170,7 +170,7 @@ export function withdrawData(tag: number, tokenId: number, amount: number): Buff
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(tokenId, 4);
-  buf.writeBigInt64LE(BigInt(amount), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
   return buf;
 }
 
@@ -180,8 +180,8 @@ export function swapData(tag: number, side: number, instrId: number, price: numb
   buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(price), 8);
-  buf.writeBigInt64LE(BigInt(amount), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(price)), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 16);
   return buf;
 }
 
@@ -191,12 +191,12 @@ export function spotQuotesReplaceData(tag: number, instrId: number, newBidPrice:
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(newBidPrice), 8);
-  buf.writeBigInt64LE(BigInt(newBidQty), 16);
-  buf.writeBigInt64LE(BigInt(oldBidOrderId), 24);
-  buf.writeBigInt64LE(BigInt(newAskPrice), 32);
-  buf.writeBigInt64LE(BigInt(newAskQty), 40);
-  buf.writeBigInt64LE(BigInt(oldAskOrderId), 48);
+  buf.writeBigInt64LE(BigInt(Math.round(newBidPrice)), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(newBidQty)), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(oldBidOrderId)), 24);
+  buf.writeBigInt64LE(BigInt(Math.round(newAskPrice)), 32);
+  buf.writeBigInt64LE(BigInt(Math.round(newAskQty)), 40);
+  buf.writeBigInt64LE(BigInt(Math.round(oldAskOrderId)), 48);
   return buf;
 }
 
@@ -206,12 +206,12 @@ export function perpQuotesReplaceData(tag: number, instrId: number, newBidPrice:
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(newBidPrice), 8);
-  buf.writeBigInt64LE(BigInt(newBidQty), 16);
-  buf.writeBigInt64LE(BigInt(oldBidOrderId), 24);
-  buf.writeBigInt64LE(BigInt(newAskPrice), 32);
-  buf.writeBigInt64LE(BigInt(newAskQty), 40);
-  buf.writeBigInt64LE(BigInt(oldAskOrderId), 48);
+  buf.writeBigInt64LE(BigInt(Math.round(newBidPrice)), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(newBidQty)), 16);
+  buf.writeBigInt64LE(BigInt(Math.round(oldBidOrderId)), 24);
+  buf.writeBigInt64LE(BigInt(Math.round(newAskPrice)), 32);
+  buf.writeBigInt64LE(BigInt(Math.round(newAskQty)), 40);
+  buf.writeBigInt64LE(BigInt(Math.round(oldAskOrderId)), 48);
   return buf;
 }
 
@@ -275,7 +275,7 @@ export function perpOrderCancelData(tag: number, side: number, instrId: number, 
   buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(orderId), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(orderId)), 8);
   return buf;
 }
 

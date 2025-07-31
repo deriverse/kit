@@ -37,11 +37,9 @@ Based on [`@solana/kit`](https://www.npmjs.com/package/@solana/kit)
 npm install @deriverse/kit
 ```
 
-## Documentation
-TODO
-
 ## Examples
-TODO
+
+We prepared a comprehensive example that is available here: https://github.com/deriverse/kit-example
 
 ## Development
 

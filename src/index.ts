@@ -295,7 +295,7 @@ export class Engine {
     let crncyTokenDec = 1;
     let logs = [];
     for (var log of data) {
-      if (log.startsWith("Program returned error")) {
+      if (log.startsWith("Program returned error") || log.startsWith(`Program logged: "Error`)) {
         return []
       }
       if (!log.startsWith("Program data: ")) {

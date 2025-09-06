@@ -700,11 +700,11 @@ export class Engine {
       instrAccounts.forEach((response) => {
         const buffer = Buffer.from(getBase64Encoder().encode(response.account.data[0]));
         let instrAccountHeaderModel = new InstrAccountHeaderModel();
-        instrAccountHeaderModel.id = buffer.readUint32LE(0);
+        instrAccountHeaderModel.instrId = buffer.readUint32LE(0);
         instrAccountHeaderModel.assetTokenId = buffer.readUint32LE(4);
         instrAccountHeaderModel.crncyTokenId = buffer.readUint32LE(8);
         instrAccountHeaderModel.mask = buffer.readUint32LE(12);
-        this.instruments.set(instrAccountHeaderModel.id, {
+        this.instruments.set(instrAccountHeaderModel.instrId, {
           address: response.pubkey,
           header: instrAccountHeaderModel,
           spotBids: [],
@@ -744,12 +744,12 @@ export class Engine {
       throw new Error("Add Instrument Failed: getAccountInfo");
     }
     const instrAccountHeaderModel = InstrAccountHeaderModel.fromBuffer(info.value.data);
-    if (instrAccountHeaderModel.id > this.rootStateModel.instrCount ||
+    if (instrAccountHeaderModel.instrId > this.rootStateModel.instrCount ||
       instrAccountHeaderModel.tag != AccountType.INSTR ||
       instrAccountHeaderModel.version != this.version) {
       throw new Error("Invalid Instrument Account");
     }
-    this.instruments.set(instrAccountHeaderModel.id, {
+    this.instruments.set(instrAccountHeaderModel.instrId, {
       address: instrAccount,
       header: instrAccountHeaderModel,
       spotBids: [],
@@ -891,6 +891,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag({
           assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -899,6 +900,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      */
     ]
   }
 
@@ -996,6 +998,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag({
           assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -1004,6 +1007,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      */
       {
         address: await this.getInstrAccountByTag({
           assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -1028,6 +1032,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag({
           assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -1036,6 +1041,7 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
+      */
 
     ]
   }
@@ -1114,7 +1120,7 @@ export class Engine {
       tag: AccountType.INSTR
     })
     let info = await this.rpc.getAccountInfo(instrAddress,
-      { commitment: this.commitment, encoding: 'base64', dataSlice: { offset: InstrAccountHeaderModel.OFFSET_ID, length: 4 } }).send();
+      { commitment: this.commitment, encoding: 'base64', dataSlice: { offset: InstrAccountHeaderModel.OFFSET_INSTR_ID, length: 4 } }).send();
     if (info.value == null) {
       return null;
     }
@@ -1777,7 +1783,7 @@ export class Engine {
     header.fixingPx /= dec;
     header.perpLastClose /= dec;
     header.perpLastPx /= dec;
-    header.lastHourPx /= dec;
+    //header.lastHourPx /= dec;
     header.perpSpotPriceForWithdrowal /= dec;
     header.poolFees /= crncyTokenDec;
     let spotBids: Array<LineQuotesModel> = [];
@@ -1834,7 +1840,7 @@ export class Engine {
         programAddress: this.programId,
         seeds: [pattern, getAddressEncoder().encode(this.drvsAuthority)]
       }))[0];
-    this.instruments.set(header.id, {
+    this.instruments.set(header.instrId, {
       address: instrAddress,
       header: header,
       spotBids: spotBids,
@@ -1879,7 +1885,7 @@ export class Engine {
       throw new Error("Wallet is not connected");
     }
     const amount = args.amount ?? 0;
-    const allFunds = args.all_funds ?? false;
+    const allFunds = args.all_funds ? 1: 0;
     const token = this.tokens.get(args.tokenId);
     const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     const clientTokenAccount = await findAssociatedTokenAddress(this.signer, tokenProgramId, token.address);
@@ -1906,7 +1912,7 @@ export class Engine {
       return {
         accounts: keys,
         programAddress: this.programId,
-        data: depositData(7, args.tokenId, amount * this.tokenDec(args.tokenId), 0, 0, allFunds)
+        data: depositData(7, 0, allFunds, args.tokenId, amount * this.tokenDec(args.tokenId), 0, 0)
       };
     }
     else {
@@ -1952,7 +1958,7 @@ export class Engine {
       return {
         accounts: keys,
         programAddress: this.programId,
-        data: depositData(7, args.tokenId, amount * this.tokenDec(args.tokenId), slot, refId, allFunds)
+        data: depositData(7, 0, allFunds, args.tokenId, amount * this.tokenDec(args.tokenId), slot, refId)
       };
     }
   }

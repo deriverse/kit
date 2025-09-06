@@ -29,6 +29,8 @@ export enum LogType {
   perpMassCancel = 26,
   perpSocLoss = 27,
   perpChangeLeverage = 28,
+  buyMarketSeat = 29,
+  sellMarketSeat = 30,
 }
 
 export class PerpChangeLeverageReportModel {
@@ -220,6 +222,65 @@ export class PerpDepositReportModel {
     result.instrId = autoBuffer.readU32();
     result.time = autoBuffer.readU32();
     result.amount = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class BuyMarketSeatReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 2 * 8; // 32 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_INSTR_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_AMOUNT = 16;
+  static readonly OFFSET_SEAT_PRICE = 24;
+
+  tag: number;
+  clientId: number;
+  instrId: number;
+  time: number;
+  amount: number;
+  seatPrice: number;
+  static fromBuffer(buffer: Buffer, offset?: number): BuyMarketSeatReportModel {
+    const result = new BuyMarketSeatReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.instrId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.amount = autoBuffer.readI64();
+    result.seatPrice = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class SellMarketSeatReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_INSTR_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_SEAT_PRICE = 16;
+
+  tag: number;
+  clientId: number;
+  instrId: number;
+  time: number;
+  seatPrice: number;
+  static fromBuffer(buffer: Buffer, offset?: number): SellMarketSeatReportModel {
+    const result = new SellMarketSeatReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.instrId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.seatPrice = autoBuffer.readI64();
     return result;
   }
 }

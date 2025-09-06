@@ -2367,6 +2367,7 @@ export class Engine {
             tag: AccountType.PERP_CLIENT_INFOS5
           }), role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2375,6 +2376,7 @@ export class Engine {
             tag: AccountType.PERP_CLIENT_ACCOUNTS
           }), role: AccountRole.WRITABLE
       },
+      */
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2399,6 +2401,7 @@ export class Engine {
             tag: AccountType.PERP_REBALANCE_TIME_TREE
           }), role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2407,6 +2410,7 @@ export class Engine {
             tag: AccountType.PERP_PRIORITY_TREE
           }), role: AccountRole.WRITABLE
       },
+      */
     ];
     const upgradeIx = {
       accounts: keys,
@@ -2801,6 +2805,7 @@ export class Engine {
             tag: AccountType.SPOT_CLIENT_INFOS2
           }), role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2809,6 +2814,7 @@ export class Engine {
             tag: AccountType.SPOT_CLIENT_ACCOUNTS
           }), role: AccountRole.WRITABLE
       },
+      */
       {
         address: await this.getInstrAccountByTag(
           {

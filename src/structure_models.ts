@@ -458,7 +458,7 @@ export class CandlesAccountHeaderModel {
 }
 
 export class InstrAccountHeaderModel {
-  static readonly LENGTH = 65 * 4 + 68 * 8 + 5 * 32; // 964 bytes
+  static readonly LENGTH = 64 * 4 + 68 * 8 + 5 * 32; // 960 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -470,11 +470,11 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PERP_MAPS_ADDRESS = 56;
   static readonly OFFSET_LUT_ADDRESS = 88;
   static readonly OFFSET_FEED_ID = 120;
-  static readonly OFFSET_CREATOR = 152;
-  static readonly OFFSET_DRV_COUNT = 184;
-  static readonly OFFSET_ASSET_TOKEN_DECS_COUNT = 188;
-  static readonly OFFSET_CRNCY_TOKEN_DECS_COUNT = 192;
-  static readonly OFFSET_SLOT = 196;
+  static readonly OFFSET_DRV_COUNT = 152;
+  static readonly OFFSET_ASSET_TOKEN_DECS_COUNT = 156;
+  static readonly OFFSET_CRNCY_TOKEN_DECS_COUNT = 160;
+  static readonly OFFSET_SLOT = 164;
+  static readonly OFFSET_CREATOR = 168;
   static readonly OFFSET_LAST_TIME = 200;
   static readonly OFFSET_DISTRIB_TIME = 204;
   static readonly OFFSET_BASE_CRNCY_INDEX = 208;
@@ -558,7 +558,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PERP_ASK_ORDERS_COUNT = 640;
   static readonly OFFSET_PERP_DAY_TRADES = 644;
   static readonly OFFSET_PERP_PREV_DAY_TRADES = 648;
-  static readonly OFFSET_RESERVED = 652;
+  static readonly OFFSET_CREATION_TIME = 652;
   static readonly OFFSET_PERP_ALLTIME_TRADES = 656;
   static readonly OFFSET_PERP_SPOT_PRICE_FOR_WITHDROWAL = 664;
   static readonly OFFSET_PERP_SOC_LOSS_LONG_RATE = 672;
@@ -586,18 +586,17 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_MAX_LEVERAGE = 848;
   static readonly OFFSET_DAY_VOLATILITY = 856;
   static readonly OFFSET_LIQUIDATION_THRESHOLD = 864;
-  static readonly OFFSET_RESERVED_VALUE1 = 872;
-  static readonly OFFSET_RESERVED_VALUE2 = 880;
-  static readonly OFFSET_RESERVED_VALUE3 = 888;
-  static readonly OFFSET_RESERVED_VALUE4 = 896;
-  static readonly OFFSET_RESERVED_VALUE5 = 904;
-  static readonly OFFSET_RESERVED_VALUE6 = 912;
-  static readonly OFFSET_RESERVED_VALUE7 = 920;
-  static readonly OFFSET_RESERVED_VALUE8 = 928;
-  static readonly OFFSET_RESERVED_VALUE9 = 936;
-  static readonly OFFSET_RESERVED_VALUE10 = 944;
-  static readonly OFFSET_CREATION_TIME = 952;
-  static readonly OFFSET_SEATS_RESERVE = 956;
+  static readonly OFFSET_SEATS_RESERVE = 872;
+  static readonly OFFSET_RESERVED_VALUE1 = 880;
+  static readonly OFFSET_RESERVED_VALUE2 = 888;
+  static readonly OFFSET_RESERVED_VALUE3 = 896;
+  static readonly OFFSET_RESERVED_VALUE4 = 904;
+  static readonly OFFSET_RESERVED_VALUE5 = 912;
+  static readonly OFFSET_RESERVED_VALUE6 = 920;
+  static readonly OFFSET_RESERVED_VALUE7 = 928;
+  static readonly OFFSET_RESERVED_VALUE8 = 936;
+  static readonly OFFSET_RESERVED_VALUE9 = 944;
+  static readonly OFFSET_RESERVED_VALUE10 = 952;
 
   tag: number;
   version: number;
@@ -609,11 +608,11 @@ export class InstrAccountHeaderModel {
   perpMapsAddress: Address<any>;
   lutAddress: Address<any>;
   feedId: Address<any>;
-  creator: Address<any>;
   drvCount: number;
   assetTokenDecsCount: number;
   crncyTokenDecsCount: number;
   slot: number;
+  creator: Address<any>;
   lastTime: number;
   distribTime: number;
   baseCrncyIndex: number;
@@ -697,7 +696,7 @@ export class InstrAccountHeaderModel {
   perpAskOrdersCount: number;
   perpDayTrades: number;
   perpPrevDayTrades: number;
-  reserved: number;
+  creationTime: number;
   perpAlltimeTrades: number;
   perpSpotPriceForWithdrowal: number;
   perpSocLossLongRate: number;
@@ -725,6 +724,7 @@ export class InstrAccountHeaderModel {
   maxLeverage: number;
   dayVolatility: number;
   liquidationThreshold: number;
+  seatsReserve: number;
   reservedValue1: number;
   reservedValue2: number;
   reservedValue3: number;
@@ -735,8 +735,6 @@ export class InstrAccountHeaderModel {
   reservedValue8: number;
   reservedValue9: number;
   reservedValue10: number;
-  creationTime: number;
-  seatsReserve: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrAccountHeaderModel {
     const result = new InstrAccountHeaderModel();
     let autoData = new AutoData(data, offset);
@@ -750,11 +748,11 @@ export class InstrAccountHeaderModel {
     result.perpMapsAddress = autoData.readAddress();
     result.lutAddress = autoData.readAddress();
     result.feedId = autoData.readAddress();
-    result.creator = autoData.readAddress();
     result.drvCount = autoData.readU32();
     result.assetTokenDecsCount = autoData.readU32();
     result.crncyTokenDecsCount = autoData.readU32();
     result.slot = autoData.readU32();
+    result.creator = autoData.readAddress();
     result.lastTime = autoData.readU32();
     result.distribTime = autoData.readU32();
     result.baseCrncyIndex = autoData.readU32();
@@ -838,7 +836,7 @@ export class InstrAccountHeaderModel {
     result.perpAskOrdersCount = autoData.readU32();
     result.perpDayTrades = autoData.readU32();
     result.perpPrevDayTrades = autoData.readU32();
-    result.reserved = autoData.readU32();
+    result.creationTime = autoData.readU32();
     result.perpAlltimeTrades = autoData.readI64();
     result.perpSpotPriceForWithdrowal = autoData.readI64();
     result.perpSocLossLongRate = autoData.readF64();
@@ -866,6 +864,7 @@ export class InstrAccountHeaderModel {
     result.maxLeverage = autoData.readF64();
     result.dayVolatility = autoData.readF64();
     result.liquidationThreshold = autoData.readF64();
+    result.seatsReserve = autoData.readI64();
     result.reservedValue1 = autoData.readI64();
     result.reservedValue2 = autoData.readI64();
     result.reservedValue3 = autoData.readI64();
@@ -876,8 +875,6 @@ export class InstrAccountHeaderModel {
     result.reservedValue8 = autoData.readI64();
     result.reservedValue9 = autoData.readI64();
     result.reservedValue10 = autoData.readI64();
-    result.creationTime = autoData.readU32();
-    result.seatsReserve = autoData.readI64();
     return result;
   }
 }

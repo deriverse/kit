@@ -253,8 +253,8 @@ export function setInstrOracleFeedData(tag: number, instrId: number, variance: n
   return buf;
 }
 
-export function setInstrReadyForPerpUpgradeData(tag: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function setInstrReadyForPerpUpgradeData(tag: number, instrId: number, variance: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);

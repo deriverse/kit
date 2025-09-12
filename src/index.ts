@@ -16,7 +16,8 @@ import {
   GetClientPerpOrdersInfoResponse, GetClientPerpOrdersArgs, GetClientPerpOrdersResponse, PerpDepositArgs,
   NewPerpOrderArgs, PerpQuotesReplaceArgs, PerpOrderCancelArgs, PerpMassCancelArgs, PerpForcedCloseArgs,
   CommunityData, LogMessage, PerpChangeLeverageArgs, PerpStatisticsResetArgs, EngineArgs,
-  NewInstrumentArgs
+  NewInstrumentArgs,
+  PerpBuySeatArgs
 } from './types';
 
 import {
@@ -28,17 +29,20 @@ import {
 } from "./structure_models";
  
 import {
+  buyMarketSeatData,
   depositData, newInstrumentData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData,
   perpForcedCloseData, perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData,
+  sellMarketSeatData,
   spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, upgradeToPerpData, withdrawData
 } from "./instruction_models";
 import { decode } from 'base64-arraybuffer';
 import {
+  BuyMarketSeatReportModel,
   DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel,
   FeesWithdrawReportModel, LogType, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel,
   PerpFillOrderReportModel, PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel,
   PerpOrderCancelReportModel, PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel,
-  PerpSocLossReportModel, PerpWithdrawReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel,
+  PerpSocLossReportModel, PerpWithdrawReportModel, SellMarketSeatReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel,
   SpotMassCancelReportModel, SpotNewOrderReportModel, SpotOrderCancelReportModel, SpotOrderRevokeReportModel,
   SpotPlaceMassCancelReportModel, SpotPlaceOrderReportModel, WithdrawReportModel
 } from "./logs_models";
@@ -333,6 +337,35 @@ export class Engine {
               if (instrInfo) {
                 crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
                 report.amount /= crncyTokenDec;
+              }
+            }
+            logs.push(report);
+          }
+          break;
+        }
+        case LogType.buyMarketSeat: {
+          if (buffer.length == BuyMarketSeatReportModel.LENGTH) {
+            let report = BuyMarketSeatReportModel.fromBuffer(buffer);
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.amount /= crncyTokenDec;
+                report.seatPrice /= crncyTokenDec;
+              }
+            }
+            logs.push(report);
+          }
+          break;
+        }
+        case LogType.sellMarketSeat: {
+          if (buffer.length == SellMarketSeatReportModel.LENGTH) {
+            let report = SellMarketSeatReportModel.fromBuffer(buffer);
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.seatPrice /= crncyTokenDec;
               }
             }
             logs.push(report);
@@ -2441,6 +2474,50 @@ export class Engine {
       accounts: keys,
       programAddress: this.programId,
       data: perpDepositData(11, args.instrId, args.amount * this.tokenDec(instr.header.crncyTokenId)),
+    };
+  }
+
+  /**
+   * Build instruction for perp buy seat in particular instrument
+   * @param args Order data
+   * @returns Transaction instruction
+   */
+  async perpBuySeatInstruction(args: PerpBuySeatArgs): Promise<any> {
+    if (!(await this.checkClient())) {
+      throw new Error("Client account not found");
+    }
+    const instr = this.instruments.get(args.instrId);
+    let keys = [
+      { address: this.signer, role: AccountRole.READONLY_SIGNER },
+      { address: this.rootAccount, role: AccountRole.READONLY },
+      { address: this.clientPrimaryAccount, role: AccountRole.WRITABLE },
+      ... await this.getPerpContext(instr.header),
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+    ];
+    return {
+      accounts: keys,
+      programAddress: this.programId,
+      data: buyMarketSeatData(47, args.instrId, args.amount * this.tokenDec(instr.header.crncyTokenId)),
+    };
+  }
+
+  async perpSellSeatInstruction(args: PerpBuySeatArgs): Promise<any> {
+    if (!(await this.checkClient())) {
+      throw new Error("Client account not found");
+    }
+    const instr = this.instruments.get(args.instrId);
+    let keys = [
+      { address: this.signer, role: AccountRole.READONLY_SIGNER },
+      { address: this.rootAccount, role: AccountRole.READONLY },
+      { address: this.clientPrimaryAccount, role: AccountRole.WRITABLE },
+      ... await this.getPerpContext(instr.header),
+      { address: await this.getAccountByTag(AccountType.COMMUNITY), role: AccountRole.READONLY },
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+    ];
+    return {
+      accounts: keys,
+      programAddress: this.programId,
+      data: sellMarketSeatData(48, args.instrId),
     };
   }
 

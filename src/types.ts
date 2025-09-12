@@ -5,11 +5,12 @@ import {
 } from "./structure_models";
  
 import {
+  BuyMarketSeatReportModel,
   DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel, FeesWithdrawReportModel,
   PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel, PerpFillOrderReportModel,
   PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel, PerpOrderCancelReportModel,
   PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel, PerpSocLossReportModel,
-  PerpWithdrawReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel, SpotMassCancelReportModel,
+  PerpWithdrawReportModel, SellMarketSeatReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel, SpotMassCancelReportModel,
   SpotNewOrderReportModel, SpotOrderCancelReportModel, SpotOrderRevokeReportModel, SpotPlaceMassCancelReportModel,
   SpotPlaceOrderReportModel, WithdrawReportModel
 } from "./logs_models";
@@ -604,6 +605,15 @@ export interface PerpDepositArgs {
   amount: number;
 }
 
+export interface PerpBuySeatArgs {
+  instrId: number;
+  amount: number;
+}
+
+export interface PerpSellSeatArgs {
+  instrId: number;
+}
+
 export interface NewPerpOrderArgs {
   instrId: number;
   ioc?: number;
@@ -648,5 +658,7 @@ export type LogMessage = DepositReportModel
   | PerpMassCancelReportModel
   | PerpFundingReportModel
   | PerpSocLossReportModel
-  | PerpChangeLeverageReportModel;
+  | PerpChangeLeverageReportModel
+  | BuyMarketSeatReportModel
+  | SellMarketSeatReportModel;
 

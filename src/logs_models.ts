@@ -31,6 +31,9 @@ export enum LogType {
   perpChangeLeverage = 28,
   buyMarketSeat = 29,
   sellMarketSeat = 30,
+  swapOrder = 31,
+  moveSpot = 32,
+  newPrivateClient = 33,
 }
 
 export class PerpChangeLeverageReportModel {
@@ -346,8 +349,8 @@ export class SpotlpTradeReportModel {
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_SIDE = 1;
-  static readonly OFFSET_TIME = 4;
-  static readonly OFFSET_CLIENT_ID = 8;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
   static readonly OFFSET_INSTR_ID = 12;
   static readonly OFFSET_ORDER_ID = 16;
   static readonly OFFSET_QTY = 24;
@@ -356,8 +359,8 @@ export class SpotlpTradeReportModel {
 
   tag: number;
   side: number;
-  time: number;
   clientId: number;
+  time: number;
   instrId: number;
   orderId: number;
   qty: number;
@@ -369,8 +372,8 @@ export class SpotlpTradeReportModel {
     result.tag = autoBuffer.readU8();
     result.side = autoBuffer.readU8();
     autoBuffer.readU16();
-    result.time = autoBuffer.readU32();
     result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
     result.instrId = autoBuffer.readU32();
     result.orderId = autoBuffer.readI64();
     result.qty = autoBuffer.readI64();
@@ -534,6 +537,43 @@ export class SpotPlaceOrderReportModel {
     result.price = autoBuffer.readI64();
     result.instrId = autoBuffer.readU32();
     result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class SwapOrderReportModel {
+  static readonly LENGTH = 4 * 1 + 3 * 4 + 3 * 8; // 40 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_SIDE = 1;
+  static readonly OFFSET_ORDER_TYPE = 2;
+  static readonly OFFSET_ORDER_ID = 8;
+  static readonly OFFSET_QTY = 16;
+  static readonly OFFSET_PRICE = 24;
+  static readonly OFFSET_TIME = 32;
+  static readonly OFFSET_INSTR_ID = 36;
+
+  tag: number;
+  side: number;
+  orderType: number;
+  orderId: number;
+  qty: number;
+  price: number;
+  time: number;
+  instrId: number;
+  static fromBuffer(buffer: Buffer, offset?: number): SwapOrderReportModel {
+    const result = new SwapOrderReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    result.side = autoBuffer.readU8();
+    result.orderType = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU32();
+    result.orderId = autoBuffer.readI64();
+    result.qty = autoBuffer.readI64();
+    result.price = autoBuffer.readI64();
+    result.time = autoBuffer.readU32();
+    result.instrId = autoBuffer.readU32();
     return result;
   }
 }
@@ -926,6 +966,37 @@ export class SpotOrderRevokeReportModel {
     autoBuffer.readU16();
     result.clientId = autoBuffer.readU32();
     result.orderId = autoBuffer.readI64();
+    result.qty = autoBuffer.readI64();
+    result.crncy = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class MoveSpotAvailFundsReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 2 * 8; // 32 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_INSTR_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_QTY = 16;
+  static readonly OFFSET_CRNCY = 24;
+
+  tag: number;
+  clientId: number;
+  instrId: number;
+  time: number;
+  qty: number;
+  crncy: number;
+  static fromBuffer(buffer: Buffer, offset?: number): MoveSpotAvailFundsReportModel {
+    const result = new MoveSpotAvailFundsReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.instrId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
     result.qty = autoBuffer.readI64();
     result.crncy = autoBuffer.readI64();
     return result;

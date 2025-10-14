@@ -10,10 +10,9 @@ export enum OrderType {
 
 export enum AccountType {
   clientCommunity = 35,
-  clientDrv = 32,
   clientPrimary = 31,
   community = 34,
-  pdf = 33,
+  /*
   futuresAskOrders = 29,
   futuresAsksTree = 27,
   futuresBidOrders = 28,
@@ -23,10 +22,10 @@ export enum AccountType {
   futuresClientInfos2 = 25,
   futuresLines = 30,
   futuresMaps = 22,
+  */
   holder = 1,
   root = 2,
   instr = 7,
-  instrTrace = 8,
   spot15MCandles = 20,
   spot1MCandles = 19,
   spotAskOrders = 17,
@@ -316,23 +315,6 @@ export class HolderAccountHeaderModel {
   }
 }
 
-export class PdfAccountHeaderModel {
-  static readonly LENGTH = 2 * 4; // 8 bytes
-
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_VERSION = 4;
-
-  tag: number;
-  version: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): PdfAccountHeaderModel {
-    const result = new PdfAccountHeaderModel();
-    let autoData = new AutoData(data, offset);
-    result.tag = autoData.readU32();
-    result.version = autoData.readU32();
-    return result;
-  }
-}
-
 export class OperatorModel {
   static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
 
@@ -366,29 +348,6 @@ export class LineQuotesModel {
     let autoData = new AutoData(data, offset);
     result.px = autoData.readI64();
     result.qty = autoData.readI64();
-    return result;
-  }
-}
-
-export class TraceAccountHeaderModel {
-  static readonly LENGTH = 4 * 4; // 16 bytes
-
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_VERSION = 4;
-  static readonly OFFSET_ID = 8;
-  static readonly OFFSET_COUNT = 12;
-
-  tag: number;
-  version: number;
-  id: number;
-  count: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): TraceAccountHeaderModel {
-    const result = new TraceAccountHeaderModel();
-    let autoData = new AutoData(data, offset);
-    result.tag = autoData.readU32();
-    result.version = autoData.readU32();
-    result.id = autoData.readU32();
-    result.count = autoData.readU32();
     return result;
   }
 }
@@ -458,7 +417,7 @@ export class CandlesAccountHeaderModel {
 }
 
 export class InstrAccountHeaderModel {
-  static readonly LENGTH = 64 * 4 + 68 * 8 + 5 * 32; // 960 bytes
+  static readonly LENGTH = 62 * 4 + 70 * 8 + 5 * 32; // 968 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -466,137 +425,137 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_ASSET_TOKEN_ID = 12;
   static readonly OFFSET_CRNCY_TOKEN_ID = 16;
   static readonly OFFSET_MASK = 20;
-  static readonly OFFSET_MAPS_ADDRESS = 24;
-  static readonly OFFSET_PERP_MAPS_ADDRESS = 56;
-  static readonly OFFSET_LUT_ADDRESS = 88;
-  static readonly OFFSET_FEED_ID = 120;
-  static readonly OFFSET_DRV_COUNT = 152;
-  static readonly OFFSET_ASSET_TOKEN_DECS_COUNT = 156;
-  static readonly OFFSET_CRNCY_TOKEN_DECS_COUNT = 160;
-  static readonly OFFSET_SLOT = 164;
-  static readonly OFFSET_CREATOR = 168;
-  static readonly OFFSET_LAST_TIME = 200;
-  static readonly OFFSET_DISTRIB_TIME = 204;
-  static readonly OFFSET_BASE_CRNCY_INDEX = 208;
-  static readonly OFFSET_INSTANCE_COUNTER = 212;
-  static readonly OFFSET_VARIANCE_COUNTER = 216;
-  static readonly OFFSET_BIDS_TREE_NODES_COUNT = 220;
-  static readonly OFFSET_BIDS_TREE_LINES_ENTRY = 224;
-  static readonly OFFSET_BIDS_TREE_ORDERS_ENTRY = 228;
-  static readonly OFFSET_ASKS_TREE_NODES_COUNT = 232;
-  static readonly OFFSET_ASKS_TREE_LINES_ENTRY = 236;
-  static readonly OFFSET_ASKS_TREE_ORDERS_ENTRY = 240;
-  static readonly OFFSET_BID_LINES_BEGIN = 244;
-  static readonly OFFSET_BID_LINES_END = 248;
-  static readonly OFFSET_BID_LINES_COUNT = 252;
-  static readonly OFFSET_ASK_LINES_BEGIN = 256;
-  static readonly OFFSET_ASK_LINES_END = 260;
-  static readonly OFFSET_ASK_LINES_COUNT = 264;
-  static readonly OFFSET_BID_ORDERS_COUNT = 268;
-  static readonly OFFSET_ASK_ORDERS_COUNT = 272;
-  static readonly OFFSET_FIXING_TIME = 276;
-  static readonly OFFSET_FIXING_CRNCY_TOKENS = 280;
-  static readonly OFFSET_FIXING_ASSET_TOKENS = 288;
-  static readonly OFFSET_COUNTER = 296;
-  static readonly OFFSET_ASSET_TOKENS = 304;
-  static readonly OFFSET_CRNCY_TOKENS = 312;
-  static readonly OFFSET_POOL_FEES = 320;
-  static readonly OFFSET_PS = 328;
-  static readonly OFFSET_PROTOCOL_FEES = 336;
-  static readonly OFFSET_HITS_COUNTER = 344;
-  static readonly OFFSET_LAST_ASSET_TOKENS = 352;
-  static readonly OFFSET_LAST_CRNCY_TOKENS = 360;
-  static readonly OFFSET_PERP_UNDERLYING_PX = 368;
-  static readonly OFFSET_LAST_PX = 376;
-  static readonly OFFSET_BEST_BID = 384;
-  static readonly OFFSET_BEST_ASK = 392;
-  static readonly OFFSET_FIXING_PX = 400;
-  static readonly OFFSET_VARIANCE = 408;
-  static readonly OFFSET_AVG_SPREAD = 416;
-  static readonly OFFSET_LAST_SPREAD = 424;
-  static readonly OFFSET_LAST_SPREAD_TIME = 432;
-  static readonly OFFSET_TOTAL_SPREAD_PERIOD = 436;
-  static readonly OFFSET_LAST_CLOSE = 440;
-  static readonly OFFSET_DAY_ASSET_TOKENS = 448;
-  static readonly OFFSET_DAY_CRNCY_TOKENS = 456;
-  static readonly OFFSET_DAY_LOW = 464;
-  static readonly OFFSET_DAY_HIGH = 472;
-  static readonly OFFSET_PREV_DAY_ASSET_TOKENS = 480;
-  static readonly OFFSET_PREV_DAY_CRNCY_TOKENS = 488;
-  static readonly OFFSET_ALLTIME_ASSET_TOKENS = 496;
-  static readonly OFFSET_ALLTIME_CRNCY_TOKENS = 504;
-  static readonly OFFSET_DAY_TRADES = 512;
-  static readonly OFFSET_PREV_DAY_TRADES = 516;
-  static readonly OFFSET_LP_DAY_TRADES = 520;
-  static readonly OFFSET_LP_PREV_DAY_TRADES = 524;
-  static readonly OFFSET_ALLTIME_TRADES = 528;
-  static readonly OFFSET_DEC_FACTOR = 536;
-  static readonly OFFSET_PERP_CLIENTS_COUNT = 544;
-  static readonly OFFSET_PERP_SLOT = 548;
-  static readonly OFFSET_PERP_TIME = 552;
-  static readonly OFFSET_PERP_FUNDING_RATE_SLOT = 556;
-  static readonly OFFSET_PERP_FUNDING_RATE_TIME = 560;
-  static readonly OFFSET_PERP_LONG_PX_TREE_NODES_COUNT = 564;
-  static readonly OFFSET_PERP_LONG_PX_TREE_ENTRY = 568;
-  static readonly OFFSET_PERP_SHORT_PX_TREE_NODES_COUNT = 572;
-  static readonly OFFSET_PERP_SHORT_PX_TREE_ENTRY = 576;
-  static readonly OFFSET_PERP_REBALANCE_TIME_TREE_NODES_COUNT = 580;
-  static readonly OFFSET_PERP_REBALANCE_TIME_TREE_ENTRY = 584;
-  static readonly OFFSET_PERP_BIDS_TREE_NODES_COUNT = 588;
-  static readonly OFFSET_PERP_BIDS_TREE_LINES_ENTRY = 592;
-  static readonly OFFSET_PERP_BIDS_TREE_ORDERS_ENTRY = 596;
-  static readonly OFFSET_PERP_ASKS_TREE_NODES_COUNT = 600;
-  static readonly OFFSET_PERP_ASKS_TREE_LINES_ENTRY = 604;
-  static readonly OFFSET_PERP_ASKS_TREE_ORDERS_ENTRY = 608;
-  static readonly OFFSET_PERP_BID_LINES_BEGIN = 612;
-  static readonly OFFSET_PERP_BID_LINES_END = 616;
-  static readonly OFFSET_PERP_BID_LINES_COUNT = 620;
-  static readonly OFFSET_PERP_ASK_LINES_BEGIN = 624;
-  static readonly OFFSET_PERP_ASK_LINES_END = 628;
-  static readonly OFFSET_PERP_ASK_LINES_COUNT = 632;
-  static readonly OFFSET_PERP_BID_ORDERS_COUNT = 636;
-  static readonly OFFSET_PERP_ASK_ORDERS_COUNT = 640;
-  static readonly OFFSET_PERP_DAY_TRADES = 644;
-  static readonly OFFSET_PERP_PREV_DAY_TRADES = 648;
-  static readonly OFFSET_CREATION_TIME = 652;
-  static readonly OFFSET_PERP_ALLTIME_TRADES = 656;
-  static readonly OFFSET_PERP_SPOT_PRICE_FOR_WITHDROWAL = 664;
-  static readonly OFFSET_PERP_SOC_LOSS_LONG_RATE = 672;
-  static readonly OFFSET_PERP_SOC_LOSS_SHORT_RATE = 680;
-  static readonly OFFSET_PERP_OPEN_INT = 688;
-  static readonly OFFSET_PERP_PRICE_DELTA = 696;
-  static readonly OFFSET_PERP_FUNDING_RATE = 704;
-  static readonly OFFSET_PERP_FUNDING_FUNDS = 712;
-  static readonly OFFSET_PERP_SOC_LOSS_FUNDS = 720;
-  static readonly OFFSET_PERP_INSURANCE_FUND = 728;
-  static readonly OFFSET_PERP_LAST_CLOSE = 736;
-  static readonly OFFSET_PERP_LAST_ASSET_TOKENS = 744;
-  static readonly OFFSET_PERP_LAST_CRNCY_TOKENS = 752;
-  static readonly OFFSET_PERP_LAST_PX = 760;
-  static readonly OFFSET_PERP_BEST_BID = 768;
-  static readonly OFFSET_PERP_BEST_ASK = 776;
-  static readonly OFFSET_PERP_DAY_ASSET_TOKENS = 784;
-  static readonly OFFSET_PERP_DAY_CRNCY_TOKENS = 792;
-  static readonly OFFSET_PERP_DAY_LOW = 800;
-  static readonly OFFSET_PERP_DAY_HIGH = 808;
-  static readonly OFFSET_PERP_PREV_DAY_ASSET_TOKENS = 816;
-  static readonly OFFSET_PERP_PREV_DAY_CRNCY_TOKENS = 824;
-  static readonly OFFSET_PERP_ALLTIME_ASSET_TOKENS = 832;
-  static readonly OFFSET_PERP_ALLTIME_CRNCY_TOKENS = 840;
-  static readonly OFFSET_MAX_LEVERAGE = 848;
-  static readonly OFFSET_DAY_VOLATILITY = 856;
-  static readonly OFFSET_LIQUIDATION_THRESHOLD = 864;
-  static readonly OFFSET_SEATS_RESERVE = 872;
-  static readonly OFFSET_RESERVED_VALUE1 = 880;
-  static readonly OFFSET_RESERVED_VALUE2 = 888;
-  static readonly OFFSET_RESERVED_VALUE3 = 896;
-  static readonly OFFSET_RESERVED_VALUE4 = 904;
-  static readonly OFFSET_RESERVED_VALUE5 = 912;
-  static readonly OFFSET_RESERVED_VALUE6 = 920;
-  static readonly OFFSET_RESERVED_VALUE7 = 928;
-  static readonly OFFSET_RESERVED_VALUE8 = 936;
-  static readonly OFFSET_RESERVED_VALUE9 = 944;
-  static readonly OFFSET_RESERVED_VALUE10 = 952;
+  static readonly OFFSET_ASSET_TOKENS = 24;
+  static readonly OFFSET_CRNCY_TOKENS = 32;
+  static readonly OFFSET_PS = 40;
+  static readonly OFFSET_POOL_FEES = 48;
+  static readonly OFFSET_LAST_PX = 56;
+  static readonly OFFSET_LAST_CLOSE = 64;
+  static readonly OFFSET_ALLTIME_TRADES = 72;
+  static readonly OFFSET_PREV_DAY_TRADES = 80;
+  static readonly OFFSET_DAY_VOLATILITY = 88;
+  static readonly OFFSET_PERP_LAST_PX = 96;
+  static readonly OFFSET_PERP_LAST_CLOSE = 104;
+  static readonly OFFSET_PERP_ALLTIME_TRADES = 112;
+  static readonly OFFSET_PERP_PREV_DAY_TRADES = 120;
+  static readonly OFFSET_PERP_OPEN_INT = 128;
+  static readonly OFFSET_MAPS_ADDRESS = 136;
+  static readonly OFFSET_PERP_MAPS_ADDRESS = 168;
+  static readonly OFFSET_LUT_ADDRESS = 200;
+  static readonly OFFSET_FEED_ID = 232;
+  static readonly OFFSET_DRV_COUNT = 264;
+  static readonly OFFSET_ASSET_TOKEN_DECS_COUNT = 268;
+  static readonly OFFSET_CRNCY_TOKEN_DECS_COUNT = 272;
+  static readonly OFFSET_SLOT = 276;
+  static readonly OFFSET_CREATOR = 280;
+  static readonly OFFSET_LAST_TIME = 312;
+  static readonly OFFSET_DISTRIB_TIME = 316;
+  static readonly OFFSET_BASE_CRNCY_INDEX = 320;
+  static readonly OFFSET_INSTANCE_COUNTER = 324;
+  static readonly OFFSET_VARIANCE_COUNTER = 328;
+  static readonly OFFSET_BIDS_TREE_NODES_COUNT = 332;
+  static readonly OFFSET_BIDS_TREE_LINES_ENTRY = 336;
+  static readonly OFFSET_BIDS_TREE_ORDERS_ENTRY = 340;
+  static readonly OFFSET_ASKS_TREE_NODES_COUNT = 344;
+  static readonly OFFSET_ASKS_TREE_LINES_ENTRY = 348;
+  static readonly OFFSET_ASKS_TREE_ORDERS_ENTRY = 352;
+  static readonly OFFSET_BID_LINES_BEGIN = 356;
+  static readonly OFFSET_BID_LINES_END = 360;
+  static readonly OFFSET_BID_LINES_COUNT = 364;
+  static readonly OFFSET_ASK_LINES_BEGIN = 368;
+  static readonly OFFSET_ASK_LINES_END = 372;
+  static readonly OFFSET_ASK_LINES_COUNT = 376;
+  static readonly OFFSET_BID_ORDERS_COUNT = 380;
+  static readonly OFFSET_ASK_ORDERS_COUNT = 384;
+  static readonly OFFSET_FIXING_TIME = 388;
+  static readonly OFFSET_FIXING_CRNCY_TOKENS = 392;
+  static readonly OFFSET_FIXING_ASSET_TOKENS = 400;
+  static readonly OFFSET_COUNTER = 408;
+  static readonly OFFSET_PROTOCOL_FEES = 416;
+  static readonly OFFSET_HITS_COUNTER = 424;
+  static readonly OFFSET_LAST_ASSET_TOKENS = 432;
+  static readonly OFFSET_LAST_CRNCY_TOKENS = 440;
+  static readonly OFFSET_PERP_UNDERLYING_PX = 448;
+  static readonly OFFSET_BEST_BID = 456;
+  static readonly OFFSET_BEST_ASK = 464;
+  static readonly OFFSET_FIXING_PX = 472;
+  static readonly OFFSET_VARIANCE = 480;
+  static readonly OFFSET_AVG_SPREAD = 488;
+  static readonly OFFSET_LAST_SPREAD = 496;
+  static readonly OFFSET_LAST_SPREAD_TIME = 504;
+  static readonly OFFSET_TOTAL_SPREAD_PERIOD = 508;
+  static readonly OFFSET_DAY_ASSET_TOKENS = 512;
+  static readonly OFFSET_DAY_CRNCY_TOKENS = 520;
+  static readonly OFFSET_DAY_LOW = 528;
+  static readonly OFFSET_DAY_HIGH = 536;
+  static readonly OFFSET_PREV_DAY_ASSET_TOKENS = 544;
+  static readonly OFFSET_PREV_DAY_CRNCY_TOKENS = 552;
+  static readonly OFFSET_ALLTIME_ASSET_TOKENS = 560;
+  static readonly OFFSET_ALLTIME_CRNCY_TOKENS = 568;
+  static readonly OFFSET_DAY_TRADES = 576;
+  static readonly OFFSET_LP_DAY_TRADES = 580;
+  static readonly OFFSET_LP_PREV_DAY_TRADES = 584;
+  static readonly OFFSET_CREATION_TIME = 588;
+  static readonly OFFSET_DEC_FACTOR = 592;
+  static readonly OFFSET_PERP_CLIENTS_COUNT = 600;
+  static readonly OFFSET_PERP_SLOT = 604;
+  static readonly OFFSET_PERP_TIME = 608;
+  static readonly OFFSET_PERP_FUNDING_RATE_SLOT = 612;
+  static readonly OFFSET_PERP_FUNDING_RATE_TIME = 616;
+  static readonly OFFSET_PERP_LONG_PX_TREE_NODES_COUNT = 620;
+  static readonly OFFSET_PERP_LONG_PX_TREE_ENTRY = 624;
+  static readonly OFFSET_PERP_SHORT_PX_TREE_NODES_COUNT = 628;
+  static readonly OFFSET_PERP_SHORT_PX_TREE_ENTRY = 632;
+  static readonly OFFSET_PERP_REBALANCE_TIME_TREE_NODES_COUNT = 636;
+  static readonly OFFSET_PERP_REBALANCE_TIME_TREE_ENTRY = 640;
+  static readonly OFFSET_PERP_BIDS_TREE_NODES_COUNT = 644;
+  static readonly OFFSET_PERP_BIDS_TREE_LINES_ENTRY = 648;
+  static readonly OFFSET_PERP_BIDS_TREE_ORDERS_ENTRY = 652;
+  static readonly OFFSET_PERP_ASKS_TREE_NODES_COUNT = 656;
+  static readonly OFFSET_PERP_ASKS_TREE_LINES_ENTRY = 660;
+  static readonly OFFSET_PERP_ASKS_TREE_ORDERS_ENTRY = 664;
+  static readonly OFFSET_PERP_BID_LINES_BEGIN = 668;
+  static readonly OFFSET_PERP_BID_LINES_END = 672;
+  static readonly OFFSET_PERP_BID_LINES_COUNT = 676;
+  static readonly OFFSET_PERP_ASK_LINES_BEGIN = 680;
+  static readonly OFFSET_PERP_ASK_LINES_END = 684;
+  static readonly OFFSET_PERP_ASK_LINES_COUNT = 688;
+  static readonly OFFSET_PERP_BID_ORDERS_COUNT = 692;
+  static readonly OFFSET_PERP_ASK_ORDERS_COUNT = 696;
+  static readonly OFFSET_PERP_DAY_TRADES = 700;
+  static readonly OFFSET_PERP_SPOT_PRICE_FOR_WITHDROWAL = 704;
+  static readonly OFFSET_PERP_SOC_LOSS_LONG_RATE = 712;
+  static readonly OFFSET_PERP_SOC_LOSS_SHORT_RATE = 720;
+  static readonly OFFSET_PERP_PRICE_DELTA = 728;
+  static readonly OFFSET_PERP_FUNDING_RATE = 736;
+  static readonly OFFSET_PERP_FUNDING_FUNDS = 744;
+  static readonly OFFSET_PERP_SOC_LOSS_FUNDS = 752;
+  static readonly OFFSET_PERP_INSURANCE_FUND = 760;
+  static readonly OFFSET_PERP_LAST_ASSET_TOKENS = 768;
+  static readonly OFFSET_PERP_LAST_CRNCY_TOKENS = 776;
+  static readonly OFFSET_PERP_BEST_BID = 784;
+  static readonly OFFSET_PERP_BEST_ASK = 792;
+  static readonly OFFSET_PERP_DAY_ASSET_TOKENS = 800;
+  static readonly OFFSET_PERP_DAY_CRNCY_TOKENS = 808;
+  static readonly OFFSET_PERP_DAY_LOW = 816;
+  static readonly OFFSET_PERP_DAY_HIGH = 824;
+  static readonly OFFSET_PERP_PREV_DAY_ASSET_TOKENS = 832;
+  static readonly OFFSET_PERP_PREV_DAY_CRNCY_TOKENS = 840;
+  static readonly OFFSET_PERP_ALLTIME_ASSET_TOKENS = 848;
+  static readonly OFFSET_PERP_ALLTIME_CRNCY_TOKENS = 856;
+  static readonly OFFSET_MAX_LEVERAGE = 864;
+  static readonly OFFSET_LIQUIDATION_THRESHOLD = 872;
+  static readonly OFFSET_SEATS_RESERVE = 880;
+  static readonly OFFSET_RESERVED_VALUE1 = 888;
+  static readonly OFFSET_RESERVED_VALUE2 = 896;
+  static readonly OFFSET_RESERVED_VALUE3 = 904;
+  static readonly OFFSET_RESERVED_VALUE4 = 912;
+  static readonly OFFSET_RESERVED_VALUE5 = 920;
+  static readonly OFFSET_RESERVED_VALUE6 = 928;
+  static readonly OFFSET_RESERVED_VALUE7 = 936;
+  static readonly OFFSET_RESERVED_VALUE8 = 944;
+  static readonly OFFSET_RESERVED_VALUE9 = 952;
+  static readonly OFFSET_RESERVED_VALUE10 = 960;
 
   tag: number;
   version: number;
@@ -604,6 +563,20 @@ export class InstrAccountHeaderModel {
   assetTokenId: number;
   crncyTokenId: number;
   mask: number;
+  assetTokens: number;
+  crncyTokens: number;
+  ps: number;
+  poolFees: number;
+  lastPx: number;
+  lastClose: number;
+  alltimeTrades: number;
+  prevDayTrades: number;
+  dayVolatility: number;
+  perpLastPx: number;
+  perpLastClose: number;
+  perpAlltimeTrades: number;
+  perpPrevDayTrades: number;
+  perpOpenInt: number;
   mapsAddress: Address<any>;
   perpMapsAddress: Address<any>;
   lutAddress: Address<any>;
@@ -636,16 +609,11 @@ export class InstrAccountHeaderModel {
   fixingCrncyTokens: number;
   fixingAssetTokens: number;
   counter: number;
-  assetTokens: number;
-  crncyTokens: number;
-  poolFees: number;
-  ps: number;
   protocolFees: number;
   hitsCounter: number;
   lastAssetTokens: number;
   lastCrncyTokens: number;
   perpUnderlyingPx: number;
-  lastPx: number;
   bestBid: number;
   bestAsk: number;
   fixingPx: number;
@@ -654,7 +622,6 @@ export class InstrAccountHeaderModel {
   lastSpread: number;
   lastSpreadTime: number;
   totalSpreadPeriod: number;
-  lastClose: number;
   dayAssetTokens: number;
   dayCrncyTokens: number;
   dayLow: number;
@@ -664,10 +631,9 @@ export class InstrAccountHeaderModel {
   alltimeAssetTokens: number;
   alltimeCrncyTokens: number;
   dayTrades: number;
-  prevDayTrades: number;
   lpDayTrades: number;
   lpPrevDayTrades: number;
-  alltimeTrades: number;
+  creationTime: number;
   decFactor: number;
   perpClientsCount: number;
   perpSlot: number;
@@ -695,22 +661,16 @@ export class InstrAccountHeaderModel {
   perpBidOrdersCount: number;
   perpAskOrdersCount: number;
   perpDayTrades: number;
-  perpPrevDayTrades: number;
-  creationTime: number;
-  perpAlltimeTrades: number;
   perpSpotPriceForWithdrowal: number;
   perpSocLossLongRate: number;
   perpSocLossShortRate: number;
-  perpOpenInt: number;
   perpPriceDelta: number;
   perpFundingRate: number;
   perpFundingFunds: number;
   perpSocLossFunds: number;
   perpInsuranceFund: number;
-  perpLastClose: number;
   perpLastAssetTokens: number;
   perpLastCrncyTokens: number;
-  perpLastPx: number;
   perpBestBid: number;
   perpBestAsk: number;
   perpDayAssetTokens: number;
@@ -722,7 +682,6 @@ export class InstrAccountHeaderModel {
   perpAlltimeAssetTokens: number;
   perpAlltimeCrncyTokens: number;
   maxLeverage: number;
-  dayVolatility: number;
   liquidationThreshold: number;
   seatsReserve: number;
   reservedValue1: number;
@@ -744,6 +703,20 @@ export class InstrAccountHeaderModel {
     result.assetTokenId = autoData.readU32();
     result.crncyTokenId = autoData.readU32();
     result.mask = autoData.readU32();
+    result.assetTokens = autoData.readI64();
+    result.crncyTokens = autoData.readI64();
+    result.ps = autoData.readI64();
+    result.poolFees = autoData.readI64();
+    result.lastPx = autoData.readI64();
+    result.lastClose = autoData.readI64();
+    result.alltimeTrades = autoData.readI64();
+    result.prevDayTrades = autoData.readI64();
+    result.dayVolatility = autoData.readF64();
+    result.perpLastPx = autoData.readI64();
+    result.perpLastClose = autoData.readI64();
+    result.perpAlltimeTrades = autoData.readI64();
+    result.perpPrevDayTrades = autoData.readI64();
+    result.perpOpenInt = autoData.readI64();
     result.mapsAddress = autoData.readAddress();
     result.perpMapsAddress = autoData.readAddress();
     result.lutAddress = autoData.readAddress();
@@ -776,16 +749,11 @@ export class InstrAccountHeaderModel {
     result.fixingCrncyTokens = autoData.readI64();
     result.fixingAssetTokens = autoData.readI64();
     result.counter = autoData.readI64();
-    result.assetTokens = autoData.readI64();
-    result.crncyTokens = autoData.readI64();
-    result.poolFees = autoData.readI64();
-    result.ps = autoData.readI64();
     result.protocolFees = autoData.readI64();
     result.hitsCounter = autoData.readI64();
     result.lastAssetTokens = autoData.readI64();
     result.lastCrncyTokens = autoData.readI64();
     result.perpUnderlyingPx = autoData.readI64();
-    result.lastPx = autoData.readI64();
     result.bestBid = autoData.readI64();
     result.bestAsk = autoData.readI64();
     result.fixingPx = autoData.readI64();
@@ -794,7 +762,6 @@ export class InstrAccountHeaderModel {
     result.lastSpread = autoData.readF64();
     result.lastSpreadTime = autoData.readU32();
     result.totalSpreadPeriod = autoData.readU32();
-    result.lastClose = autoData.readI64();
     result.dayAssetTokens = autoData.readI64();
     result.dayCrncyTokens = autoData.readI64();
     result.dayLow = autoData.readI64();
@@ -804,10 +771,9 @@ export class InstrAccountHeaderModel {
     result.alltimeAssetTokens = autoData.readF64();
     result.alltimeCrncyTokens = autoData.readF64();
     result.dayTrades = autoData.readU32();
-    result.prevDayTrades = autoData.readU32();
     result.lpDayTrades = autoData.readU32();
     result.lpPrevDayTrades = autoData.readU32();
-    result.alltimeTrades = autoData.readI64();
+    result.creationTime = autoData.readU32();
     result.decFactor = autoData.readI64();
     result.perpClientsCount = autoData.readU32();
     result.perpSlot = autoData.readU32();
@@ -835,22 +801,16 @@ export class InstrAccountHeaderModel {
     result.perpBidOrdersCount = autoData.readU32();
     result.perpAskOrdersCount = autoData.readU32();
     result.perpDayTrades = autoData.readU32();
-    result.perpPrevDayTrades = autoData.readU32();
-    result.creationTime = autoData.readU32();
-    result.perpAlltimeTrades = autoData.readI64();
     result.perpSpotPriceForWithdrowal = autoData.readI64();
     result.perpSocLossLongRate = autoData.readF64();
     result.perpSocLossShortRate = autoData.readF64();
-    result.perpOpenInt = autoData.readI64();
     result.perpPriceDelta = autoData.readF64();
     result.perpFundingRate = autoData.readF64();
     result.perpFundingFunds = autoData.readI64();
     result.perpSocLossFunds = autoData.readI64();
     result.perpInsuranceFund = autoData.readI64();
-    result.perpLastClose = autoData.readI64();
     result.perpLastAssetTokens = autoData.readI64();
     result.perpLastCrncyTokens = autoData.readI64();
-    result.perpLastPx = autoData.readI64();
     result.perpBestBid = autoData.readI64();
     result.perpBestAsk = autoData.readI64();
     result.perpDayAssetTokens = autoData.readI64();
@@ -862,7 +822,6 @@ export class InstrAccountHeaderModel {
     result.perpAlltimeAssetTokens = autoData.readF64();
     result.perpAlltimeCrncyTokens = autoData.readF64();
     result.maxLeverage = autoData.readF64();
-    result.dayVolatility = autoData.readF64();
     result.liquidationThreshold = autoData.readF64();
     result.seatsReserve = autoData.readI64();
     result.reservedValue1 = autoData.readI64();
@@ -880,31 +839,29 @@ export class InstrAccountHeaderModel {
 }
 
 export class RootStateModel {
-  static readonly LENGTH = 8 * 4 + 2 * 8 + 6 * 32; // 240 bytes
+  static readonly LENGTH = 10 * 4 + 2 * 8 + 4 * 32; // 184 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
   static readonly OFFSET_OPERATOR_ADDRESS = 8;
   static readonly OFFSET_HOLDER_ADDRESS = 40;
-  static readonly OFFSET_COMMUNITY_ADDRESS = 72;
-  static readonly OFFSET_PDF_ADDRESS = 104;
-  static readonly OFFSET_DRVS_MINT_ADDRESS = 136;
-  static readonly OFFSET_LUT_ADDRESS = 168;
-  static readonly OFFSET_REF_PROGRAM_DURATION = 200;
-  static readonly OFFSET_REF_LINK_DURATION = 204;
-  static readonly OFFSET_REF_DISCOUNT = 208;
-  static readonly OFFSET_REF_RATIO = 216;
-  static readonly OFFSET_CLIENTS_COUNT = 224;
-  static readonly OFFSET_TOKENS_COUNT = 228;
-  static readonly OFFSET_INSTR_COUNT = 232;
-  static readonly OFFSET_REF_COUNTER = 236;
+  static readonly OFFSET_DRVS_MINT_ADDRESS = 72;
+  static readonly OFFSET_LUT_ADDRESS = 104;
+  static readonly OFFSET_REF_PROGRAM_DURATION = 136;
+  static readonly OFFSET_REF_LINK_DURATION = 140;
+  static readonly OFFSET_REF_DISCOUNT = 144;
+  static readonly OFFSET_REF_RATIO = 152;
+  static readonly OFFSET_CLIENTS_COUNT = 160;
+  static readonly OFFSET_TOKENS_COUNT = 164;
+  static readonly OFFSET_INSTR_COUNT = 168;
+  static readonly OFFSET_REF_COUNTER = 172;
+  static readonly OFFSET_MASK = 176;
+  static readonly OFFSET_RESERVED = 180;
 
   tag: number;
   version: number;
   operatorAddress: Address<any>;
   holderAddress: Address<any>;
-  communityAddress: Address<any>;
-  pdfAddress: Address<any>;
   drvsMintAddress: Address<any>;
   lutAddress: Address<any>;
   refProgramDuration: number;
@@ -915,6 +872,8 @@ export class RootStateModel {
   tokensCount: number;
   instrCount: number;
   refCounter: number;
+  mask: number;
+  reserved: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): RootStateModel {
     const result = new RootStateModel();
     let autoData = new AutoData(data, offset);
@@ -922,8 +881,6 @@ export class RootStateModel {
     result.version = autoData.readU32();
     result.operatorAddress = autoData.readAddress();
     result.holderAddress = autoData.readAddress();
-    result.communityAddress = autoData.readAddress();
-    result.pdfAddress = autoData.readAddress();
     result.drvsMintAddress = autoData.readAddress();
     result.lutAddress = autoData.readAddress();
     result.refProgramDuration = autoData.readU32();
@@ -934,6 +891,8 @@ export class RootStateModel {
     result.tokensCount = autoData.readU32();
     result.instrCount = autoData.readU32();
     result.refCounter = autoData.readU32();
+    result.mask = autoData.readU32();
+    result.reserved = autoData.readU32();
     return result;
   }
 }
@@ -1248,51 +1207,47 @@ export class PerpClientInfo5Model {
 }
 
 export class ClientPrimaryAccountHeaderModel {
-  static readonly LENGTH = 16 * 4 + 16 * 8 + 5 * 32; // 352 bytes
+  static readonly LENGTH = 16 * 4 + 16 * 8 + 3 * 32; // 288 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
   static readonly OFFSET_WALLET_ADDRESS = 8;
-  static readonly OFFSET_DRV_ADDRESS = 40;
-  static readonly OFFSET_COMMUNITY_ADDRESS = 72;
-  static readonly OFFSET_LUT_ADDRESS = 104;
-  static readonly OFFSET_REF_ADDRESS = 136;
-  static readonly OFFSET_FIRST_REF_LINK_DISCOUNT = 168;
-  static readonly OFFSET_SECOND_REF_LINK_DISCOUNT = 176;
-  static readonly OFFSET_FIRST_REF_LINK_RATIO = 184;
-  static readonly OFFSET_SECOND_REF_LINK_RATIO = 192;
-  static readonly OFFSET_REF_PROGRAM_DISCOUNT = 200;
-  static readonly OFFSET_REF_PROGRAM_RATIO = 208;
-  static readonly OFFSET_RESERVED = 216;
-  static readonly OFFSET_MASK = 224;
-  static readonly OFFSET_ID = 232;
-  static readonly OFFSET_REF_CLIENT_ID = 236;
-  static readonly OFFSET_REF_COUNTER = 240;
-  static readonly OFFSET_FIRST_REF_LINK_ID = 244;
-  static readonly OFFSET_SECOND_REF_LINK_ID = 248;
-  static readonly OFFSET_FIRST_REF_LINK_EXPIRATION = 252;
-  static readonly OFFSET_SECOND_REF_LINK_EXPIRATION = 256;
-  static readonly OFFSET_REF_PROGRAM_EXPIRATION = 260;
-  static readonly OFFSET_SPOT_TRADES = 264;
-  static readonly OFFSET_PERP_TRADES = 268;
-  static readonly OFFSET_LP_TRADES = 272;
-  static readonly OFFSET_POINTS = 276;
-  static readonly OFFSET_SLOT = 280;
-  static readonly OFFSET_ASSETS_COUNT = 284;
-  static readonly OFFSET_RESERVED_VALUE1 = 288;
-  static readonly OFFSET_RESERVED_VALUE2 = 296;
-  static readonly OFFSET_RESERVED_VALUE3 = 304;
-  static readonly OFFSET_RESERVED_VALUE4 = 312;
-  static readonly OFFSET_RESERVED_VALUE5 = 320;
-  static readonly OFFSET_RESERVED_VALUE6 = 328;
-  static readonly OFFSET_RESERVED_VALUE7 = 336;
-  static readonly OFFSET_RESERVED_VALUE8 = 344;
+  static readonly OFFSET_LUT_ADDRESS = 40;
+  static readonly OFFSET_REF_ADDRESS = 72;
+  static readonly OFFSET_FIRST_REF_LINK_DISCOUNT = 104;
+  static readonly OFFSET_SECOND_REF_LINK_DISCOUNT = 112;
+  static readonly OFFSET_FIRST_REF_LINK_RATIO = 120;
+  static readonly OFFSET_SECOND_REF_LINK_RATIO = 128;
+  static readonly OFFSET_REF_PROGRAM_DISCOUNT = 136;
+  static readonly OFFSET_REF_PROGRAM_RATIO = 144;
+  static readonly OFFSET_RESERVED = 152;
+  static readonly OFFSET_MASK = 160;
+  static readonly OFFSET_ID = 168;
+  static readonly OFFSET_REF_CLIENT_ID = 172;
+  static readonly OFFSET_REF_COUNTER = 176;
+  static readonly OFFSET_FIRST_REF_LINK_ID = 180;
+  static readonly OFFSET_SECOND_REF_LINK_ID = 184;
+  static readonly OFFSET_FIRST_REF_LINK_EXPIRATION = 188;
+  static readonly OFFSET_SECOND_REF_LINK_EXPIRATION = 192;
+  static readonly OFFSET_REF_PROGRAM_EXPIRATION = 196;
+  static readonly OFFSET_SPOT_TRADES = 200;
+  static readonly OFFSET_PERP_TRADES = 204;
+  static readonly OFFSET_LP_TRADES = 208;
+  static readonly OFFSET_POINTS = 212;
+  static readonly OFFSET_SLOT = 216;
+  static readonly OFFSET_ASSETS_COUNT = 220;
+  static readonly OFFSET_RESERVED_VALUE1 = 224;
+  static readonly OFFSET_RESERVED_VALUE2 = 232;
+  static readonly OFFSET_RESERVED_VALUE3 = 240;
+  static readonly OFFSET_RESERVED_VALUE4 = 248;
+  static readonly OFFSET_RESERVED_VALUE5 = 256;
+  static readonly OFFSET_RESERVED_VALUE6 = 264;
+  static readonly OFFSET_RESERVED_VALUE7 = 272;
+  static readonly OFFSET_RESERVED_VALUE8 = 280;
 
   tag: number;
   version: number;
   walletAddress: Address<any>;
-  drvAddress: Address<any>;
-  communityAddress: Address<any>;
   lutAddress: Address<any>;
   refAddress: Address<any>;
   firstRefLinkDiscount: number;
@@ -1331,8 +1286,6 @@ export class ClientPrimaryAccountHeaderModel {
     result.tag = autoData.readU32();
     result.version = autoData.readU32();
     result.walletAddress = autoData.readAddress();
-    result.drvAddress = autoData.readAddress();
-    result.communityAddress = autoData.readAddress();
     result.lutAddress = autoData.readAddress();
     result.refAddress = autoData.readAddress();
     result.firstRefLinkDiscount = autoData.readF64();
@@ -1365,35 +1318,6 @@ export class ClientPrimaryAccountHeaderModel {
     result.reservedValue6 = autoData.readI64();
     result.reservedValue7 = autoData.readI64();
     result.reservedValue8 = autoData.readI64();
-    return result;
-  }
-}
-
-export class ClientDrvAccountHeaderModel {
-  static readonly LENGTH = 6 * 4; // 24 bytes
-
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_VERSION = 4;
-  static readonly OFFSET_ID = 8;
-  static readonly OFFSET_COUNT = 12;
-  static readonly OFFSET_SLOT = 16;
-  static readonly OFFSET_RESERVED = 20;
-
-  tag: number;
-  version: number;
-  id: number;
-  count: number;
-  slot: number;
-  reserved: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientDrvAccountHeaderModel {
-    const result = new ClientDrvAccountHeaderModel();
-    let autoData = new AutoData(data, offset);
-    result.tag = autoData.readU32();
-    result.version = autoData.readU32();
-    result.id = autoData.readU32();
-    result.count = autoData.readU32();
-    result.slot = autoData.readU32();
-    result.reserved = autoData.readU32();
     return result;
   }
 }
@@ -1479,6 +1403,26 @@ export class PxOrdersModel {
     result.link = autoData.readU32();
     result.begin = autoData.readU32();
     result.end = autoData.readU32();
+    return result;
+  }
+}
+
+export class PrivateClientModel {
+  static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
+
+  static readonly OFFSET_CREATION_TIME = 0;
+  static readonly OFFSET_EXPIRATION_TIME = 4;
+  static readonly OFFSET_WALLET = 8;
+
+  creationTime: number;
+  expirationTime: number;
+  wallet: Address<any>;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): PrivateClientModel {
+    const result = new PrivateClientModel();
+    let autoData = new AutoData(data, offset);
+    result.creationTime = autoData.readU32();
+    result.expirationTime = autoData.readU32();
+    result.wallet = autoData.readAddress();
     return result;
   }
 }

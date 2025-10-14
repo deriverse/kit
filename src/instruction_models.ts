@@ -1,19 +1,17 @@
-export function newOperatorData(tag: number, version: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function newOperatorData(tag: number): Buffer {
+  let buf = Buffer.alloc(4);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(version, 4);
   return buf;
 }
 
-export function newRootAccountData(tag: number, version: number, lutSlot: number): Buffer {
-  let buf = Buffer.alloc(12);
+export function newRootAccountData(tag: number, privateMode: number, lutSlot: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
+  buf.writeUint8(privateMode, 1);
   buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(version, 4);
-  buf.writeUint32LE(lutSlot, 8);
+  buf.writeUint32LE(lutSlot, 4);
   return buf;
 }
 
@@ -244,8 +242,8 @@ export function upgradeToPerpData(tag: number, instrId: number): Buffer {
   return buf;
 }
 
-export function setInstrOracleFeedData(tag: number, instrId: number, variance: number): Buffer {
-  let buf = Buffer.alloc(16);
+export function setInstrOracleFeedData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
@@ -327,6 +325,15 @@ export function sellMarketSeatData(tag: number, instrId: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function newPrivateClient(tag: number, expirationTime: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(expirationTime, 4);
   return buf;
 }
 

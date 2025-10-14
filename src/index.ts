@@ -1172,7 +1172,7 @@ export class Engine {
     let buf = Buffer.alloc(8);
     buf.writeUint32LE(this.version, 0);
     buf.writeUint32LE(AccountType.CLIENT_PRIMARY, 4);
-    const clientPrimaryAccount = await this.findClientPrimaryAccount(signer)
+    const clientPrimaryAccount = await this.findClientPrimaryAccount(signer);
     let exists = false;
     try {
       const info = await this.rpc.getAccountInfo(clientPrimaryAccount,
@@ -1184,7 +1184,7 @@ export class Engine {
         const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(info.value.data);
         if (clientPrimaryAccountHeaderModel.walletAddress == signer) {
           this.clientPrimaryAccount = clientPrimaryAccount;
-          this.clientCommunityAccount = clientPrimaryAccountHeaderModel.communityAddress;
+          this.clientCommunityAccount = await this.findClientCommunityAccount(signer);
           this.originalClientId = clientPrimaryAccountHeaderModel.id;
           this.clientLutAddress = clientPrimaryAccountHeaderModel.lutAddress;
           let date = Math.floor((new Date()).valueOf() / 1000);
@@ -1237,17 +1237,6 @@ export class Engine {
     return address;
   }
 
-  private async findClientDrvAccount(): Promise<Address> {
-    let tagBuf = Buffer.alloc(8);
-    tagBuf.writeUint32LE(this.version, 0);
-    tagBuf.writeUint32LE(AccountType.CLIENT_DRV, 4);
-    const address = (await getProgramDerivedAddress({
-      programAddress: this.programId,
-      seeds: [tagBuf, getAddressEncoder().encode(this.signer)]
-    }))[0];
-    return address;
-  }
-
   private async checkClient(): Promise<boolean> {
     if (this.signer == null) {
       throw new Error("Wallet not connected");
@@ -1267,7 +1256,7 @@ export class Engine {
       }
       const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(info.value.data);
       this.clientPrimaryAccount = clientPrimaryAccount;
-      this.clientCommunityAccount = clientPrimaryAccountHeaderModel.communityAddress
+      this.clientCommunityAccount = await this.findClientCommunityAccount();
       this.originalClientId = clientPrimaryAccountHeaderModel.id;
       return true;
     }
@@ -1952,9 +1941,11 @@ export class Engine {
       const slot = Number((await this.rpc.getSlot().send())) - 1;
       const lutAddress = await getLookupTableAddress(this.signer, slot);
       const clientCommunityAccount = await this.findClientCommunityAccount();
+      /*
       keys.push(
         { address: await this.findClientDrvAccount(), role: AccountRole.WRITABLE }
       );
+      */
       keys.push(
         { address: clientCommunityAccount, role: AccountRole.WRITABLE }
       );
@@ -2022,7 +2013,7 @@ export class Engine {
       { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.WRITABLE },
     ];
     if (args.spot != undefined) {
-      keys.push({ address: await this.findClientDrvAccount(), role: AccountRole.READONLY });
+      //keys.push({ address: await this.findClientDrvAccount(), role: AccountRole.READONLY });
       for (var i = 0; i < args.spot.length; ++i) {
         const instr = this.instruments.get(args.spot[i].instrId);
         if (instr.header.assetTokenId == args.tokenId || instr.header.crncyTokenId == args.tokenId) {
@@ -2290,7 +2281,7 @@ export class Engine {
       programAddress: this.programId,
       seed: perpMapsAccountSeed
     });
-    const perpMapsAccountSize = 175336;
+    const perpMapsAccountSize = 168576;
     const perpMapsAccountLamports = await this.rpc.getMinimumBalanceForRentExemption(BigInt(perpMapsAccountSize)).send();
     const createMapsAccountIx = getCreateAccountWithSeedInstruction({
       payer: this.signer,
@@ -2916,6 +2907,7 @@ export class Engine {
             tag: AccountType.SPOT_DAY_CANDLES
           }), role: AccountRole.WRITABLE
       },
+      /*
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2924,13 +2916,14 @@ export class Engine {
             tag: AccountType.INSTR_TRACE
           }), role: AccountRole.WRITABLE
       },
+      */
     ];
-    const upgradeIx = {
+    const newInstrIx = {
       accounts: keys,
       programAddress: this.programId,
       data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * 1000000000)
     };
-    return [createMapsAccountIx, upgradeIx];
+    return [createMapsAccountIx, newInstrIx];
   }
 
 }

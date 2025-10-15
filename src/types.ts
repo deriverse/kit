@@ -77,7 +77,7 @@ export enum AccountType {
 }
 
 export const VERSION = 1;
-export const PROGRAM_ID = address("2M1irQU4JmQzxBGrQDi8cWAhdAATSPCeGYV43uvGwsDX ");
+export const PROGRAM_ID = address("2M1irQU4JmQzxBGrQDi8cWAhdAATSPCeGYV43uvGwsDX");
 export const MARKET_DEPTH = 20;
 
 export interface EngineArgs {

@@ -39,7 +39,7 @@ import { decode } from 'base64-arraybuffer';
 import {
   BuyMarketSeatReportModel,
   DepositReportModel, DrvsAirdropReportModel, EarningsReportModel, FeesDepositReportModel,
-  FeesWithdrawReportModel, LogType, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel,
+  FeesWithdrawReportModel, LogType, MoveSpotAvailFundsReportModel, PerpChangeLeverageReportModel, PerpDepositReportModel, PerpFeesReportModel,
   PerpFillOrderReportModel, PerpFundingReportModel, PerpMassCancelReportModel, PerpNewOrderReportModel,
   PerpOrderCancelReportModel, PerpOrderRevokeReportModel, PerpPlaceMassCancelReportModel, PerpPlaceOrderReportModel,
   PerpSocLossReportModel, PerpWithdrawReportModel, SellMarketSeatReportModel, SpotFeesReportModel, SpotFillOrderReportModel, SpotlpTradeReportModel,
@@ -418,6 +418,22 @@ export class Engine {
                 crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
                 report.qty /= lpDec;
                 report.tokens /= assetTokenDec;
+                report.crncy /= crncyTokenDec;
+              }
+            }
+            logs.push(report);
+          }
+          break;
+        }
+        case LogType.moveSpot: {
+          if (buffer.length == MoveSpotAvailFundsReportModel.LENGTH) {
+            let report = MoveSpotAvailFundsReportModel.fromBuffer(buffer);
+            if (this.uiNumbers) {
+              const instrInfo = this.instruments.get(report.instrId);
+              if (instrInfo) {
+                assetTokenDec = this.tokenDec(instrInfo.header.assetTokenId);
+                crncyTokenDec = this.tokenDec(instrInfo.header.crncyTokenId);
+                report.qty /= assetTokenDec;
                 report.crncy /= crncyTokenDec;
               }
             }

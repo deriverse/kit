@@ -17,7 +17,9 @@ import {
   NewPerpOrderArgs, PerpQuotesReplaceArgs, PerpOrderCancelArgs, PerpMassCancelArgs, PerpForcedCloseArgs,
   CommunityData, LogMessage, PerpChangeLeverageArgs, PerpStatisticsResetArgs, EngineArgs,
   NewInstrumentArgs,
-  PerpBuySeatArgs
+  PerpBuySeatArgs,
+  SwapArgs,
+  PerpSellSeatArgs
 } from './types';
 
 import {
@@ -31,9 +33,9 @@ import {
 import {
   buyMarketSeatData,
   depositData, newInstrumentData, newPerpOrderData, newSpotOrderData, perpChangeLeverageData, perpDepositData,
-  perpForcedCloseData, perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData,
+  perpMassCancelData, perpOrderCancelData, perpQuotesReplaceData, perpStatisticsResetData,
   sellMarketSeatData,
-  spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, upgradeToPerpData, withdrawData
+  spotLpData, spotMassCancelData, spotOrderCancelData, spotQuotesReplaceData, swapData, upgradeToPerpData, withdrawData
 } from "./instruction_models";
 import { decode } from 'base64-arraybuffer';
 import {
@@ -294,6 +296,10 @@ export function getPerpPriceStep(price: number): number {
   else {
     return 1000;
   }
+}
+
+function perpSeatReserve(activeUsers: number): number {
+  return 250000 * activeUsers / (25000 - activeUsers);
 }
 
 async function findAssociatedTokenAddress(owner: Address, tokenProgramId: Address, mint: Address): Promise<Address> {
@@ -1059,16 +1065,6 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag({
-          assetTokenId: instrAccountHeaderModel.assetTokenId,
-          crncyTokenId: instrAccountHeaderModel.crncyTokenId,
-          tag: AccountType.SPOT_CLIENT_ACCOUNTS
-        }),
-        role: AccountRole.WRITABLE
-      },
-      */
     ]
   }
 
@@ -1166,16 +1162,6 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag({
-          assetTokenId: instrAccountHeaderModel.assetTokenId,
-          crncyTokenId: instrAccountHeaderModel.crncyTokenId,
-          tag: AccountType.PERP_CLIENT_ACCOUNTS
-        }),
-        role: AccountRole.WRITABLE
-      },
-      */
       {
         address: await this.getInstrAccountByTag({
           assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -1200,17 +1186,6 @@ export class Engine {
         }),
         role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag({
-          assetTokenId: instrAccountHeaderModel.assetTokenId,
-          crncyTokenId: instrAccountHeaderModel.crncyTokenId,
-          tag: AccountType.PERP_PRIORITY_TREE
-        }),
-        role: AccountRole.WRITABLE
-      },
-      */
-
     ]
   }
 
@@ -1940,7 +1915,6 @@ export class Engine {
     header.fixingPx /= dec;
     header.perpLastClose /= dec;
     header.perpLastPx /= dec;
-    //header.lastHourPx /= dec;
     header.perpSpotPriceForWithdrowal /= dec;
     header.poolFees /= crncyTokenDec;
     let spotBids: Array<LineQuotesModel> = [];
@@ -2076,11 +2050,6 @@ export class Engine {
       const slot = Number((await this.rpc.getSlot().send())) - 1;
       const lutAddress = await getLookupTableAddress(this.signer, slot);
       const clientCommunityAccount = await this.findClientCommunityAccount();
-      /*
-      keys.push(
-        { address: await this.findClientDrvAccount(), role: AccountRole.WRITABLE }
-      );
-      */
       keys.push(
         { address: clientCommunityAccount, role: AccountRole.WRITABLE }
       );
@@ -2148,7 +2117,6 @@ export class Engine {
       { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.WRITABLE },
     ];
     if (args.spot != undefined) {
-      //keys.push({ address: await this.findClientDrvAccount(), role: AccountRole.READONLY });
       for (var i = 0; i < args.spot.length; ++i) {
         const instr = this.instruments.get(args.spot[i].instrId);
         if (instr.header.assetTokenId == args.tokenId || instr.header.crncyTokenId == args.tokenId) {
@@ -2189,7 +2157,8 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    await this.updateInstrData({ instrId: args.instrId });
+    let instr = this.instruments.get(args.instrId)!;
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2212,10 +2181,13 @@ export class Engine {
         { address: this.clientCommunityAccount, role: AccountRole.WRITABLE }
       );
     }
+    const slippage = (args.slippage == undefined || args.slippage == null) ? 0 : args.slippage;
+    const price = instr.header.crncyTokens / instr.header.assetTokens;
+    const slippagePrice = slippage == 0 ? 0 : args.side == 0 ? price * (1 + slippage) : price / (1 + slippage);
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec)),
+      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec), slippagePrice * 1000000000),
     };
   }
 
@@ -2231,6 +2203,10 @@ export class Engine {
       throw new Error("Client account not found");
     }
     let instr = this.instruments.get(args.instrId);
+    if (instr.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
     let buf = newSpotOrderData(
       12,
       args.ioc == null || args.ioc == undefined ? 0 : args.ioc,
@@ -2278,6 +2254,10 @@ export class Engine {
       throw new Error("Client account not found");
     }
     let instr = this.instruments.get(args.instrId);
+    if (instr.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
     let assetTokenDecFactor = this.tokenDec(instr.header.assetTokenId);
     let buf = spotQuotesReplaceData(
       34,
@@ -2325,6 +2305,10 @@ export class Engine {
       throw new Error("Client account not found");
     }
     let instr = this.instruments.get(args.instrId);
+    if (instr.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
     const drvs = instr.header.assetTokenId == 0;
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
@@ -2358,7 +2342,11 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
     const drvs = instr.header.assetTokenId == 0;
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
@@ -2526,16 +2514,6 @@ export class Engine {
             tag: AccountType.PERP_CLIENT_INFOS5
           }), role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag(
-          {
-            assetTokenId: instr.header.assetTokenId,
-            crncyTokenId: instr.header.crncyTokenId,
-            tag: AccountType.PERP_CLIENT_ACCOUNTS
-          }), role: AccountRole.WRITABLE
-      },
-      */
       {
         address: await this.getInstrAccountByTag(
           {
@@ -2560,16 +2538,6 @@ export class Engine {
             tag: AccountType.PERP_REBALANCE_TIME_TREE
           }), role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag(
-          {
-            assetTokenId: instr.header.assetTokenId,
-            crncyTokenId: instr.header.crncyTokenId,
-            tag: AccountType.PERP_PRIORITY_TREE
-          }), role: AccountRole.WRITABLE
-      },
-      */
     ];
     const upgradeIx = {
       accounts: keys,
@@ -2588,7 +2556,11 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2612,7 +2584,8 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    await this.updateInstrData({ instrId: args.instrId });
+    let instr = this.instruments.get(args.instrId)!;
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2620,18 +2593,23 @@ export class Engine {
       ... await this.getPerpContext(instr.header),
       { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     ];
+    const splippage = (args.slippage == undefined || args.slippage == null) ? 0 : args.slippage;
+    const slippagePrice = (perpSeatReserve(instr.header.perpClientsCount + 1) -
+      perpSeatReserve(instr.header.perpClientsCount)) * (1 + splippage);
+    const crncyDec = this.tokenDec(instr.header.crncyTokenId);
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: buyMarketSeatData(47, args.instrId, args.amount * this.tokenDec(instr.header.crncyTokenId)),
+      data: buyMarketSeatData(47, args.instrId, slippagePrice * crncyDec, args.amount * crncyDec),
     };
   }
 
-  async perpSellSeatInstruction(args: PerpBuySeatArgs): Promise<any> {
+  async perpSellSeatInstruction(args: PerpSellSeatArgs): Promise<any> {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    await this.updateInstrData({ instrId: args.instrId });
+    let instr = this.instruments.get(args.instrId)!;
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2640,10 +2618,14 @@ export class Engine {
       { address: await this.getAccountByTag(AccountType.COMMUNITY), role: AccountRole.READONLY },
       { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     ];
+    const splippage = (args.slippage == undefined || args.slippage == null) ? 0 : args.slippage;
+    const slippagePrice = (perpSeatReserve(instr.header.perpClientsCount + 1) -
+      perpSeatReserve(instr.header.perpClientsCount)) / (1 + splippage);
+    const crncyDec = this.tokenDec(instr.header.crncyTokenId);
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: sellMarketSeatData(48, args.instrId),
+      data: sellMarketSeatData(48, slippagePrice * crncyDec, args.instrId),
     };
   }
 
@@ -2656,7 +2638,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2698,7 +2685,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let assetTokenDecFactor = this.tokenDec(instr.header.assetTokenId);
     let buf = perpQuotesReplaceData(
       42,
@@ -2743,7 +2735,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2768,7 +2765,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2781,31 +2783,6 @@ export class Engine {
       accounts: keys,
       programAddress: this.programId,
       data: perpMassCancelData(36, args.instrId),
-    };
-  }
-
-  /**
-   * Build instruction for perp forced close in particular instrument
-   * @param args Order data
-   * @returns Transaction instruction
-   */
-  async perpForcedCloseInstruction(args: PerpForcedCloseArgs): Promise<IInstruction> {
-    if (!(await this.checkClient())) {
-      throw new Error("Client account not found");
-    }
-    const instr = this.instruments.get(args.instrId);
-    let keys = [
-      { address: this.signer, role: AccountRole.READONLY_SIGNER },
-      { address: this.rootAccount, role: AccountRole.READONLY },
-      { address: args.clientPrimaryAccount, role: AccountRole.WRITABLE },
-      ... await this.getPerpContext(instr.header),
-      { address: await this.getAccountByTag(AccountType.COMMUNITY), role: AccountRole.READONLY },
-      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    ];
-    return {
-      accounts: keys,
-      programAddress: this.programId,
-      data: perpForcedCloseData(38, args.instrId),
     };
   }
 
@@ -2840,7 +2817,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -2865,7 +2847,12 @@ export class Engine {
     if (!(await this.checkClient())) {
       throw new Error("Client account not found");
     }
-    const instr = this.instruments.get(args.instrId);
+    let instr = this.instruments.get(args.instrId);
+    if (instr.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId: args.instrId });
+      instr = this.instruments.get(args.instrId)!;
+    }
+
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
       { address: this.rootAccount, role: AccountRole.READONLY },
@@ -3008,16 +2995,6 @@ export class Engine {
             tag: AccountType.SPOT_CLIENT_INFOS2
           }), role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag(
-          {
-            assetTokenId: assetTokenId,
-            crncyTokenId: crncyTokenId,
-            tag: AccountType.SPOT_CLIENT_ACCOUNTS
-          }), role: AccountRole.WRITABLE
-      },
-      */
       {
         address: await this.getInstrAccountByTag(
           {
@@ -3042,16 +3019,6 @@ export class Engine {
             tag: AccountType.SPOT_DAY_CANDLES
           }), role: AccountRole.WRITABLE
       },
-      /*
-      {
-        address: await this.getInstrAccountByTag(
-          {
-            assetTokenId: assetTokenId,
-            crncyTokenId: crncyTokenId,
-            tag: AccountType.INSTR_TRACE
-          }), role: AccountRole.WRITABLE
-      },
-      */
     ];
     const newInstrIx = {
       accounts: keys,
@@ -3060,6 +3027,77 @@ export class Engine {
     };
     return [createMapsAccountIx, newInstrIx];
   }
+
+  /**
+   * Build instruction for durect swap
+   * @param args Order data
+   * @returns Transaction instruction
+   */
+  async swapInstruction(
+    args: SwapArgs
+  ): Promise<any> {
+    if (!(await this.checkClient())) {
+      throw new Error("Client account not found");
+    }
+    const assetTokenId = await this.getTokenId(args.assetMint);
+    const crncyTokenId = await this.getTokenId(args.crncyMint);
+    const assetTokenAccount = this.tokens.get(assetTokenId)!;
+    const crncyTokenAccount = this.tokens.get(crncyTokenId)!;
+    const assetTokenProgramId = (assetTokenAccount.mask & 0x80000000) == 0 ?
+      TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+    const crncyTokenProgramId = (crncyTokenAccount.mask & 0x80000000) == 0 ?
+      TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+    let instrId = await this.getInstrId({
+      assetTokenId: assetTokenId,
+      crncyTokenId: crncyTokenId   
+    });
+    const clientAssetTokenAccount = await findAssociatedTokenAddress(this.signer, assetTokenProgramId, args.assetMint);
+    const clientCrncyTokenAccount = await findAssociatedTokenAddress(this.signer, crncyTokenProgramId, args.crncyMint);
+    let instr = this.instruments.get(instrId)!;
+    if (instr.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId: instrId });
+      instr = this.instruments.get(instrId)!;
+    }
+    let buf = swapData(
+      26,
+      args.crncyInput?1:0,
+      instrId,
+      Math.round(args.limitPrice * 1000000000),
+      Math.round(
+        args.amount *
+        (args.crncyInput ?
+          this.tokenDec(instr.header.crncyTokenId) :
+          this.tokenDec(instr.header.assetTokenId))
+      ),
+    );
+    let keys = [
+      { address: this.signer, role: AccountRole.READONLY_SIGNER },
+      { address: this.rootAccount, role: AccountRole.READONLY },
+      ... await this.getSpotContext(instr.header),
+      ... await this.getSpotCandles(instr.header),
+      {
+        address: await this.getAccountByTag(AccountType.COMMUNITY),
+        role: AccountRole.READONLY
+      },
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: assetTokenProgramId, role: AccountRole.READONLY },
+      { address: crncyTokenProgramId, role: AccountRole.READONLY },
+      { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
+      { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
+      { address: args.assetMint, role: AccountRole.READONLY },
+      { address: args.crncyMint, role: AccountRole.READONLY },
+      { address: await this.getTokenAccount(args.assetMint), role: AccountRole.READONLY },
+      { address: await this.getTokenAccount(args.crncyMint), role: AccountRole.READONLY },
+      { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
+      { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
+      { address: this.drvsAuthority, role: AccountRole.READONLY },
+      
+    ];
+    return {
+      accounts: keys, programAddress: this.programId, data: buf
+    };
+  }
+
 
 }
 

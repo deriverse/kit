@@ -77,7 +77,7 @@ export enum AccountType {
 }
 
 export const VERSION = 1;
-export const PROGRAM_ID = address("2M1irQU4JmQzxBGrQDi8cWAhdAATSPCeGYV43uvGwsDX");
+export const PROGRAM_ID = address("DRVSpZ2YUYYKgZP8XtLhAGtT1zYSCKzeHfb4DgRnrgqD");
 export const MARKET_DEPTH = 20;
 
 export interface EngineArgs {
@@ -185,18 +185,6 @@ export interface NewSpotOrderArgs {
 }
 
 /**
- * Contains data for swapInstruction.
- * @property {number} instrId Instrument ID
- * @property {number} price Indicates limit price for swap instructiom, zero value means market order without limits.
- * @property {number} qty Indicates asset tokens quantity that you want to trade, negative value means selling.
- */
-export interface SwapArgs {
-  instrId: number;
-  price: number;
-  qty: number;
-}
-
-/**
  * Contains data for spotQuotesReplaceInstruction
  * @property {number} instrId Instrument ID
  * @property {number} bidOrderIdToCancel Order ID that you want to cancel on bid side, zero value means no actions
@@ -214,6 +202,22 @@ export interface SpotQuotesReplaceArgs {
   askOrderIdToCancel: number;
   newAskPrice: number;
   newAskQty: number;
+}
+
+/**
+ * Contains data for swapInstruction
+ * @property {Address} assetMint Asset Token Mint
+ * @property {Address} crncyMint Crncy Token Mint
+ * @property {number} amount Amount to swap
+ * @property {number} limitPrice limit price
+ * @property {boolean} crncyInput crncy token as input token 
+ */
+export interface SwapArgs {
+  assetMint: Address<any>;
+  crncyMint: Address<any>;
+  amount: number;
+  limitPrice: number;
+  crncyInput: boolean;
 }
 
 /**
@@ -591,6 +595,7 @@ export interface SpotLpArgs {
   instrId: number;
   side: number;
   amount: number;
+  slippage?: number;
 }
 
 /**
@@ -610,10 +615,12 @@ export interface PerpDepositArgs {
 export interface PerpBuySeatArgs {
   instrId: number;
   amount: number;
+  slippage?: number;
 }
 
 export interface PerpSellSeatArgs {
   instrId: number;
+  slippage?: number;
 }
 
 export interface NewPerpOrderArgs {

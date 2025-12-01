@@ -1402,8 +1402,8 @@ export class Engine {
     for (var i = 0; i < clientPrimaryAccountHeaderModel.assetsCount; ++i) {
       const offset = ClientPrimaryAccountHeaderModel.LENGTH + i * 16;
       const assetInfo = primaryData.readUint32LE(offset);
-      const tag = assetInfo >> 24;
-      const id = assetInfo & 0xFFFFFF;
+      const tag = assetInfo >> 28;
+      const id = assetInfo & 0xFFFFFFF;
       if (tag == 1) {
         tokens.set(id, {
           tokenId: id,

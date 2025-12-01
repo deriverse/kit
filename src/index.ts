@@ -2135,10 +2135,10 @@ export class Engine {
     }
     if (args.tokenId == 0) {
       keys.push(
-        { address: await this.getAccountByTag(AccountType.COMMUNITY), role: AccountRole.READONLY }
+        { address: await this.getAccountByTag(AccountType.COMMUNITY), role: AccountRole.WRITABLE }
       );
       keys.push(
-        { address: await this.clientCommunityAccount, role: AccountRole.READONLY }
+        { address: await this.clientCommunityAccount, role: AccountRole.WRITABLE }
       );
     }
     return {

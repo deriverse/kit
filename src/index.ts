@@ -2181,13 +2181,11 @@ export class Engine {
         { address: this.clientCommunityAccount, role: AccountRole.WRITABLE }
       );
     }
-    const slippage = (args.slippage == undefined || args.slippage == null) ? 0 : args.slippage;
-    const price = instr.header.crncyTokens / instr.header.assetTokens;
-    const slippagePrice = slippage == 0 ? 0 : args.side == 0 ? price * (1 + slippage) : price / (1 + slippage);
+    const edgePrice = (args.edgePrice == undefined || args.edgePrice == null) ? 0 : args.edgePrice;
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec), slippagePrice * 1000000000),
+      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec), edgePrice * 1000000000),
     };
   }
 

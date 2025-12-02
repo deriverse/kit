@@ -595,7 +595,7 @@ export interface SpotLpArgs {
   instrId: number;
   side: number;
   amount: number;
-  slippage?: number;
+  edgePrice?: number;
 }
 
 /**

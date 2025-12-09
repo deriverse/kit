@@ -282,25 +282,24 @@ export function changeRefProgramData(tag: number, refProgramDuration: number, re
   return buf;
 }
 
-export function buyMarketSeatData(tag: number, instrId: number, upperSlippageBound: number, amount: number): Buffer {
+export function buyMarketSeatData(tag: number, instrId: number, edgePrice: number, amount: number): Buffer {
   let buf = Buffer.alloc(24);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(0, 4);
-  buf.writeUint32LE(instrId, 8);
-  buf.writeUint32LE(upperSlippageBound, 12);
+  buf.writeUint32LE(instrId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(edgePrice)), 8);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 16);
   return buf;
 }
 
-export function sellMarketSeatData(tag: number, instrId: number, lowerSlippageBound: number): Buffer {
-  let buf = Buffer.alloc(12);
+export function sellMarketSeatData(tag: number, instrId: number, edgePrice: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeUint32LE(lowerSlippageBound, 8);
+  buf.writeBigInt64LE(BigInt(Math.floor(edgePrice)), 8);
   return buf;
 }
 
@@ -319,6 +318,50 @@ export function pointsProgramExpiration(tag: number, newExpirationTime: number):
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(newExpirationTime, 4);
+  return buf;
+}
+
+export function setVarianceData(tag: number, variance: number): Buffer {
+  let buf = Buffer.alloc(12);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  return buf;
+}
+
+export function changeDenominatorData(tag: number, baseCrncyId: number, denominator: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(baseCrncyId, 4);
+  return buf;
+}
+
+export function newBaseCrncyData(tag: number, denominator: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(0, 4);
+  return buf;
+}
+
+export function perpClientsProcessingData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function setSeatpurchasingFeeData(tag: number, fee: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(0, 4);
   return buf;
 }
 

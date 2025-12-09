@@ -1889,8 +1889,8 @@ export class Engine {
     header.dayCrncyTokens /= crncyTokenDec;
     header.prevDayAssetTokens /= assetTokenDec;
     header.prevDayCrncyTokens /= crncyTokenDec;
-    header.perpLastAssetTokens /= assetTokenDec;
-    header.perpLastCrncyTokens /= crncyTokenDec;
+    header.perpLastTradeAssetTokens /= assetTokenDec;
+    header.perpLastTradeCrncyTokens /= crncyTokenDec;
     header.perpDayAssetTokens /= assetTokenDec;
     header.perpDayCrncyTokens /= crncyTokenDec;
     header.fixingAssetTokens /= assetTokenDec;
@@ -1915,7 +1915,8 @@ export class Engine {
     header.fixingPx /= dec;
     header.perpLastClose /= dec;
     header.perpLastPx /= dec;
-    header.perpSpotPriceForWithdrowal /= dec;
+    header.perpLongSpotPriceForWithdrowal /= dec;
+    header.perpShortSpotPriceForWithdrowal /= dec;
     header.poolFees /= crncyTokenDec;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];

@@ -2182,11 +2182,15 @@ export class Engine {
         { address: this.clientCommunityAccount, role: AccountRole.WRITABLE }
       );
     }
-    const edgePrice = (args.edgePrice == undefined || args.edgePrice == null) ? 0 : args.edgePrice;
+    const minPrice = (args.minPrice == undefined || args.minPrice == null) ? 0 : args.minPrice;
+    const maxPrice = (args.maxPrice == undefined || args.maxPrice == null) ? 0 : args.maxPrice;
     return {
       accounts: keys,
       programAddress: this.programId,
-      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec), edgePrice * 1000000000),
+      data: spotLpData(14, args.side, args.instrId, Math.round(args.amount * lpDec),
+        minPrice * 1000000000,
+        maxPrice * 1000000000
+      ),
     };
   }
 
@@ -2213,7 +2217,8 @@ export class Engine {
       args.side,
       args.instrId,
       Math.round(args.price * 1000000000),
-      Math.round(args.qty * this.tokenDec(instr.header.assetTokenId))
+      Math.round(args.qty * this.tokenDec(instr.header.assetTokenId)),
+      args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000
     );
     let keys = [
       { address: this.signer, role: AccountRole.READONLY_SIGNER },
@@ -2671,7 +2676,9 @@ export class Engine {
         args.side,
         args.instrId,
         args.price * 1000000000,
-        args.qty * this.tokenDec(instr.header.assetTokenId)),
+        args.qty * this.tokenDec(instr.header.assetTokenId),
+        args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000
+      ),
     };
   }
 

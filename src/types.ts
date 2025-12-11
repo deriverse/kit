@@ -182,6 +182,7 @@ export interface NewSpotOrderArgs {
   ioc?: number;
   orderType?: number;
   side: number;
+  edgePrice?: number;
 }
 
 /**
@@ -595,7 +596,8 @@ export interface SpotLpArgs {
   instrId: number;
   side: number;
   amount: number;
-  edgePrice?: number;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 /**
@@ -631,6 +633,7 @@ export interface NewPerpOrderArgs {
   price: number;
   leverage?: number;
   side: number;
+  edgePrice?: number;
 }
 
 export interface NewInstrumentArgs {

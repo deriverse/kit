@@ -15,8 +15,8 @@ export function newRootAccountData(tag: number, privateMode: number, lutSlot: nu
   return buf;
 }
 
-export function newSpotOrderData(tag: number, ioc: number, orderType: number, side: number, instrId: number, price: number, amount: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function newSpotOrderData(tag: number, ioc: number, orderType: number, side: number, instrId: number, price: number, amount: number, edgePrice: number): Buffer {
+  let buf = Buffer.alloc(32);
   buf.writeUint8(tag, 0);
   buf.writeUint8(ioc, 1);
   buf.writeUint8(orderType, 2);
@@ -24,11 +24,12 @@ export function newSpotOrderData(tag: number, ioc: number, orderType: number, si
   buf.writeUint32LE(instrId, 4);
   buf.writeBigInt64LE(BigInt(Math.floor(price)), 8);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(edgePrice)), 24);
   return buf;
 }
 
-export function newPerpOrderData(tag: number, ioc: number, leverage: number, orderType: number, side: number, instrId: number, price: number, amount: number): Buffer {
-  let buf = Buffer.alloc(32);
+export function newPerpOrderData(tag: number, ioc: number, leverage: number, orderType: number, side: number, instrId: number, price: number, amount: number, edgePrice: number): Buffer {
+  let buf = Buffer.alloc(40);
   buf.writeUint8(tag, 0);
   buf.writeUint8(ioc, 1);
   buf.writeUint8(leverage, 2);
@@ -40,6 +41,7 @@ export function newPerpOrderData(tag: number, ioc: number, leverage: number, ord
   buf.writeUint32LE(instrId, 12);
   buf.writeBigInt64LE(BigInt(Math.floor(price)), 16);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 24);
+  buf.writeBigInt64LE(BigInt(Math.floor(edgePrice)), 32);
   return buf;
 }
 
@@ -80,14 +82,15 @@ export function spotMassCancelData(tag: number, instrId: number): Buffer {
   return buf;
 }
 
-export function spotLpData(tag: number, side: number, instrId: number, amount: number, edgePrice: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function spotLpData(tag: number, side: number, instrId: number, amount: number, minPrice: number, maxPrice: number): Buffer {
+  let buf = Buffer.alloc(32);
   buf.writeUint8(tag, 0);
   buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
-  buf.writeBigInt64LE(BigInt(Math.floor(edgePrice)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(minPrice)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(maxPrice)), 24);
   return buf;
 }
 
@@ -356,12 +359,39 @@ export function perpClientsProcessingData(tag: number, instrId: number): Buffer 
   return buf;
 }
 
-export function setSeatpurchasingFeeData(tag: number, fee: number): Buffer {
+export function setSeatPurchasingFeeData(tag: number, fee: number): Buffer {
   let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(0, 4);
+  return buf;
+}
+
+export function changeVotingData(tag: number, newChoice: number, votingCounter: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(newChoice, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(votingCounter, 4);
+  return buf;
+}
+
+export function garbageCollectorData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function activateClientRefProgramData(tag: number, refId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(refId, 4);
   return buf;
 }
 

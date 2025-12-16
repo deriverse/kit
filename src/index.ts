@@ -377,6 +377,7 @@ export class Engine {
   clientLutAddress?: Address<any>;
   private refClientPrimaryAccount?: Address<any>;
   private refClientCommunityAccount?: Address<any>;
+  privateMode?: boolean;
   tokens: Map<number, TokenStateModel>;
   instruments: Map<number, Instrument>;
   version: number;
@@ -863,6 +864,7 @@ export class Engine {
       this.rootStateModel = RootStateModel.fromBuffer(infos.value[0].data);
       this.tokens = new Map();
       this.instruments = new Map();
+      this.privateMode = (this.rootStateModel.mask & 1) != 0;
       const tokenAccounts = await this.findAccountsByTag(AccountType.TOKEN);
       tokenAccounts.forEach((t) => {
         let tokenStateModel = TokenStateModel.fromBuffer(t.account.data)
@@ -2032,6 +2034,11 @@ export class Engine {
       { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
       { address: tokenProgramId, role: AccountRole.READONLY },
     ];
+    if (this.privateMode) {
+      keys.push(
+          { address: await this.getAccountByTag(AccountType.PRIVATE_CLIENTS), role: AccountRole.WRITABLE }
+        );
+    }
     if (exists) {
       if (args.tokenId == 0) {
         keys.push(

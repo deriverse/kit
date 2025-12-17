@@ -3101,6 +3101,7 @@ export class Engine {
       { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
       { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
       { address: this.drvsAuthority, role: AccountRole.READONLY },
+      { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
       
     ];
     return {

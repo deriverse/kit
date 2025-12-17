@@ -3089,9 +3089,6 @@ export class Engine {
         address: await this.getAccountByTag(AccountType.COMMUNITY),
         role: AccountRole.READONLY
       },
-      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-      { address: assetTokenProgramId, role: AccountRole.READONLY },
-      { address: crncyTokenProgramId, role: AccountRole.READONLY },
       { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
       { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
       { address: args.assetMint, role: AccountRole.READONLY },
@@ -3099,9 +3096,13 @@ export class Engine {
       { address: await this.getTokenAccount(args.assetMint), role: AccountRole.READONLY },
       { address: await this.getTokenAccount(args.crncyMint), role: AccountRole.READONLY },
       { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
-      { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
+      { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },   
       { address: this.drvsAuthority, role: AccountRole.READONLY },
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: assetTokenProgramId, role: AccountRole.READONLY },
+      { address: crncyTokenProgramId, role: AccountRole.READONLY },
       { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
+
       
     ];
     return {

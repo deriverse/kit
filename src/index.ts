@@ -3049,9 +3049,6 @@ export class Engine {
   async swapInstruction(
     args: SwapArgs
   ): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error("Client account not found");
-    }
     const assetTokenId = await this.getTokenId(args.assetMint);
     const crncyTokenId = await this.getTokenId(args.crncyMint);
     const assetTokenAccount = this.tokens.get(assetTokenId)!;

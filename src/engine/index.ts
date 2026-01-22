@@ -45,6 +45,30 @@ import {
   SwapArgs,
   PerpSellSeatArgs,
   LogMessage,
+  DepositArgsSchema,
+  WithdrawArgsSchema,
+  NewSpotOrderArgsSchema,
+  SpotQuotesReplaceArgsSchema,
+  SwapArgsSchema,
+  SpotOrderCancelArgsSchema,
+  SpotMassCancelArgsSchema,
+  SpotLpArgsSchema,
+  PerpDepositArgsSchema,
+  PerpBuySeatArgsSchema,
+  PerpSellSeatArgsSchema,
+  NewPerpOrderArgsSchema,
+  PerpQuotesReplaceArgsSchema,
+  PerpOrderCancelArgsSchema,
+  PerpMassCancelArgsSchema,
+  PerpChangeLeverageArgsSchema,
+  PerpStatisticsResetArgsSchema,
+  NewInstrumentArgsSchema,
+  InstrIdSchema,
+  GetClientSpotOrdersInfoArgsSchema,
+  GetClientPerpOrdersInfoArgsSchema,
+  GetClientSpotOrdersArgsSchema,
+  GetClientPerpOrdersArgsSchema,
+  EngineArgsSchema,
 } from '../types';
 import { AccountType } from '../types/enums';
 import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, setDecimals } from '../constants';
@@ -150,6 +174,7 @@ export class Engine {
       uiNumbers?: boolean;
     },
   ) {
+    if (args) EngineArgsSchema.parse(args);
     this.rpc = rpc;
     this.programId = args?.programId ?? PROGRAM_ID;
     this.version = args?.version ?? VERSION;
@@ -645,6 +670,7 @@ export class Engine {
   }
 
   async getClientSpotOrdersInfo(args: GetClientSpotOrdersInfoArgs): Promise<GetClientSpotOrdersInfoResponse> {
+    GetClientSpotOrdersInfoArgsSchema.parse(args);
     return getClientSpotOrdersInfoFn(
       {
         ...this.getAccountHelperContext(),
@@ -660,6 +686,7 @@ export class Engine {
   }
 
   async getClientPerpOrdersInfo(args: GetClientPerpOrdersInfoArgs): Promise<GetClientPerpOrdersInfoResponse> {
+    GetClientPerpOrdersInfoArgsSchema.parse(args);
     return getClientPerpOrdersInfoFn(
       {
         ...this.getAccountHelperContext(),
@@ -675,6 +702,7 @@ export class Engine {
   }
 
   async getClientSpotOrders(args: GetClientSpotOrdersArgs): Promise<GetClientSpotOrdersResponse> {
+    GetClientSpotOrdersArgsSchema.parse(args);
     return getClientSpotOrdersFn(
       {
         ...this.getAccountHelperContext(),
@@ -690,6 +718,7 @@ export class Engine {
   }
 
   async getClientPerpOrders(args: GetClientPerpOrdersArgs): Promise<GetClientPerpOrdersResponse> {
+    GetClientPerpOrdersArgsSchema.parse(args);
     return getClientPerpOrdersFn(
       {
         ...this.getAccountHelperContext(),
@@ -709,6 +738,7 @@ export class Engine {
   // ============================================
 
   async depositInstruction(args: DepositArgs): Promise<any> {
+    DepositArgsSchema.parse(args);
     const exists = await this.checkClient();
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
@@ -722,6 +752,7 @@ export class Engine {
   }
 
   async withdrawInstruction(args: WithdrawArgs): Promise<any> {
+    WithdrawArgsSchema.parse(args);
     await this.requireClient();
     return buildWithdrawInstruction(this.getSpotInstructionContext(), args);
   }
@@ -731,6 +762,7 @@ export class Engine {
   // ============================================
 
   async spotLpInstruction(args: SpotLpArgs): Promise<any> {
+    SpotLpArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
     const instr = this.instruments.get(args.instrId)!;
@@ -738,30 +770,35 @@ export class Engine {
   }
 
   async newSpotOrderInstruction(args: NewSpotOrderArgs): Promise<any> {
+    NewSpotOrderArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildNewSpotOrderInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
   }
 
   async spotQuotesReplaceInstruction(args: SpotQuotesReplaceArgs): Promise<any> {
+    SpotQuotesReplaceArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotQuotesReplaceInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
   }
 
   async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<any> {
+    SpotOrderCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotOrderCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   async spotMassCancelInstruction(args: SpotMassCancelArgs): Promise<any> {
+    SpotMassCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotMassCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   async swapInstruction(args: SwapArgs): Promise<any> {
+    SwapArgsSchema.parse(args);
     const assetTokenId = await this.getTokenId(args.assetMint);
     const crncyTokenId = await this.getTokenId(args.crncyMint);
     const instrId = await this.getInstrId({ assetTokenId, crncyTokenId });
@@ -774,6 +811,7 @@ export class Engine {
   // ============================================
 
   async upgradeToPerpInstructions(args: InstrId): Promise<any[]> {
+    InstrIdSchema.parse(args);
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
     }
@@ -791,12 +829,14 @@ export class Engine {
   }
 
   async perpDepositInstruction(args: PerpDepositArgs): Promise<any> {
+    PerpDepositArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpDepositInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpBuySeatInstruction(args: PerpBuySeatArgs): Promise<any> {
+    PerpBuySeatArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
     const instr = this.instruments.get(args.instrId)!;
@@ -804,6 +844,7 @@ export class Engine {
   }
 
   async perpSellSeatInstruction(args: PerpSellSeatArgs): Promise<any> {
+    PerpSellSeatArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
     const instr = this.instruments.get(args.instrId)!;
@@ -811,24 +852,28 @@ export class Engine {
   }
 
   async newPerpOrderInstruction(args: NewPerpOrderArgs): Promise<any> {
+    NewPerpOrderArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildNewPerpOrderInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
   }
 
   async perpQuotesReplaceInstruction(args: PerpQuotesReplaceArgs): Promise<any> {
+    PerpQuotesReplaceArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpQuotesReplaceInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
   }
 
   async perpOrderCancelInstruction(args: PerpOrderCancelArgs): Promise<any> {
+    PerpOrderCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpOrderCancelInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpMassCancelInstruction(args: PerpMassCancelArgs): Promise<any> {
+    PerpMassCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpMassCancelInstruction(this.getPerpInstructionContext(), args, instr);
@@ -840,12 +885,14 @@ export class Engine {
   }
 
   async perpChangeLeverageInstruction(args: PerpChangeLeverageArgs): Promise<any> {
+    PerpChangeLeverageArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpChangeLeverageInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpStatisticsResetInstruction(args: PerpStatisticsResetArgs): Promise<any> {
+    PerpStatisticsResetArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpStatisticsResetInstruction(this.getPerpInstructionContext(), args, instr);
@@ -856,6 +903,7 @@ export class Engine {
   // ============================================
 
   async newInstrumentInstructions(args: NewInstrumentArgs): Promise<any[]> {
+    NewInstrumentArgsSchema.parse(args);
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
     }

@@ -54,5 +54,38 @@ export {
 
 export { LogMessage } from './log-message';
 
+export {
+  EngineArgsSchema,
+  InstrIdSchema,
+  DepositArgsSchema,
+  WithdrawArgsSchema,
+  NewSpotOrderArgsSchema,
+  SpotQuotesReplaceArgsSchema,
+  SwapArgsSchema,
+  SpotOrderCancelArgsSchema,
+  SpotMassCancelArgsSchema,
+  SpotLpArgsSchema,
+  PerpDepositArgsSchema,
+  PerpBuySeatArgsSchema,
+  PerpSellSeatArgsSchema,
+  NewPerpOrderArgsSchema,
+  PerpQuotesReplaceArgsSchema,
+  PerpOrderCancelArgsSchema,
+  PerpMassCancelArgsSchema,
+  PerpChangeLeverageArgsSchema,
+  PerpStatisticsResetArgsSchema,
+  PerpForcedCloseArgsSchema,
+  NewInstrumentArgsSchema,
+  GetInstrIdArgsSchema,
+  GetClientSpotOrdersInfoArgsSchema,
+  GetClientPerpOrdersInfoArgsSchema,
+  GetClientSpotOrdersArgsSchema,
+  GetClientPerpOrdersArgsSchema,
+  DistribDividendsArgsSchema,
+  GetSpotContextArgsSchema,
+  GetInstrAccountByTagArgsSchema,
+  UpdateInstrDataArgsSchema,
+} from './schemas';
+
 // for backward compatibility
 export { VERSION, PROGRAM_ID, MARKET_DEPTH } from '../constants';

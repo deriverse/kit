@@ -72,6 +72,9 @@ async function buildDepositInstruction(
   const amount = args.amount ?? 0;
   const allFunds = args.all_funds ? 1 : 0;
   const token = ctx.tokens.get(args.tokenId);
+  if (!token) {
+    throw new Error(`Token ${args.tokenId} not found`);
+  }
   const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
   const clientTokenAccount = await findAssociatedTokenAddress(
     ctx.signer,
@@ -445,8 +448,17 @@ async function buildSwapInstruction(
 ): Promise<Instruction> {
   const assetTokenId = await getTokenId(ctx, args.assetMint);
   const crncyTokenId = await getTokenId(ctx, args.crncyMint);
-  const assetTokenAccount = ctx.tokens.get(assetTokenId)!;
-  const crncyTokenAccount = ctx.tokens.get(crncyTokenId)!;
+  if (assetTokenId == null) {
+    throw new Error(`Asset token not found for mint ${args.assetMint}`);
+  }
+  if (crncyTokenId == null) {
+    throw new Error(`Currency token not found for mint ${args.crncyMint}`);
+  }
+  const assetTokenAccount = ctx.tokens.get(assetTokenId);
+  const crncyTokenAccount = ctx.tokens.get(crncyTokenId);
+  if (!assetTokenAccount || !crncyTokenAccount) {
+    throw new Error('Token account not found');
+  }
   const assetTokenProgramId =
     (assetTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
   const crncyTokenProgramId =

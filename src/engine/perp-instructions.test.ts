@@ -147,9 +147,9 @@ describe('perp instruction builders', () => {
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
       expect(instruction.accounts).toBeDefined();
-      expect(instruction.accounts.length).toBeGreaterThan(0);
+      expect(instruction.accounts!.length).toBeGreaterThan(0);
       expect(instruction.data).toBeInstanceOf(Uint8Array);
-      expect(instruction.data[0]).toBe(11); // perpDeposit instruction tag
+      expect(instruction.data![0]).toBe(11); // perpDeposit instruction tag
     });
 
     it('converts amount with uiNumbers', async () => {
@@ -174,7 +174,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(19); // newPerpOrder instruction tag
+      expect(instruction.data![0]).toBe(19); // newPerpOrder instruction tag
     });
 
     it('includes IOC flag when provided', async () => {
@@ -185,7 +185,7 @@ describe('perp instruction builders', () => {
       const instruction = await buildNewPerpOrderInstruction(ctx, args, instr);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[1]).toBe(1); // ioc flag
+      expect(instruction.data![1]).toBe(1); // ioc flag
     });
 
     it('includes leverage when provided', async () => {
@@ -196,7 +196,7 @@ describe('perp instruction builders', () => {
       const instruction = await buildNewPerpOrderInstruction(ctx, args, instr);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[2]).toBe(5); // leverage
+      expect(instruction.data![2]).toBe(5); // leverage
     });
 
     it('includes ref accounts when provided', async () => {
@@ -209,7 +209,7 @@ describe('perp instruction builders', () => {
 
       const instruction = await buildNewPerpOrderInstruction(ctx, args, instr);
 
-      expect(instruction.accounts.length).toBeGreaterThan(20);
+      expect(instruction.accounts!.length).toBeGreaterThan(20);
     });
   });
 
@@ -223,7 +223,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(30); // perpOrderCancel instruction tag
+      expect(instruction.data![0]).toBe(30); // perpOrderCancel instruction tag
     });
   });
 
@@ -237,7 +237,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(36); // perpMassCancel instruction tag
+      expect(instruction.data![0]).toBe(36); // perpMassCancel instruction tag
     });
   });
 
@@ -251,7 +251,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(37); // perpChangeLeverage instruction tag
+      expect(instruction.data![0]).toBe(37); // perpChangeLeverage instruction tag
     });
   });
 
@@ -263,8 +263,8 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.accounts.length).toBe(3);
-      expect(instruction.data[0]).toBe(45); // newRefLink instruction tag
+      expect(instruction.accounts!.length).toBe(3);
+      expect(instruction.data![0]).toBe(45); // newRefLink instruction tag
     });
   });
 
@@ -278,7 +278,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(47); // buyMarketSeat instruction tag
+      expect(instruction.data![0]).toBe(47); // buyMarketSeat instruction tag
     });
 
     it('handles slippage parameter', async () => {
@@ -289,7 +289,7 @@ describe('perp instruction builders', () => {
       const instruction = await buildPerpBuySeatInstruction(ctx, args, instr);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[0]).toBe(47);
+      expect(instruction.data![0]).toBe(47);
     });
 
     it('defaults slippage to 0 when not provided', async () => {
@@ -313,7 +313,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(48); // sellMarketSeat instruction tag
+      expect(instruction.data![0]).toBe(48); // sellMarketSeat instruction tag
     });
 
     it('handles slippage parameter', async () => {
@@ -324,7 +324,7 @@ describe('perp instruction builders', () => {
       const instruction = await buildPerpSellSeatInstruction(ctx, args, instr);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[0]).toBe(48);
+      expect(instruction.data![0]).toBe(48);
     });
   });
 
@@ -346,7 +346,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(42); // perpQuotesReplace instruction tag
+      expect(instruction.data![0]).toBe(42); // perpQuotesReplace instruction tag
     });
 
     it('includes ref accounts when provided', async () => {
@@ -367,7 +367,7 @@ describe('perp instruction builders', () => {
 
       const instruction = await buildPerpQuotesReplaceInstruction(ctx, args, instr);
 
-      expect(instruction.accounts.length).toBeGreaterThan(18);
+      expect(instruction.accounts!.length).toBeGreaterThan(18);
     });
   });
 
@@ -381,7 +381,7 @@ describe('perp instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(46); // perpStatisticsReset instruction tag
+      expect(instruction.data![0]).toBe(46); // perpStatisticsReset instruction tag
     });
   });
 });

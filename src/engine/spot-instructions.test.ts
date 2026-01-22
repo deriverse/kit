@@ -127,9 +127,9 @@ describe('spot instruction builders', () => {
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
       expect(instruction.accounts).toBeDefined();
-      expect(instruction.accounts.length).toBeGreaterThan(0);
+      expect(instruction.accounts!.length).toBeGreaterThan(0);
       expect(instruction.data).toBeInstanceOf(Uint8Array);
-      expect(instruction.data[0]).toBe(7); // deposit instruction tag
+      expect(instruction.data![0]).toBe(7); // deposit instruction tag
     });
 
     it('builds deposit instruction for new account', async () => {
@@ -141,7 +141,7 @@ describe('spot instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.accounts.length).toBeGreaterThan(0);
+      expect(instruction.accounts!.length).toBeGreaterThan(0);
       expect(rpcGetSlot).toHaveBeenCalled();
     });
 
@@ -152,7 +152,7 @@ describe('spot instruction builders', () => {
 
       const instruction = await buildDepositInstruction(ctx, args, true, rpcGetSlot);
 
-      expect(instruction.accounts.length).toBeGreaterThan(9);
+      expect(instruction.accounts!.length).toBeGreaterThan(9);
     });
 
     it('handles all_funds flag', async () => {
@@ -163,7 +163,7 @@ describe('spot instruction builders', () => {
       const instruction = await buildDepositInstruction(ctx, args, true, rpcGetSlot);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[2]).toBe(1); // all_funds flag position
+      expect(instruction.data![2]).toBe(1); // all_funds flag position
     });
   });
 
@@ -177,9 +177,9 @@ describe('spot instruction builders', () => {
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
       expect(instruction.accounts).toBeDefined();
-      expect(instruction.accounts.length).toBeGreaterThan(0);
+      expect(instruction.accounts!.length).toBeGreaterThan(0);
       expect(instruction.data).toBeInstanceOf(Uint8Array);
-      expect(instruction.data[0]).toBe(8); // withdraw instruction tag
+      expect(instruction.data![0]).toBe(8); // withdraw instruction tag
     });
 
     it('includes spot instruments when provided', async () => {
@@ -192,7 +192,7 @@ describe('spot instruction builders', () => {
 
       const instruction = await buildWithdrawInstruction(ctx, args);
 
-      expect(instruction.accounts.length).toBeGreaterThan(11);
+      expect(instruction.accounts!.length).toBeGreaterThan(11);
     });
   });
 
@@ -206,7 +206,7 @@ describe('spot instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(14); // spotLp instruction tag
+      expect(instruction.data![0]).toBe(14); // spotLp instruction tag
     });
 
     it('includes price bounds when provided', async () => {
@@ -230,7 +230,7 @@ describe('spot instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(12); // newSpotOrder instruction tag
+      expect(instruction.data![0]).toBe(12); // newSpotOrder instruction tag
     });
 
     it('includes IOC flag when provided', async () => {
@@ -241,7 +241,7 @@ describe('spot instruction builders', () => {
       const instruction = await buildNewSpotOrderInstruction(ctx, args, instr);
 
       expect(instruction).toBeDefined();
-      expect(instruction.data[1]).toBe(1); // ioc flag
+      expect(instruction.data![1]).toBe(1); // ioc flag
     });
 
     it('includes ref accounts when provided', async () => {
@@ -254,7 +254,7 @@ describe('spot instruction builders', () => {
 
       const instruction = await buildNewSpotOrderInstruction(ctx, args, instr);
 
-      expect(instruction.accounts.length).toBeGreaterThan(15);
+      expect(instruction.accounts!.length).toBeGreaterThan(15);
     });
   });
 
@@ -268,7 +268,7 @@ describe('spot instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(13); // spotOrderCancel instruction tag
+      expect(instruction.data![0]).toBe(13); // spotOrderCancel instruction tag
     });
   });
 
@@ -282,7 +282,7 @@ describe('spot instruction builders', () => {
 
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.data[0]).toBe(15); // spotMassCancel instruction tag
+      expect(instruction.data![0]).toBe(15); // spotMassCancel instruction tag
     });
   });
 });

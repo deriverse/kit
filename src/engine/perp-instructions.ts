@@ -219,7 +219,7 @@ async function buildPerpDepositInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
@@ -246,7 +246,7 @@ async function buildPerpBuySeatInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
@@ -275,7 +275,7 @@ async function buildPerpSellSeatInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -305,8 +305,8 @@ async function buildNewPerpOrderInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -314,6 +314,9 @@ async function buildNewPerpOrderInstruction(
 
   if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
+  }
+
+  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -357,8 +360,8 @@ async function buildPerpQuotesReplaceInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -366,6 +369,9 @@ async function buildPerpQuotesReplaceInstruction(
 
   if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
+  }
+
+  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -383,7 +389,7 @@ async function buildPerpOrderCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -407,7 +413,7 @@ async function buildPerpMassCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -431,7 +437,7 @@ async function buildPerpChangeLeverageInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -455,7 +461,7 @@ async function buildPerpStatisticsResetInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -478,7 +484,7 @@ async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
   ];
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };

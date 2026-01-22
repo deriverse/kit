@@ -149,8 +149,8 @@ export class Engine {
   rootAccount: Address<any>;
   communityAccount: Address<any>;
   private signer?: Address<any>;
-  originalClientId?: number;
-  private clientPrimaryAccount?: Address<any>;
+  originalClientId?: number | null;
+  private clientPrimaryAccount?: Address<any> | null;
   private clientCommunityAccount?: Address<any>;
   clientLutAddress?: Address<any>;
   private refClientPrimaryAccount?: Address<any>;
@@ -307,7 +307,7 @@ export class Engine {
           encoding: 'base64',
         })
         .send();
-      if (infos.value == null) {
+      if (infos.value == null || infos.value[0] == null || infos.value[1] == null) {
         throw new Error('Initialization failed: getMultipleAccountsInfo');
       }
       this.rootStateModel = RootStateModel.fromBuffer(infos.value[0].data);
@@ -420,6 +420,7 @@ export class Engine {
                 encoding: 'base64',
               })
               .send();
+            if (refInfo.value == null) throw new Error('Ref client account not found');
             const refClientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(refInfo.value.data);
             this.refClientCommunityAccount = await findClientCommunityAccount(
               { programId: this.programId, version: this.version },
@@ -509,11 +510,14 @@ export class Engine {
   }
 
   instrLut(args: InstrId): Address {
-    return this.instruments.get(args.instrId).header.lutAddress;
+    return this.instruments.get(args.instrId)?.header.lutAddress;
   }
 
   async updateInstrData(args: InstrId) {
     const instr = this.instruments.get(args.instrId);
+    if (!instr) {
+      throw new Error('Instrument not found!');
+    }
     const ctx = this.getAccountHelperContext();
     let instrAccount = await getInstrAccountByTagFn(ctx, {
       assetTokenId: instr.header.assetTokenId,
@@ -523,6 +527,10 @@ export class Engine {
     const info = await this.rpc
       .getAccountInfo(instrAccount, { commitment: this.commitment, encoding: 'base64' })
       .send();
+
+    if (info.value == null) {
+      throw new Error('updateInstrData: getAccountInfo failed');
+    }
     await this.updateInstrDataFromBuffer(info.value.data);
   }
 
@@ -665,7 +673,7 @@ export class Engine {
       uiNumbers: this.uiNumbers,
       clientPrimaryAccount: this.clientPrimaryAccount,
       clientCommunityAccount: this.clientCommunityAccount,
-      originalClientId: this.originalClientId,
+      originalClientId: this.originalClientId!,
     });
   }
 
@@ -679,7 +687,7 @@ export class Engine {
         uiNumbers: this.uiNumbers,
         clientPrimaryAccount: this.clientPrimaryAccount,
         clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId,
+        originalClientId: this.originalClientId!,
       },
       args,
     );
@@ -695,7 +703,7 @@ export class Engine {
         uiNumbers: this.uiNumbers,
         clientPrimaryAccount: this.clientPrimaryAccount,
         clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId,
+        originalClientId: this.originalClientId!,
       },
       args,
     );
@@ -711,7 +719,7 @@ export class Engine {
         uiNumbers: this.uiNumbers,
         clientPrimaryAccount: this.clientPrimaryAccount,
         clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId,
+        originalClientId: this.originalClientId!,
       },
       args,
     );
@@ -727,7 +735,7 @@ export class Engine {
         uiNumbers: this.uiNumbers,
         clientPrimaryAccount: this.clientPrimaryAccount,
         clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId,
+        originalClientId: this.originalClientId!,
       },
       args,
     );
@@ -743,11 +751,8 @@ export class Engine {
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
     }
-    return buildDepositInstruction(
-      this.getSpotInstructionContext({ withPrivateMode: true }),
-      args,
-      exists,
-      () => this.rpc.getSlot().send(),
+    return buildDepositInstruction(this.getSpotInstructionContext({ withPrivateMode: true }), args, exists, () =>
+      this.rpc.getSlot().send(),
     );
   }
 
@@ -801,7 +806,16 @@ export class Engine {
     SwapArgsSchema.parse(args);
     const assetTokenId = await this.getTokenId(args.assetMint);
     const crncyTokenId = await this.getTokenId(args.crncyMint);
+    if (assetTokenId === null) {
+      throw new Error('Asset token not found!');
+    }
+    if (crncyTokenId === null) {
+      throw new Error('Crncy token not found!');
+    }
     const instrId = await this.getInstrId({ assetTokenId, crncyTokenId });
+    if (instrId === null) {
+      throw new Error('Instruction not found!');
+    }
     const instr = await this.getSpotInstrumentWithUpdate(instrId);
     return buildSwapInstruction(this.getSpotInstructionContext(), args, instr);
   }
@@ -820,11 +834,8 @@ export class Engine {
     }
     await this.updateInstrData({ instrId: args.instrId });
     const instr = this.instruments.get(args.instrId)!;
-    return buildUpgradeToPerpInstructions(
-      this.getPerpInstructionContext(),
-      args,
-      instr,
-      (size) => this.rpc.getMinimumBalanceForRentExemption(size).send(),
+    return buildUpgradeToPerpInstructions(this.getPerpInstructionContext(), args, instr, (size) =>
+      this.rpc.getMinimumBalanceForRentExemption(size).send(),
     );
   }
 

@@ -59,7 +59,7 @@ async function getClientData(ctx: ClientQueryContext): Promise<GetClientDataResp
       encoding: 'base64',
     })
     .send();
-  if (infos.value == null) {
+  if (infos.value == null || infos.value[0] == null || infos.value[1] == null) {
     throw new Error('GetClientData: GetAccountInfo failed');
   }
   const clientPrimaryAccountHeaderModel = ClientPrimaryAccountHeaderModel.fromBuffer(infos.value[0].data);
@@ -150,7 +150,7 @@ async function getClientSpotOrdersInfo(
   args: GetClientSpotOrdersInfoArgs,
 ): Promise<GetClientSpotOrdersInfoResponse> {
   const instr = ctx.instruments.get(args.instrId);
-  if (instr == undefined) {
+  if (!instr) {
     throw new Error('Invalid Instrument ID');
   }
   const clientInfosAccount = await getInstrAccountByTag(ctx, {
@@ -206,7 +206,7 @@ async function getClientPerpOrdersInfo(
   args: GetClientPerpOrdersInfoArgs,
 ): Promise<GetClientPerpOrdersInfoResponse> {
   const instr = ctx.instruments.get(args.instrId);
-  if (instr == undefined) {
+  if (!instr) {
     throw new Error('Invalid Instrument ID');
   }
   const clientInfosAccount = await getInstrAccountByTag(ctx, {
@@ -289,6 +289,9 @@ async function getClientSpotOrders(
   args: GetClientSpotOrdersArgs,
 ): Promise<GetClientSpotOrdersResponse> {
   const instr = ctx.instruments.get(args.instrId);
+  if (!instr) {
+    throw new Error('Invalid Instrument ID');
+  }
   const bidOrdersAccount = await getInstrAccountByTag(ctx, {
     assetTokenId: instr.header.assetTokenId,
     crncyTokenId: instr.header.crncyTokenId,
@@ -308,6 +311,9 @@ async function getClientSpotOrders(
         encoding: 'base64',
       })
       .send();
+    if (infos.value[0] == null || infos.value[1] == null) {
+      throw new Error('Orders account not found');
+    }
     let bids = getMultipleSpotOrders(infos.value[0].data, args.bidsEntry, ctx.originalClientId);
     for (let i = 0; i < bids.length; ++i) {
       bids[i].qty /= assetTokenDec;
@@ -328,6 +334,7 @@ async function getClientSpotOrders(
     let info = await ctx.rpc
       .getAccountInfo(bidOrdersAccount, { commitment: ctx.commitment, encoding: 'base64' })
       .send();
+    if (info.value == null) throw new Error('Bid orders account not found');
     bidContextSlot = Number(info.context.slot);
     bids = getMultipleSpotOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
   } else if (args.bidsCount == 1) {
@@ -338,6 +345,7 @@ async function getClientSpotOrders(
         dataSlice: { offset: args.bidsEntry * 64 + SpotTradeAccountHeaderModel.LENGTH, length: 64 },
       })
       .send();
+    if (info.value == null) throw new Error('Bid orders account not found');
     const order = OrderModel.fromBuffer(info.value.data);
     if (order.origClientId == ctx.originalClientId) {
       bids = [order];
@@ -348,6 +356,7 @@ async function getClientSpotOrders(
     let info = await ctx.rpc
       .getAccountInfo(askOrdersAccount, { commitment: ctx.commitment, encoding: 'base64' })
       .send();
+    if (info.value == null) throw new Error('Ask orders account not found');
     askContextSlot = Number(info.context.slot);
     asks = getMultipleSpotOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
   } else if (args.asksCount == 1) {
@@ -358,6 +367,7 @@ async function getClientSpotOrders(
         dataSlice: { offset: args.asksEntry * 64 + SpotTradeAccountHeaderModel.LENGTH, length: 64 },
       })
       .send();
+    if (info.value == null) throw new Error('Ask orders account not found');
     const order = OrderModel.fromBuffer(info.value.data);
     if (order.origClientId == ctx.originalClientId) {
       asks = [order];
@@ -393,6 +403,9 @@ async function getClientPerpOrders(
   args: GetClientPerpOrdersArgs,
 ): Promise<GetClientPerpOrdersResponse> {
   const instr = ctx.instruments.get(args.instrId);
+  if (!instr) {
+    throw new Error('Invalid Instrument ID');
+  }
   const bidOrdersAccount = await getInstrAccountByTag(ctx, {
     assetTokenId: instr.header.assetTokenId,
     crncyTokenId: instr.header.crncyTokenId,
@@ -412,6 +425,9 @@ async function getClientPerpOrders(
         encoding: 'base64',
       })
       .send();
+    if (infos.value[0] == null || infos.value[1] == null) {
+      throw new Error('Orders account not found');
+    }
     let bids = getMultiplePerpOrders(infos.value[0].data, args.bidsEntry, ctx.originalClientId);
     for (let i = 0; i < bids.length; ++i) {
       bids[i].qty /= assetTokenDec;
@@ -432,6 +448,7 @@ async function getClientPerpOrders(
     let info = await ctx.rpc
       .getAccountInfo(bidOrdersAccount, { commitment: ctx.commitment, encoding: 'base64' })
       .send();
+    if (info.value == null) throw new Error('Bid orders account not found');
     bidContextSlot = Number(info.context.slot);
     bids = getMultiplePerpOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
   } else if (args.bidsCount == 1) {
@@ -442,6 +459,7 @@ async function getClientPerpOrders(
         dataSlice: { offset: args.bidsEntry * 64 + PerpTradeAccountHeaderModel.LENGTH, length: 64 },
       })
       .send();
+    if (info.value == null) throw new Error('Bid orders account not found');
     const order = OrderModel.fromBuffer(info.value.data);
     if (order.origClientId == ctx.originalClientId) {
       bids = [order];
@@ -452,6 +470,7 @@ async function getClientPerpOrders(
     let info = await ctx.rpc
       .getAccountInfo(askOrdersAccount, { commitment: ctx.commitment, encoding: 'base64' })
       .send();
+    if (info.value == null) throw new Error('Ask orders account not found');
     askContextSlot = Number(info.context.slot);
     asks = getMultiplePerpOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
   } else if (args.asksCount == 1) {
@@ -462,6 +481,7 @@ async function getClientPerpOrders(
         dataSlice: { offset: args.asksEntry * 64 + PerpTradeAccountHeaderModel.LENGTH, length: 64 },
       })
       .send();
+    if (info.value == null) throw new Error('Ask orders account not found');
     const order = OrderModel.fromBuffer(info.value.data);
     if (order.origClientId == ctx.originalClientId) {
       asks = [order];

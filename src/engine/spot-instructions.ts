@@ -67,7 +67,7 @@ async function buildDepositInstruction(
   ctx: SpotInstructionContext,
   args: DepositArgs,
   exists: boolean,
-  rpcGetSlot: () => Promise<bigint>
+  rpcGetSlot: () => Promise<bigint>,
 ): Promise<Instruction> {
   const amount = args.amount ?? 0;
   const allFunds = args.all_funds ? 1 : 0;
@@ -76,11 +76,7 @@ async function buildDepositInstruction(
     throw new Error(`Token ${args.tokenId} not found`);
   }
   const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
-  const clientTokenAccount = await findAssociatedTokenAddress(
-    ctx.signer,
-    tokenProgramId,
-    token.address
-  );
+  const clientTokenAccount = await findAssociatedTokenAddress(ctx.signer, tokenProgramId, token.address);
   const clientPrimaryAccount = await findClientPrimaryAccount(ctx, ctx.signer);
 
   let keys = [
@@ -113,15 +109,7 @@ async function buildDepositInstruction(
     return {
       accounts: keys,
       programAddress: ctx.programId,
-      data: depositData(
-        7,
-        0,
-        allFunds,
-        args.tokenId,
-        amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
-        0,
-        0
-      ),
+      data: depositData(7, 0, allFunds, args.tokenId, amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), 0, 0),
     };
   } else {
     const slot = Number(await rpcGetSlot()) - 1;
@@ -164,7 +152,7 @@ async function buildDepositInstruction(
         args.tokenId,
         amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
         slot,
-        refId
+        refId,
       ),
     };
   }
@@ -173,17 +161,13 @@ async function buildDepositInstruction(
 /**
  * Build withdraw instruction
  */
-async function buildWithdrawInstruction(
-  ctx: SpotInstructionContext,
-  args: WithdrawArgs
-): Promise<Instruction> {
+async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: WithdrawArgs): Promise<Instruction> {
   const token = ctx.tokens.get(args.tokenId);
+  if (!token) {
+    throw new Error(`Token ${args.tokenId} not found`);
+  }
   const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
-  const clientTokenAccount = await findAssociatedTokenAddress(
-    ctx.signer,
-    tokenProgramId,
-    token.address
-  );
+  const clientTokenAccount = await findAssociatedTokenAddress(ctx.signer, tokenProgramId, token.address);
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
@@ -202,6 +186,9 @@ async function buildWithdrawInstruction(
   if (args.spot != undefined) {
     for (let i = 0; i < args.spot.length; ++i) {
       const instr = ctx.instruments.get(args.spot[i].instrId);
+      if (!instr) {
+        throw new Error(`Instrument ${args.spot[i].instrId} not found`);
+      }
       if (instr.header.assetTokenId == args.tokenId || instr.header.crncyTokenId == args.tokenId) {
         keys.push({ address: instr.header.mapsAddress, role: AccountRole.READONLY });
         keys.push({
@@ -227,11 +214,7 @@ async function buildWithdrawInstruction(
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: withdrawData(
-      8,
-      args.tokenId,
-      args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers)
-    ),
+    data: withdrawData(8, args.tokenId, args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers)),
   };
 }
 
@@ -241,7 +224,7 @@ async function buildWithdrawInstruction(
 async function buildSpotLpInstruction(
   ctx: SpotInstructionContext,
   args: SpotLpArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
@@ -254,7 +237,7 @@ async function buildSpotLpInstruction(
       }),
       role: AccountRole.WRITABLE,
     },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -263,7 +246,7 @@ async function buildSpotLpInstruction(
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE });
   }
 
   const minPrice = args.minPrice == undefined || args.minPrice == null ? 0 : args.minPrice;
@@ -278,7 +261,7 @@ async function buildSpotLpInstruction(
       args.instrId,
       Math.round(args.amount * lpDec),
       minPrice * 1000000000,
-      maxPrice * 1000000000
+      maxPrice * 1000000000,
     ),
   };
 }
@@ -289,7 +272,7 @@ async function buildSpotLpInstruction(
 async function buildNewSpotOrderInstruction(
   ctx: SpotInstructionContext,
   args: NewSpotOrderArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   let buf = newSpotOrderData(
     12,
@@ -299,7 +282,7 @@ async function buildNewSpotOrderInstruction(
     args.instrId,
     Math.round(args.price * 1000000000),
     Math.round(args.qty * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
-    args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000
+    args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000,
   );
 
   let keys = [
@@ -318,6 +301,9 @@ async function buildNewSpotOrderInstruction(
 
   if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
+  }
+
+  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -330,7 +316,7 @@ async function buildNewSpotOrderInstruction(
 async function buildSpotQuotesReplaceInstruction(
   ctx: SpotInstructionContext,
   args: SpotQuotesReplaceArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   let assetTokenDecFactor = tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers);
   let buf = spotQuotesReplaceData(
@@ -341,7 +327,7 @@ async function buildSpotQuotesReplaceInstruction(
     args.bidOrderIdToCancel,
     Math.round(args.newAskPrice * 1000000000),
     Math.round(args.newAskQty * assetTokenDecFactor),
-    args.askOrderIdToCancel
+    args.askOrderIdToCancel,
   );
 
   let keys = [
@@ -360,6 +346,9 @@ async function buildSpotQuotesReplaceInstruction(
 
   if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
+  }
+
+  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -372,14 +361,14 @@ async function buildSpotQuotesReplaceInstruction(
 async function buildSpotOrderCancelInstruction(
   ctx: SpotInstructionContext,
   args: SpotOrderCancelArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -408,14 +397,14 @@ async function buildSpotOrderCancelInstruction(
 async function buildSpotMassCancelInstruction(
   ctx: SpotInstructionContext,
   args: SpotMassCancelArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -444,7 +433,7 @@ async function buildSpotMassCancelInstruction(
 async function buildSwapInstruction(
   ctx: SpotInstructionContext,
   args: SwapArgs,
-  instr: Instrument
+  instr: Instrument,
 ): Promise<Instruction> {
   const assetTokenId = await getTokenId(ctx, args.assetMint);
   const crncyTokenId = await getTokenId(ctx, args.crncyMint);
@@ -459,21 +448,15 @@ async function buildSwapInstruction(
   if (!assetTokenAccount || !crncyTokenAccount) {
     throw new Error('Token account not found');
   }
-  const assetTokenProgramId =
-    (assetTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
-  const crncyTokenProgramId =
-    (crncyTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  const assetTokenProgramId = (assetTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  const crncyTokenProgramId = (crncyTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
   let instrId = await getInstrId(ctx, { assetTokenId: assetTokenId, crncyTokenId: crncyTokenId });
-  const clientAssetTokenAccount = await findAssociatedTokenAddress(
-    ctx.signer,
-    assetTokenProgramId,
-    args.assetMint
-  );
-  const clientCrncyTokenAccount = await findAssociatedTokenAddress(
-    ctx.signer,
-    crncyTokenProgramId,
-    args.crncyMint
-  );
+  if (instrId === null) {
+    throw new Error('No instruction ID');
+  }
+
+  const clientAssetTokenAccount = await findAssociatedTokenAddress(ctx.signer, assetTokenProgramId, args.assetMint);
+  const clientCrncyTokenAccount = await findAssociatedTokenAddress(ctx.signer, crncyTokenProgramId, args.crncyMint);
 
   let buf = swapData(
     26,
@@ -484,8 +467,8 @@ async function buildSwapInstruction(
       args.amount *
         (args.crncyInput
           ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
-          : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers))
-    )
+          : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
+    ),
   );
 
   let keys = [

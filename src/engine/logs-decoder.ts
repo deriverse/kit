@@ -4,6 +4,7 @@ import { decode } from 'base64-arraybuffer';
 import { Instrument, LogMessage } from '../types';
 import { dec, lpDec } from '../constants';
 import { TokenStateModel } from '../structure_models';
+import { tokenDec } from './utils';
 import {
   BuyMarketSeatReportModel,
   DepositReportModel,
@@ -46,22 +47,6 @@ export interface LogsDecoderContext {
   instruments: Map<number, Instrument>;
   tokens: Map<number, TokenStateModel>;
   uiNumbers: boolean;
-}
-
-/**
- * Get token decimal factor for UI number conversion
- */
-function tokenDec(tokens: Map<number, TokenStateModel>, tokenId: number, uiNumbers: boolean): number {
-  if (uiNumbers) {
-    const token = tokens.get(tokenId);
-    if (token) {
-      return Math.pow(10, token.mask & 0xff);
-    } else {
-      return 1;
-    }
-  } else {
-    return 1;
-  }
 }
 
 /**

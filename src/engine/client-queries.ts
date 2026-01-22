@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { AccountType } from '../types/enums';
 import { lpDec } from '../constants';
-import { getMultipleSpotOrders, getMultiplePerpOrders } from './utils';
+import { getMultipleSpotOrders, getMultiplePerpOrders, tokenDec } from './utils';
 import {
   ClientCommunityAccountHeaderModel,
   ClientCommunityRecordModel,
@@ -47,22 +47,6 @@ export interface ClientQueryContext extends AccountHelperContext {
   clientPrimaryAccount: Address;
   clientCommunityAccount: Address;
   originalClientId: number;
-}
-
-/**
- * Get token decimal factor for UI number conversion
- */
-function tokenDec(tokens: Map<number, TokenStateModel>, tokenId: number, uiNumbers: boolean): number {
-  if (uiNumbers) {
-    const token = tokens.get(tokenId);
-    if (token) {
-      return Math.pow(10, token.mask & 0xff);
-    } else {
-      return 1;
-    }
-  } else {
-    return 1;
-  }
 }
 
 /**

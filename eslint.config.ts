@@ -9,8 +9,10 @@ export default defineConfig(
       'node_modules/**',
       'src/*.old.ts',
       'src/auto_buffer.ts',
-      'src/auth_data.ts',
+      'src/auto_data.ts',
       'src/instruction_models.ts',
+      'src/structure_models.ts',
+      'src/logs_models.ts',
     ],
   },
   eslint.configs.recommended,
@@ -27,5 +29,5 @@ export default defineConfig(
       '@typescript-eslint/no-unused-expressions': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
-  }
+  },
 );

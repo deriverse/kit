@@ -75,6 +75,7 @@ import {
   getPerpContext as getPerpContextFn,
   getSpotCandles as getSpotCandlesFn,
 } from './context-builders';
+import { tokenDec } from './utils';
 import {
   getClientData as getClientDataFn,
   getClientSpotOrdersInfo as getClientSpotOrdersInfoFn,
@@ -172,14 +173,53 @@ export class Engine {
     };
   }
 
-  private tokenDec(tokenId: number): number {
-    if (this.uiNumbers) {
-      const token = this.tokens.get(tokenId);
-      if (token) {
-        return Math.pow(10, token.mask & 0xff);
-      }
+  private getSpotInstructionContext(options?: { withRef?: boolean; withPrivateMode?: boolean }) {
+    return {
+      ...this.getAccountHelperContext(),
+      instruments: this.instruments,
+      tokens: this.tokens,
+      uiNumbers: this.uiNumbers,
+      signer: this.signer,
+      rootAccount: this.rootAccount,
+      clientPrimaryAccount: this.clientPrimaryAccount,
+      clientCommunityAccount: this.clientCommunityAccount,
+      ...(options?.withRef && {
+        refClientPrimaryAccount: this.refClientPrimaryAccount,
+        refClientCommunityAccount: this.refClientCommunityAccount,
+      }),
+      ...(options?.withPrivateMode && { privateMode: this.privateMode }),
+    };
+  }
+
+  private getPerpInstructionContext(options?: { withRef?: boolean }) {
+    return {
+      ...this.getSpotInstructionContext(options),
+      rootStateModel: this.rootStateModel,
+    };
+  }
+
+  private async requireClient(): Promise<void> {
+    if (!(await this.checkClient())) {
+      throw new Error('Client account not found');
     }
-    return 1;
+  }
+
+  private async getSpotInstrumentWithUpdate(instrId: number): Promise<Instrument> {
+    let instr = this.instruments.get(instrId);
+    if (instr?.header.mapsAddress == undefined) {
+      await this.updateInstrData({ instrId });
+      instr = this.instruments.get(instrId)!;
+    }
+    return instr;
+  }
+
+  private async getPerpInstrumentWithUpdate(instrId: number): Promise<Instrument> {
+    let instr = this.instruments.get(instrId);
+    if (instr?.header.perpMapsAddress == undefined) {
+      await this.updateInstrData({ instrId });
+      instr = this.instruments.get(instrId)!;
+    }
+    return instr;
   }
 
   private async checkClient(): Promise<boolean> {
@@ -381,7 +421,7 @@ export class Engine {
   updateCommunityFromBuffer(data: Base64EncodedDataResponse) {
     let baseCrncyRecords = new Map();
     let communityAccountHeaderModel = CommunityAccountHeaderModel.fromBuffer(data);
-    const drvsDec = this.tokenDec(0);
+    const drvsDec = tokenDec(this.tokens, 0, this.uiNumbers);
     communityAccountHeaderModel.prevVotingSupply /= drvsDec;
     communityAccountHeaderModel.votingSupply /= drvsDec;
     communityAccountHeaderModel.drvsTokens /= drvsDec;
@@ -390,7 +430,7 @@ export class Engine {
         data,
         CommunityAccountHeaderModel.LENGTH + i * BaseCrncyRecordModel.LENGTH,
       );
-      record.funds /= this.tokenDec(record.crncyTokenId);
+      record.funds /= tokenDec(this.tokens, record.crncyTokenId, this.uiNumbers);
       baseCrncyRecords.set(record.crncyTokenId, record);
     }
     this.community = {
@@ -464,8 +504,8 @@ export class Engine {
   async updateInstrDataFromBuffer(data: Base64EncodedDataResponse) {
     let header = InstrAccountHeaderModel.fromBuffer(data);
     header.ps /= lpDec;
-    const assetTokenDec = this.tokenDec(header.assetTokenId);
-    const crncyTokenDec = this.tokenDec(header.crncyTokenId);
+    const assetTokenDec = tokenDec(this.tokens, header.assetTokenId, this.uiNumbers);
+    const crncyTokenDec = tokenDec(this.tokens, header.crncyTokenId, this.uiNumbers);
     header.assetTokens /= assetTokenDec;
     header.crncyTokens /= crncyTokenDec;
     header.protocolFees /= crncyTokenDec;
@@ -674,17 +714,7 @@ export class Engine {
       throw new Error('Wallet is not connected');
     }
     return buildDepositInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        privateMode: this.privateMode,
-      },
+      this.getSpotInstructionContext({ withPrivateMode: true }),
       args,
       exists,
       () => this.rpc.getSlot().send(),
@@ -692,22 +722,8 @@ export class Engine {
   }
 
   async withdrawInstruction(args: WithdrawArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    return buildWithdrawInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-    );
+    await this.requireClient();
+    return buildWithdrawInstruction(this.getSpotInstructionContext(), args);
   }
 
   // ============================================
@@ -715,154 +731,42 @@ export class Engine {
   // ============================================
 
   async spotLpInstruction(args: SpotLpArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
+    await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    let instr = this.instruments.get(args.instrId)!;
-    return buildSpotLpInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    const instr = this.instruments.get(args.instrId)!;
+    return buildSpotLpInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   async newSpotOrderInstruction(args: NewSpotOrderArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.mapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildNewSpotOrderInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        refClientPrimaryAccount: this.refClientPrimaryAccount,
-        refClientCommunityAccount: this.refClientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
+    return buildNewSpotOrderInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
   }
 
   async spotQuotesReplaceInstruction(args: SpotQuotesReplaceArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.mapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildSpotQuotesReplaceInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        refClientPrimaryAccount: this.refClientPrimaryAccount,
-        refClientCommunityAccount: this.refClientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
+    return buildSpotQuotesReplaceInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
   }
 
   async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.mapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildSpotOrderCancelInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
+    return buildSpotOrderCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   async spotMassCancelInstruction(args: SpotMassCancelArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.mapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildSpotMassCancelInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
+    return buildSpotMassCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   async swapInstruction(args: SwapArgs): Promise<any> {
     const assetTokenId = await this.getTokenId(args.assetMint);
     const crncyTokenId = await this.getTokenId(args.crncyMint);
-    let instrId = await this.getInstrId({ assetTokenId: assetTokenId, crncyTokenId: crncyTokenId });
-    let instr = this.instruments.get(instrId)!;
-    if (instr.header.mapsAddress == undefined) {
-      await this.updateInstrData({ instrId: instrId });
-      instr = this.instruments.get(instrId)!;
-    }
-    return buildSwapInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    const instrId = await this.getInstrId({ assetTokenId, crncyTokenId });
+    const instr = await this.getSpotInstrumentWithUpdate(instrId);
+    return buildSwapInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
   // ============================================
@@ -873,24 +777,13 @@ export class Engine {
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
     }
-    let instr = this.instruments.get(args.instrId);
-    if (instr == null) {
+    if (this.instruments.get(args.instrId) == null) {
       throw new Error('Invalid Instr ID');
     }
     await this.updateInstrData({ instrId: args.instrId });
-    instr = this.instruments.get(args.instrId);
+    const instr = this.instruments.get(args.instrId)!;
     return buildUpgradeToPerpInstructions(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
+      this.getPerpInstructionContext(),
       args,
       instr,
       (size) => this.rpc.getMinimumBalanceForRentExemption(size).send(),
@@ -898,252 +791,64 @@ export class Engine {
   }
 
   async perpDepositInstruction(args: PerpDepositArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpDepositInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpDepositInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpBuySeatInstruction(args: PerpBuySeatArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
+    await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    let instr = this.instruments.get(args.instrId)!;
-    return buildPerpBuySeatInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    const instr = this.instruments.get(args.instrId)!;
+    return buildPerpBuySeatInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpSellSeatInstruction(args: PerpSellSeatArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
+    await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    let instr = this.instruments.get(args.instrId)!;
-    return buildPerpSellSeatInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    const instr = this.instruments.get(args.instrId)!;
+    return buildPerpSellSeatInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async newPerpOrderInstruction(args: NewPerpOrderArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildNewPerpOrderInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        refClientPrimaryAccount: this.refClientPrimaryAccount,
-        refClientCommunityAccount: this.refClientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildNewPerpOrderInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
   }
 
   async perpQuotesReplaceInstruction(args: PerpQuotesReplaceArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpQuotesReplaceInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        refClientPrimaryAccount: this.refClientPrimaryAccount,
-        refClientCommunityAccount: this.refClientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpQuotesReplaceInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
   }
 
   async perpOrderCancelInstruction(args: PerpOrderCancelArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpOrderCancelInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpOrderCancelInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpMassCancelInstruction(args: PerpMassCancelArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpMassCancelInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpMassCancelInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async newRefLinkInstruction(): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    return buildNewRefLinkInstruction({
-      ...this.getAccountHelperContext(),
-      instruments: this.instruments,
-      tokens: this.tokens,
-      rootStateModel: this.rootStateModel,
-      uiNumbers: this.uiNumbers,
-      signer: this.signer,
-      rootAccount: this.rootAccount,
-      clientPrimaryAccount: this.clientPrimaryAccount,
-      clientCommunityAccount: this.clientCommunityAccount,
-    });
+    await this.requireClient();
+    return buildNewRefLinkInstruction(this.getPerpInstructionContext());
   }
 
   async perpChangeLeverageInstruction(args: PerpChangeLeverageArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpChangeLeverageInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpChangeLeverageInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   async perpStatisticsResetInstruction(args: PerpStatisticsResetArgs): Promise<any> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    let instr = this.instruments.get(args.instrId);
-    if (instr.header.perpMapsAddress == undefined) {
-      await this.updateInstrData({ instrId: args.instrId });
-      instr = this.instruments.get(args.instrId)!;
-    }
-    return buildPerpStatisticsResetInstruction(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
-      args,
-      instr,
-    );
+    await this.requireClient();
+    const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
+    return buildPerpStatisticsResetInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
   // ============================================
@@ -1155,17 +860,7 @@ export class Engine {
       throw new Error('Wallet is not connected');
     }
     return buildNewInstrumentInstructions(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        rootStateModel: this.rootStateModel,
-        uiNumbers: this.uiNumbers,
-        signer: this.signer,
-        rootAccount: this.rootAccount,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-      },
+      this.getPerpInstructionContext(),
       args,
       () => this.rpc.getSlot().send(),
       (address) => this.rpc.getAccountInfo(address).send(),

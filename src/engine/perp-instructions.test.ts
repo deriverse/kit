@@ -63,6 +63,7 @@ vi.mock('./utils', () => ({
   findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
   getLookupTableAddress: vi.fn().mockResolvedValue('MockLUT1111111111111111111111111' as Address),
   perpSeatReserve: vi.fn().mockReturnValue(100),
+  tokenDec: vi.fn().mockReturnValue(1000000000), // 10^9
 }));
 
 // Helper to create a mock token

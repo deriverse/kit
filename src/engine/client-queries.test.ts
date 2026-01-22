@@ -31,6 +31,7 @@ vi.mock('./account-helpers', () => ({
 vi.mock('./utils', () => ({
   getMultipleSpotOrders: vi.fn().mockReturnValue([]),
   getMultiplePerpOrders: vi.fn().mockReturnValue([]),
+  tokenDec: vi.fn().mockReturnValue(1000000000),
 }));
 
 // Helper to create a mock token

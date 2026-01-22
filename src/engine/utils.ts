@@ -1,7 +1,20 @@
 import { Address, Base64EncodedDataResponse, getProgramDerivedAddress, getAddressEncoder } from '@solana/kit';
 import { Buffer } from 'buffer';
-import { OrderModel, SpotTradeAccountHeaderModel, PerpTradeAccountHeaderModel } from '../structure_models';
+import { OrderModel, SpotTradeAccountHeaderModel, PerpTradeAccountHeaderModel, TokenStateModel } from '../structure_models';
 import { ADDRESS_LOOKUP_TABLE_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, nullOrder } from '../constants';
+
+/**
+ * Get token decimal factor for UI number conversion
+ */
+export function tokenDec(tokens: Map<number, TokenStateModel>, tokenId: number, uiNumbers: boolean): number {
+  if (uiNumbers) {
+    const token = tokens.get(tokenId);
+    if (token) {
+      return Math.pow(10, token.mask & 0xff);
+    }
+  }
+  return 1;
+}
 
 /**
  * Get price step between orderbook lines depending on curent price

@@ -8,6 +8,51 @@ export enum OrderType {
   forcedClose = 3,
 }
 
+export enum AccountType {
+  clientCommunity = 35,
+  clientPrimary = 31,
+  community = 34,
+  futuresAskOrders = 29,
+  futuresAsksTree = 27,
+  futuresBidOrders = 28,
+  futuresBidsTree = 26,
+  futuresClientAccounts = 23,
+  futuresClientInfos = 24,
+  futuresClientInfos2 = 25,
+  futuresLines = 30,
+  futuresMaps = 22,
+  holder = 1,
+  root = 2,
+  instr = 7,
+  spot15MCandles = 20,
+  spot1MCandles = 19,
+  spotAskOrders = 17,
+  spotAsksTree = 15,
+  spotBidOrders = 16,
+  spotBidsTree = 14,
+  spotClientInfos = 12,
+  spotClientInfos2 = 13,
+  spotDayCandles = 21,
+  spotLines = 18,
+  spotMaps = 10,
+  token = 4,
+  perpAskOrders = 36,
+  perpAsksTree = 37,
+  perpBidOrders = 38,
+  perpBidsTree = 39,
+  perpClientInfos = 41,
+  perpClientInfos2 = 42,
+  perpClientInfos3 = 43,
+  perpClientInfos4 = 44,
+  perpClientInfos5 = 45,
+  perpLines = 46,
+  perpMaps = 47,
+  perpLongPxTree = 48,
+  perpShortPxTree = 49,
+  perpRebalanceTimeTree = 50,
+  privateClients = 51,
+}
+
 export class ClientCommunityRecordModel {
   static readonly LENGTH = 2 * 4 + 6 * 8; // 56 bytes
 
@@ -73,10 +118,7 @@ export class ClientCommunityAccountHeaderModel {
   drvsTokens: number;
   count: number;
   reserved: number;
-  static fromBuffer(
-    data: Base64EncodedDataResponse,
-    offset?: number
-  ): ClientCommunityAccountHeaderModel {
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientCommunityAccountHeaderModel {
     const result = new ClientCommunityAccountHeaderModel();
     let autoData = new AutoData(data, offset);
     result.tag = autoData.readU32();
@@ -1316,10 +1358,7 @@ export class ClientPrimaryAccountHeaderModel {
   reservedValue6: number;
   reservedValue7: number;
   reservedValue8: number;
-  static fromBuffer(
-    data: Base64EncodedDataResponse,
-    offset?: number
-  ): ClientPrimaryAccountHeaderModel {
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientPrimaryAccountHeaderModel {
     const result = new ClientPrimaryAccountHeaderModel();
     let autoData = new AutoData(data, offset);
     result.tag = autoData.readU32();
@@ -1496,3 +1535,4 @@ export class PrivateClientModel {
     return result;
   }
 }
+

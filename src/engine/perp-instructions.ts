@@ -22,7 +22,7 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
 } from '../constants';
-import { perpSeatReserve, getLookupTableAddress } from './utils';
+import { perpSeatReserve, getLookupTableAddress, tokenDec } from './utils';
 import { TokenStateModel, RootStateModel } from '../structure_models';
 import {
   upgradeToPerpData,
@@ -60,22 +60,6 @@ export interface PerpInstructionContext extends AccountHelperContext {
   clientCommunityAccount?: Address;
   refClientPrimaryAccount?: Address;
   refClientCommunityAccount?: Address;
-}
-
-/**
- * Get token decimal factor for UI number conversion
- */
-function tokenDec(tokens: Map<number, TokenStateModel>, tokenId: number, uiNumbers: boolean): number {
-  if (uiNumbers) {
-    const token = tokens.get(tokenId);
-    if (token) {
-      return Math.pow(10, token.mask & 0xff);
-    } else {
-      return 1;
-    }
-  } else {
-    return 1;
-  }
 }
 
 /**

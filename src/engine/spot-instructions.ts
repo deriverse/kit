@@ -20,7 +20,7 @@ import {
   ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
   lpDec,
 } from '../constants';
-import { findAssociatedTokenAddress, getLookupTableAddress } from './utils';
+import { findAssociatedTokenAddress, getLookupTableAddress, tokenDec } from './utils';
 import { TokenStateModel } from '../structure_models';
 import {
   depositData,
@@ -58,26 +58,6 @@ export interface SpotInstructionContext extends AccountHelperContext {
   refClientPrimaryAccount?: Address;
   refClientCommunityAccount?: Address;
   privateMode?: boolean;
-}
-
-/**
- * Get token decimal factor for UI number conversion
- */
-function tokenDec(
-  tokens: Map<number, TokenStateModel>,
-  tokenId: number,
-  uiNumbers: boolean
-): number {
-  if (uiNumbers) {
-    const token = tokens.get(tokenId);
-    if (token) {
-      return Math.pow(10, token.mask & 0xff);
-    } else {
-      return 1;
-    }
-  } else {
-    return 1;
-  }
 }
 
 /**

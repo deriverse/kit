@@ -12,13 +12,27 @@
     "outDir": "dist" /* Specify an output folder for all emitted files. */,
     "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
     "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
-    "strict": false /* Enable all strict type-checking options. */,
-    "strictNullChecks": true /* Enable strict null checks. */,
-    "noImplicitAny": false /* Enable error reporting for expressions and declarations with an implied 'any' type. */,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "declaration": true,
     "sourceMap": false
   },
   "include": ["src"],
-  "exclude": ["tests", "vitest.config.ts", "node_modules", "dist", "src/*.old.ts"]
+  "exclude": [
+    "tests",
+    "vitest.config.ts",
+    "node_modules",
+    "dist",
+    "src/*.old.ts",
+    "src/auto_buffer.ts",
+    "src/auto_data.ts",
+    "src/instruction_models.ts",
+    "src/structure_models.ts",
+    "src/logs_models.ts"
+  ]
 }

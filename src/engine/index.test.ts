@@ -64,11 +64,13 @@ vi.mock('./spot-instructions', () => ({
 
 // Mock perp-instructions
 vi.mock('./perp-instructions', () => ({
-  buildUpgradeToPerpInstructions: vi.fn().mockResolvedValue([{
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([20]),
-  }]),
+  buildUpgradeToPerpInstructions: vi.fn().mockResolvedValue([
+    {
+      programAddress: 'MockProgram1111111111111111111111111' as Address,
+      accounts: [],
+      data: new Uint8Array([20]),
+    },
+  ]),
   buildPerpDepositInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -119,11 +121,13 @@ vi.mock('./perp-instructions', () => ({
     accounts: [],
     data: new Uint8Array([30]),
   }),
-  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([{
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([31]),
-  }]),
+  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([
+    {
+      programAddress: 'MockProgram1111111111111111111111111' as Address,
+      accounts: [],
+      data: new Uint8Array([31]),
+    },
+  ]),
   PerpInstructionContext: {},
 }));
 
@@ -246,7 +250,6 @@ async function setupEngineWithClient(): Promise<{ engine: Engine; mockRpc: Retur
 
   return { engine, mockRpc };
 }
-
 
 describe('Engine class', () => {
   describe('constructor', () => {
@@ -373,8 +376,7 @@ describe('Engine instruction methods', () => {
       const mockRpc = createMockRpc();
       const engine = new Engine(mockRpc as any);
 
-      await expect(engine.depositInstruction({ tokenId: 1, amount: 100 }))
-        .rejects.toThrow('Wallet');
+      await expect(engine.depositInstruction({ tokenId: 1, amount: 100 })).rejects.toThrow('Wallet');
     });
 
     it('calls buildDepositInstruction with correct args', async () => {
@@ -400,7 +402,7 @@ describe('Engine instruction methods', () => {
       const result = await engine.depositInstruction({ tokenId: 1, amount: 100 });
 
       expect(result).toBeDefined();
-      expect(result.data[0]).toBe(7); // deposit tag
+      expect(result.data![0]).toBe(7); // deposit tag
     });
   });
 
@@ -415,8 +417,7 @@ describe('Engine instruction methods', () => {
       (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
       (engine as any).clientPrimaryAccount = null;
 
-      await expect(engine.withdrawInstruction({ tokenId: 1, amount: 50 }))
-        .rejects.toThrow('Client account not found');
+      await expect(engine.withdrawInstruction({ tokenId: 1, amount: 50 })).rejects.toThrow('Client account not found');
     });
 
     it('calls buildWithdrawInstruction with correct args', async () => {
@@ -445,8 +446,9 @@ describe('Engine instruction methods', () => {
       (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
       (engine as any).clientPrimaryAccount = null;
 
-      await expect(engine.spotLpInstruction({ instrId: 1, side: 0, amount: 100 }))
-        .rejects.toThrow('Client account not found');
+      await expect(engine.spotLpInstruction({ instrId: 1, side: 0, amount: 100 })).rejects.toThrow(
+        'Client account not found',
+      );
     });
 
     it('calls buildSpotLpInstruction with correct args', async () => {
@@ -475,8 +477,9 @@ describe('Engine instruction methods', () => {
       (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
       (engine as any).clientPrimaryAccount = null;
 
-      await expect(engine.newSpotOrderInstruction({ instrId: 1, side: 0, price: 100, qty: 10 }))
-        .rejects.toThrow('Client account not found');
+      await expect(engine.newSpotOrderInstruction({ instrId: 1, side: 0, price: 100, qty: 10 })).rejects.toThrow(
+        'Client account not found',
+      );
     });
 
     it('calls buildNewSpotOrderInstruction', async () => {
@@ -549,8 +552,7 @@ describe('Engine instruction methods', () => {
       const engine = new Engine(mockRpc as any);
       engine.instruments = createMockInstrumentsMap();
 
-      await expect(engine.upgradeToPerpInstructions({ instrId: 1 }))
-        .rejects.toThrow('Wallet is not connected');
+      await expect(engine.upgradeToPerpInstructions({ instrId: 1 })).rejects.toThrow('Wallet is not connected');
     });
 
     it('calls buildUpgradeToPerpInstructions', async () => {
@@ -573,8 +575,9 @@ describe('Engine instruction methods', () => {
       (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
       (engine as any).clientPrimaryAccount = null;
 
-      await expect(engine.perpDepositInstruction({ instrId: 1, amount: 100 }))
-        .rejects.toThrow('Client account not found');
+      await expect(engine.perpDepositInstruction({ instrId: 1, amount: 100 })).rejects.toThrow(
+        'Client account not found',
+      );
     });
 
     it('calls buildPerpDepositInstruction', async () => {
@@ -689,11 +692,13 @@ describe('Engine instruction methods', () => {
       const mockRpc = createMockRpc();
       const engine = new Engine(mockRpc as any);
 
-      await expect(engine.newInstrumentInstructions({
-        assetMint: 'AssetMint1111111111111111111111111111' as Address,
-        crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
-        initialPrice: 100,
-      })).rejects.toThrow('Wallet is not connected');
+      await expect(
+        engine.newInstrumentInstructions({
+          assetMint: 'AssetMint1111111111111111111111111111' as Address,
+          crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+          initialPrice: 100,
+        }),
+      ).rejects.toThrow('Wallet is not connected');
     });
 
     it('calls buildNewInstrumentInstructions', async () => {
@@ -706,6 +711,134 @@ describe('Engine instruction methods', () => {
       });
 
       expect(buildNewInstrumentInstructions).toHaveBeenCalled();
+    });
+  });
+
+  describe('getClientData', () => {
+    it('throws when client not found', async () => {
+      const mockRpc = createMockRpc();
+      const engine = new Engine(mockRpc as any);
+      (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
+      (engine as any).clientPrimaryAccount = null;
+
+      await expect(engine.getClientData()).rejects.toThrow('Client account not found');
+    });
+  });
+
+  describe('getClientSpotOrdersInfo', () => {
+    it('throws for invalid instrument', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await expect(engine.getClientSpotOrdersInfo({ instrId: 999, clientId: 1 })).rejects.toThrow(
+        'Invalid Instrument ID',
+      );
+    });
+  });
+
+  describe('getClientPerpOrdersInfo', () => {
+    it('throws for invalid instrument', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await expect(engine.getClientPerpOrdersInfo({ instrId: 999, clientId: 1 })).rejects.toThrow(
+        'Invalid Instrument ID',
+      );
+    });
+  });
+
+  describe('getClientSpotOrders', () => {
+    it('throws when originalClientId is null', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).originalClientId = null;
+
+      await expect(
+        engine.getClientSpotOrders({ instrId: 1, bidsEntry: 0, bidsCount: 0, asksEntry: 0, asksCount: 0 }),
+      ).rejects.toThrow('Original client ID not found');
+    });
+  });
+
+  describe('getClientPerpOrders', () => {
+    it('throws when originalClientId is null', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).originalClientId = null;
+
+      await expect(
+        engine.getClientPerpOrders({ instrId: 1, bidsEntry: 0, bidsCount: 0, asksEntry: 0, asksCount: 0 }),
+      ).rejects.toThrow('Original client ID not found');
+    });
+  });
+});
+
+// ============================================
+// DATA UPDATE METHOD TESTS
+// ============================================
+
+describe('Engine data update methods', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('addToken', () => {
+    it('throws when getAccountInfo returns null', async () => {
+      const mockRpc = createMockRpc();
+      mockRpc.getAccountInfo = vi.fn().mockReturnValue({
+        send: vi.fn().mockResolvedValue({ value: null }),
+      });
+      const engine = new Engine(mockRpc as any);
+      (engine as any).rootStateModel = { tokensCount: 10 };
+
+      await expect(engine.addToken('TokenAccount111111111111111111111' as Address)).rejects.toThrow(
+        'Add Token Failed: getAccountInfo',
+      );
+    });
+  });
+
+  describe('addInstr', () => {
+    it('throws when getAccountInfo returns null', async () => {
+      const mockRpc = createMockRpc();
+      mockRpc.getAccountInfo = vi.fn().mockReturnValue({
+        send: vi.fn().mockResolvedValue({ value: null }),
+      });
+      const engine = new Engine(mockRpc as any);
+      (engine as any).rootStateModel = { instrCount: 10 };
+
+      await expect(engine.addInstr('InstrAccount111111111111111111111' as Address)).rejects.toThrow(
+        'Add Instrument Failed: getAccountInfo',
+      );
+    });
+  });
+
+  describe('updateCommunity', () => {
+    it('throws when getAccountInfo returns null', async () => {
+      const mockRpc = createMockRpc();
+      mockRpc.getAccountInfo = vi.fn().mockReturnValue({
+        send: vi.fn().mockResolvedValue({ value: null }),
+      });
+      const engine = new Engine(mockRpc as any);
+      engine.communityAccount = 'CommunityAccount1111111111111111111' as Address;
+
+      await expect(engine.updateCommunity()).rejects.toThrow('Community Account: GetAccountInfo Failed');
+    });
+  });
+
+  describe('updateRoot', () => {
+    it('throws when getAccountInfo returns null', async () => {
+      const mockRpc = createMockRpc();
+      mockRpc.getAccountInfo = vi.fn().mockReturnValue({
+        send: vi.fn().mockResolvedValue({ value: null }),
+      });
+      const engine = new Engine(mockRpc as any);
+      engine.rootAccount = 'RootAccount11111111111111111111111' as Address;
+
+      await expect(engine.updateRoot()).rejects.toThrow('Root Account: GetAccountInfo Failed');
+    });
+  });
+
+  describe('updateInstrData', () => {
+    it('throws when instrument not found', async () => {
+      const { engine } = await setupEngineWithClient();
+      vi.mocked(engine.updateInstrData).mockRestore();
+
+      await expect(engine.updateInstrData({ instrId: 999 })).rejects.toThrow('Instrument not found');
     });
   });
 });

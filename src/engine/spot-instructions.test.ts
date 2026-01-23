@@ -107,6 +107,9 @@ function createMockSpotContext(overrides: Partial<SpotInstructionContext> = {}):
     rootAccount: 'RootAccount1111111111111111111111' as Address,
     clientPrimaryAccount: 'ClientPrimary11111111111111111' as Address,
     clientCommunityAccount: 'ClientCommunity111111111111111' as Address,
+    refClientPrimaryAccount: null,
+    refClientCommunityAccount: null,
+    privateMode: false,
     ...overrides,
   };
 }

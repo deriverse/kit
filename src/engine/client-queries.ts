@@ -44,15 +44,22 @@ export interface ClientQueryContext extends AccountHelperContext {
   instruments: Map<number, Instrument>;
   tokens: Map<number, TokenStateModel>;
   uiNumbers: boolean;
-  clientPrimaryAccount: Address;
-  clientCommunityAccount: Address;
-  originalClientId: number;
+  clientPrimaryAccount: Address | null;
+  clientCommunityAccount: Address | null;
+  originalClientId: number | null;
 }
 
 /**
  * Unpack client accounts
  */
 async function getClientData(ctx: ClientQueryContext): Promise<GetClientDataResponse> {
+  if (!ctx.clientPrimaryAccount) {
+    throw new Error('Client primary account not found');
+  }
+  if (!ctx.clientCommunityAccount) {
+    throw new Error('Client community account not found');
+  }
+
   const infos = await ctx.rpc
     .getMultipleAccounts([ctx.clientPrimaryAccount, ctx.clientCommunityAccount], {
       commitment: ctx.commitment,
@@ -121,7 +128,7 @@ async function getClientData(ctx: ClientQueryContext): Promise<GetClientDataResp
       address: clientPrimaryAccountHeaderModel.refAddress,
       expiration: clientPrimaryAccountHeaderModel.refProgramExpiration,
       clientId: clientPrimaryAccountHeaderModel.refClientId,
-      disount: clientPrimaryAccountHeaderModel.refProgramDiscount,
+      discount: clientPrimaryAccountHeaderModel.refProgramDiscount,
       ratio: clientPrimaryAccountHeaderModel.refProgramRatio,
     },
     community: { header: clientCommunityAccountHeaderModel, data: clientCommunityRecords },
@@ -288,6 +295,10 @@ async function getClientSpotOrders(
   ctx: ClientQueryContext,
   args: GetClientSpotOrdersArgs,
 ): Promise<GetClientSpotOrdersResponse> {
+  if (ctx.originalClientId === null) {
+    throw new Error('Original client ID not found');
+  }
+
   const instr = ctx.instruments.get(args.instrId);
   if (!instr) {
     throw new Error('Invalid Instrument ID');
@@ -358,7 +369,7 @@ async function getClientSpotOrders(
       .send();
     if (info.value == null) throw new Error('Ask orders account not found');
     askContextSlot = Number(info.context.slot);
-    asks = getMultipleSpotOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
+    asks = getMultipleSpotOrders(info.value.data, args.asksEntry, ctx.originalClientId);
   } else if (args.asksCount == 1) {
     let info = await ctx.rpc
       .getAccountInfo(askOrdersAccount, {
@@ -402,6 +413,10 @@ async function getClientPerpOrders(
   ctx: ClientQueryContext,
   args: GetClientPerpOrdersArgs,
 ): Promise<GetClientPerpOrdersResponse> {
+  if (ctx.originalClientId === null) {
+    throw new Error('Original client ID not found');
+  }
+
   const instr = ctx.instruments.get(args.instrId);
   if (!instr) {
     throw new Error('Invalid Instrument ID');
@@ -472,7 +487,7 @@ async function getClientPerpOrders(
       .send();
     if (info.value == null) throw new Error('Ask orders account not found');
     askContextSlot = Number(info.context.slot);
-    asks = getMultiplePerpOrders(info.value.data, args.bidsEntry, ctx.originalClientId);
+    asks = getMultiplePerpOrders(info.value.data, args.asksEntry, ctx.originalClientId);
   } else if (args.asksCount == 1) {
     let info = await ctx.rpc
       .getAccountInfo(askOrdersAccount, {

@@ -1,4 +1,12 @@
-import { Address, AccountRole, Instruction, createAddressWithSeed } from '@solana/kit';
+import {
+  Address,
+  AccountRole,
+  Instruction,
+  createAddressWithSeed,
+  TransactionSigner,
+  SolanaRpcResponse,
+  AccountInfoBase,
+} from '@solana/kit';
 import { getCreateAccountWithSeedInstruction } from '@solana-program/system';
 
 import {
@@ -56,10 +64,10 @@ export interface PerpInstructionContext extends AccountHelperContext {
   uiNumbers: boolean;
   signer: Address;
   rootAccount: Address;
-  clientPrimaryAccount?: Address;
-  clientCommunityAccount?: Address;
-  refClientPrimaryAccount?: Address;
-  refClientCommunityAccount?: Address;
+  clientPrimaryAccount: Address;
+  clientCommunityAccount: Address;
+  refClientPrimaryAccount: Address | null;
+  refClientCommunityAccount: Address | null;
 }
 
 /**
@@ -95,9 +103,9 @@ async function buildUpgradeToPerpInstructions(
   const perpMapsAccountLamports = await rpcGetMinBalance(BigInt(perpMapsAccountSize));
   // Cast signer for the instruction - the caller provides the actual TransactionSigner when needed
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
-    payer: ctx.signer as any,
-    baseAccount: ctx.signer as any,
-    base: ctx.signer as any,
+    payer: ctx.signer as unknown as TransactionSigner,
+    baseAccount: ctx.signer as unknown as TransactionSigner,
+    base: ctx.signer,
     newAccount: perpMapsAccount,
     seed: perpMapsAccountSeed,
     space: perpMapsAccountSize,
@@ -219,7 +227,7 @@ async function buildPerpDepositInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
@@ -246,12 +254,12 @@ async function buildPerpBuySeatInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  const slippage = args.slippage == undefined || args.slippage == null ? 0 : args.slippage;
+  const slippage = args.slippage ?? 0;
   const slippagePrice =
     (perpSeatReserve(instr.header.perpClientsCount + 1) - perpSeatReserve(instr.header.perpClientsCount)) *
     (1 + slippage);
@@ -275,13 +283,13 @@ async function buildPerpSellSeatInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  const slippage = args.slippage == undefined || args.slippage == null ? 0 : args.slippage;
+  const slippage = args.slippage ?? 0;
   const slippagePrice =
     (perpSeatReserve(instr.header.perpClientsCount + 1) - perpSeatReserve(instr.header.perpClientsCount)) /
     (1 + slippage);
@@ -305,18 +313,18 @@ async function buildNewPerpOrderInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
+  if (ctx.refClientPrimaryAccount != null) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
   }
 
-  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
+  if (ctx.refClientCommunityAccount != null) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -325,14 +333,14 @@ async function buildNewPerpOrderInstruction(
     programAddress: ctx.programId,
     data: newPerpOrderData(
       19,
-      args.ioc == null || args.ioc == undefined ? 0 : args.ioc,
-      args.leverage == null || args.leverage == undefined ? 0 : args.leverage,
-      args.orderType == null || args.orderType == undefined ? 0 : args.orderType,
+      args.ioc ?? 0,
+      args.leverage ?? 0,
+      args.orderType ?? 0,
       args.side,
       args.instrId,
       args.price * 1000000000,
       args.qty * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers),
-      args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000,
+      (args.edgePrice ?? 0) * 1000000000,
     ),
   };
 }
@@ -360,18 +368,18 @@ async function buildPerpQuotesReplaceInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
+  if (ctx.refClientPrimaryAccount != null) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
   }
 
-  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
+  if (ctx.refClientCommunityAccount != null) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -389,7 +397,7 @@ async function buildPerpOrderCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -413,7 +421,7 @@ async function buildPerpMassCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -437,7 +445,7 @@ async function buildPerpChangeLeverageInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -461,7 +469,7 @@ async function buildPerpStatisticsResetInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -484,7 +492,7 @@ async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
   ];
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };
@@ -497,7 +505,7 @@ async function buildNewInstrumentInstructions(
   ctx: PerpInstructionContext,
   args: NewInstrumentArgs,
   rpcGetSlot: () => Promise<bigint>,
-  rpcGetAccountInfo: (address: Address) => Promise<{ value: any }>,
+  rpcGetAccountInfo: (address: Address) => Promise<SolanaRpcResponse<AccountInfoBase | null>>,
   rpcGetMinBalance: (size: bigint) => Promise<bigint>,
 ): Promise<Instruction[]> {
   if (args.initialPrice <= 0) {
@@ -536,9 +544,9 @@ async function buildNewInstrumentInstructions(
   const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
   // Cast signer for the instruction - the caller provides the actual TransactionSigner when needed
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
-    payer: ctx.signer as any,
-    baseAccount: ctx.signer as any,
-    base: ctx.signer as any,
+    payer: ctx.signer as unknown as TransactionSigner,
+    baseAccount: ctx.signer as unknown as TransactionSigner,
+    base: ctx.signer,
     newAccount: mapsAccount,
     seed: mapsAccountSeed,
     space: mapsAccountSize,

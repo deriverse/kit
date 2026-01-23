@@ -1,5 +1,5 @@
 import {
-  Address,
+  Address as SolanaAddress,
   SolanaRpcApiDevnet,
   SolanaRpcApiMainnet,
   Base64EncodedDataResponse,
@@ -9,6 +9,7 @@ import {
   getAddressEncoder,
   AccountMeta,
   Commitment,
+  Instruction,
 } from '@solana/kit';
 import { Buffer } from 'buffer';
 
@@ -101,6 +102,7 @@ import {
 } from './context-builders';
 import { tokenDec } from './utils';
 import {
+  ClientQueryContext,
   getClientData as getClientDataFn,
   getClientSpotOrdersInfo as getClientSpotOrdersInfoFn,
   getClientPerpOrdersInfo as getClientPerpOrdersInfoFn,
@@ -132,6 +134,8 @@ import {
   buildNewInstrumentInstructions,
 } from './perp-instructions';
 
+type Address = SolanaAddress<string>;
+
 /**
  * Main class to operate with Deriverse
  * @property {number} originalClientId Deriverse main client ID
@@ -141,34 +145,35 @@ import {
  * @property {Map<number, Instrument>} instruments Instruments data
  */
 export class Engine {
-  programId: Address<any>;
-  rootStateModel: RootStateModel;
-  community: CommunityData;
-  private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
-  private drvsAuthority: Address<any>;
-  rootAccount: Address<any>;
-  communityAccount: Address<any>;
-  private signer?: Address<any>;
-  originalClientId?: number | null;
-  private clientPrimaryAccount?: Address<any> | null;
-  private clientCommunityAccount?: Address<any>;
-  clientLutAddress?: Address<any>;
-  private refClientPrimaryAccount?: Address<any>;
-  private refClientCommunityAccount?: Address<any>;
-  privateMode?: boolean;
-  tokens: Map<number, TokenStateModel>;
-  instruments: Map<number, Instrument>;
-  version: number;
+  programId: Address;
+  rootAccount: Address;
+  communityAccount: Address;
   commitment: Commitment;
+  version: number;
+  rootStateModel!: RootStateModel;
+  community!: CommunityData;
+  tokens!: Map<number, TokenStateModel>;
+  instruments!: Map<number, Instrument>;
+  originalClientId: number | null = null;
+  clientLutAddress: Address | null = null;
+  privateMode: boolean = false;
+
+  private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
+  private drvsAuthority: Address;
+  private signer: Address | null = null;
+  private clientPrimaryAccount: Address | null = null;
+  private clientCommunityAccount: Address | null = null;
+  private refClientPrimaryAccount: Address | null = null;
+  private refClientCommunityAccount: Address | null = null;
   private uiNumbers: boolean;
 
   /**
    * @param rpc @solana/kit rpc
    */
   constructor(
-    rpc: Rpc<any>,
+    rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>,
     args?: {
-      programId?: Address<any>;
+      programId?: Address;
       version?: number;
       commitment?: Commitment;
       uiNumbers?: boolean;
@@ -198,7 +203,16 @@ export class Engine {
     };
   }
 
-  private getSpotInstructionContext(options?: { withRef?: boolean; withPrivateMode?: boolean }) {
+  private getSpotInstructionContext() {
+    if (this.signer === null) {
+      throw new Error('Wallet is not connected');
+    }
+    if (this.clientPrimaryAccount === null) {
+      throw new Error('Client primary account not found');
+    }
+    if (this.clientCommunityAccount === null) {
+      throw new Error('Client community account not found');
+    }
     return {
       ...this.getAccountHelperContext(),
       instruments: this.instruments,
@@ -208,18 +222,28 @@ export class Engine {
       rootAccount: this.rootAccount,
       clientPrimaryAccount: this.clientPrimaryAccount,
       clientCommunityAccount: this.clientCommunityAccount,
-      ...(options?.withRef && {
-        refClientPrimaryAccount: this.refClientPrimaryAccount,
-        refClientCommunityAccount: this.refClientCommunityAccount,
-      }),
-      ...(options?.withPrivateMode && { privateMode: this.privateMode }),
+      refClientPrimaryAccount: this.refClientPrimaryAccount,
+      refClientCommunityAccount: this.refClientCommunityAccount,
+      privateMode: this.privateMode,
     };
   }
 
-  private getPerpInstructionContext(options?: { withRef?: boolean }) {
+  private getPerpInstructionContext() {
     return {
-      ...this.getSpotInstructionContext(options),
+      ...this.getSpotInstructionContext(),
       rootStateModel: this.rootStateModel,
+    };
+  }
+
+  private getClientQueryContext(): ClientQueryContext {
+    return {
+      ...this.getAccountHelperContext(),
+      instruments: this.instruments,
+      tokens: this.tokens,
+      uiNumbers: this.uiNumbers,
+      clientPrimaryAccount: this.clientPrimaryAccount,
+      clientCommunityAccount: this.clientCommunityAccount,
+      originalClientId: this.originalClientId,
     };
   }
 
@@ -229,11 +253,19 @@ export class Engine {
     }
   }
 
+  private requireInstrument(instrId: number): Instrument {
+    const instr = this.instruments.get(instrId);
+    if (instr === undefined) {
+      throw new Error('Instrument not found');
+    }
+    return instr;
+  }
+
   private async getSpotInstrumentWithUpdate(instrId: number): Promise<Instrument> {
     let instr = this.instruments.get(instrId);
     if (instr?.header.mapsAddress == undefined) {
       await this.updateInstrData({ instrId });
-      instr = this.instruments.get(instrId)!;
+      instr = this.requireInstrument(instrId);
     }
     return instr;
   }
@@ -242,13 +274,13 @@ export class Engine {
     let instr = this.instruments.get(instrId);
     if (instr?.header.perpMapsAddress == undefined) {
       await this.updateInstrData({ instrId });
-      instr = this.instruments.get(instrId)!;
+      instr = this.requireInstrument(instrId);
     }
     return instr;
   }
 
   private async checkClient(): Promise<boolean> {
-    if (this.signer == null) {
+    if (this.signer === null) {
       throw new Error('Wallet not connected');
     }
     if (this.clientPrimaryAccount != null) {
@@ -274,7 +306,7 @@ export class Engine {
       this.originalClientId = clientPrimaryAccountHeaderModel.id;
       return true;
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return false;
     }
   }
@@ -342,7 +374,7 @@ export class Engine {
       this.updateCommunityFromBuffer(infos.value[1].data);
       return true;
     } catch (err) {
-      console.log('Initialization failed:', err);
+      console.error('Initialization failed:', err);
       return false;
     }
   }
@@ -390,7 +422,7 @@ export class Engine {
     });
   }
 
-  async setSigner(signer: Address<any>) {
+  async setSigner(signer: Address) {
     this.signer = signer;
     const clientPrimaryAccount = await findClientPrimaryAccount(
       { programId: this.programId, version: this.version },
@@ -414,6 +446,7 @@ export class Engine {
           let date = Math.floor(new Date().valueOf() / 1000);
           if (date < clientPrimaryAccountHeaderModel.refProgramExpiration) {
             this.refClientPrimaryAccount = clientPrimaryAccountHeaderModel.refAddress;
+            if (!this.refClientPrimaryAccount) throw new Error('Ref client account address not found');
             let refInfo = await this.rpc
               .getAccountInfo(this.refClientPrimaryAccount, {
                 commitment: this.commitment,
@@ -431,7 +464,7 @@ export class Engine {
         }
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
       throw new Error('Wallet connection failed');
     }
     if (!exists) {
@@ -510,7 +543,7 @@ export class Engine {
   }
 
   instrLut(args: InstrId): Address {
-    return this.instruments.get(args.instrId)?.header.lutAddress;
+    return this.requireInstrument(args.instrId).header.lutAddress;
   }
 
   async updateInstrData(args: InstrId) {
@@ -663,100 +696,41 @@ export class Engine {
   // ============================================
 
   async getClientData(): Promise<GetClientDataResponse> {
-    if (!(await this.checkClient())) {
-      throw new Error('Client account not found');
-    }
-    return getClientDataFn({
-      ...this.getAccountHelperContext(),
-      instruments: this.instruments,
-      tokens: this.tokens,
-      uiNumbers: this.uiNumbers,
-      clientPrimaryAccount: this.clientPrimaryAccount,
-      clientCommunityAccount: this.clientCommunityAccount,
-      originalClientId: this.originalClientId!,
-    });
+    await this.requireClient();
+    return getClientDataFn(this.getClientQueryContext());
   }
 
   async getClientSpotOrdersInfo(args: GetClientSpotOrdersInfoArgs): Promise<GetClientSpotOrdersInfoResponse> {
     GetClientSpotOrdersInfoArgsSchema.parse(args);
-    return getClientSpotOrdersInfoFn(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId!,
-      },
-      args,
-    );
+    return getClientSpotOrdersInfoFn(this.getClientQueryContext(), args);
   }
 
   async getClientPerpOrdersInfo(args: GetClientPerpOrdersInfoArgs): Promise<GetClientPerpOrdersInfoResponse> {
     GetClientPerpOrdersInfoArgsSchema.parse(args);
-    return getClientPerpOrdersInfoFn(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId!,
-      },
-      args,
-    );
+    return getClientPerpOrdersInfoFn(this.getClientQueryContext(), args);
   }
 
   async getClientSpotOrders(args: GetClientSpotOrdersArgs): Promise<GetClientSpotOrdersResponse> {
     GetClientSpotOrdersArgsSchema.parse(args);
-    return getClientSpotOrdersFn(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId!,
-      },
-      args,
-    );
+    return getClientSpotOrdersFn(this.getClientQueryContext(), args);
   }
 
   async getClientPerpOrders(args: GetClientPerpOrdersArgs): Promise<GetClientPerpOrdersResponse> {
     GetClientPerpOrdersArgsSchema.parse(args);
-    return getClientPerpOrdersFn(
-      {
-        ...this.getAccountHelperContext(),
-        instruments: this.instruments,
-        tokens: this.tokens,
-        uiNumbers: this.uiNumbers,
-        clientPrimaryAccount: this.clientPrimaryAccount,
-        clientCommunityAccount: this.clientCommunityAccount,
-        originalClientId: this.originalClientId!,
-      },
-      args,
-    );
+    return getClientPerpOrdersFn(this.getClientQueryContext(), args);
   }
 
   // ============================================
   // DEPOSIT & WITHDRAW INSTRUCTIONS
   // ============================================
 
-  async depositInstruction(args: DepositArgs): Promise<any> {
+  async depositInstruction(args: DepositArgs): Promise<Instruction> {
     DepositArgsSchema.parse(args);
     const exists = await this.checkClient();
-    if (this.signer == null) {
-      throw new Error('Wallet is not connected');
-    }
-    return buildDepositInstruction(this.getSpotInstructionContext({ withPrivateMode: true }), args, exists, () =>
-      this.rpc.getSlot().send(),
-    );
+    return buildDepositInstruction(this.getSpotInstructionContext(), args, exists, () => this.rpc.getSlot().send());
   }
 
-  async withdrawInstruction(args: WithdrawArgs): Promise<any> {
+  async withdrawInstruction(args: WithdrawArgs): Promise<Instruction> {
     WithdrawArgsSchema.parse(args);
     await this.requireClient();
     return buildWithdrawInstruction(this.getSpotInstructionContext(), args);
@@ -766,43 +740,43 @@ export class Engine {
   // SPOT TRADING INSTRUCTIONS
   // ============================================
 
-  async spotLpInstruction(args: SpotLpArgs): Promise<any> {
+  async spotLpInstruction(args: SpotLpArgs): Promise<Instruction> {
     SpotLpArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    const instr = this.instruments.get(args.instrId)!;
+    const instr = this.requireInstrument(args.instrId);
     return buildSpotLpInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
-  async newSpotOrderInstruction(args: NewSpotOrderArgs): Promise<any> {
+  async newSpotOrderInstruction(args: NewSpotOrderArgs): Promise<Instruction> {
     NewSpotOrderArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
-    return buildNewSpotOrderInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
+    return buildNewSpotOrderInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
-  async spotQuotesReplaceInstruction(args: SpotQuotesReplaceArgs): Promise<any> {
+  async spotQuotesReplaceInstruction(args: SpotQuotesReplaceArgs): Promise<Instruction> {
     SpotQuotesReplaceArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
-    return buildSpotQuotesReplaceInstruction(this.getSpotInstructionContext({ withRef: true }), args, instr);
+    return buildSpotQuotesReplaceInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
-  async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<any> {
+  async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<Instruction> {
     SpotOrderCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotOrderCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
-  async spotMassCancelInstruction(args: SpotMassCancelArgs): Promise<any> {
+  async spotMassCancelInstruction(args: SpotMassCancelArgs): Promise<Instruction> {
     SpotMassCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotMassCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
-  async swapInstruction(args: SwapArgs): Promise<any> {
+  async swapInstruction(args: SwapArgs): Promise<Instruction> {
     SwapArgsSchema.parse(args);
     const assetTokenId = await this.getTokenId(args.assetMint);
     const crncyTokenId = await this.getTokenId(args.crncyMint);
@@ -824,7 +798,7 @@ export class Engine {
   // PERP TRADING INSTRUCTIONS
   // ============================================
 
-  async upgradeToPerpInstructions(args: InstrId): Promise<any[]> {
+  async upgradeToPerpInstructions(args: InstrId): Promise<Instruction[]> {
     InstrIdSchema.parse(args);
     if (this.signer == null) {
       throw new Error('Wallet is not connected');
@@ -833,76 +807,76 @@ export class Engine {
       throw new Error('Invalid Instr ID');
     }
     await this.updateInstrData({ instrId: args.instrId });
-    const instr = this.instruments.get(args.instrId)!;
+    const instr = this.requireInstrument(args.instrId);
     return buildUpgradeToPerpInstructions(this.getPerpInstructionContext(), args, instr, (size) =>
       this.rpc.getMinimumBalanceForRentExemption(size).send(),
     );
   }
 
-  async perpDepositInstruction(args: PerpDepositArgs): Promise<any> {
+  async perpDepositInstruction(args: PerpDepositArgs): Promise<Instruction> {
     PerpDepositArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpDepositInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpBuySeatInstruction(args: PerpBuySeatArgs): Promise<any> {
+  async perpBuySeatInstruction(args: PerpBuySeatArgs): Promise<Instruction> {
     PerpBuySeatArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    const instr = this.instruments.get(args.instrId)!;
+    const instr = this.requireInstrument(args.instrId);
     return buildPerpBuySeatInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpSellSeatInstruction(args: PerpSellSeatArgs): Promise<any> {
+  async perpSellSeatInstruction(args: PerpSellSeatArgs): Promise<Instruction> {
     PerpSellSeatArgsSchema.parse(args);
     await this.requireClient();
     await this.updateInstrData({ instrId: args.instrId });
-    const instr = this.instruments.get(args.instrId)!;
+    const instr = this.requireInstrument(args.instrId);
     return buildPerpSellSeatInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async newPerpOrderInstruction(args: NewPerpOrderArgs): Promise<any> {
+  async newPerpOrderInstruction(args: NewPerpOrderArgs): Promise<Instruction> {
     NewPerpOrderArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
-    return buildNewPerpOrderInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
+    return buildNewPerpOrderInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpQuotesReplaceInstruction(args: PerpQuotesReplaceArgs): Promise<any> {
+  async perpQuotesReplaceInstruction(args: PerpQuotesReplaceArgs): Promise<Instruction> {
     PerpQuotesReplaceArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
-    return buildPerpQuotesReplaceInstruction(this.getPerpInstructionContext({ withRef: true }), args, instr);
+    return buildPerpQuotesReplaceInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpOrderCancelInstruction(args: PerpOrderCancelArgs): Promise<any> {
+  async perpOrderCancelInstruction(args: PerpOrderCancelArgs): Promise<Instruction> {
     PerpOrderCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpOrderCancelInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpMassCancelInstruction(args: PerpMassCancelArgs): Promise<any> {
+  async perpMassCancelInstruction(args: PerpMassCancelArgs): Promise<Instruction> {
     PerpMassCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpMassCancelInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async newRefLinkInstruction(): Promise<any> {
+  async newRefLinkInstruction(): Promise<Instruction> {
     await this.requireClient();
     return buildNewRefLinkInstruction(this.getPerpInstructionContext());
   }
 
-  async perpChangeLeverageInstruction(args: PerpChangeLeverageArgs): Promise<any> {
+  async perpChangeLeverageInstruction(args: PerpChangeLeverageArgs): Promise<Instruction> {
     PerpChangeLeverageArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpChangeLeverageInstruction(this.getPerpInstructionContext(), args, instr);
   }
 
-  async perpStatisticsResetInstruction(args: PerpStatisticsResetArgs): Promise<any> {
+  async perpStatisticsResetInstruction(args: PerpStatisticsResetArgs): Promise<Instruction> {
     PerpStatisticsResetArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
@@ -913,7 +887,7 @@ export class Engine {
   // NEW INSTRUMENT INSTRUCTIONS
   // ============================================
 
-  async newInstrumentInstructions(args: NewInstrumentArgs): Promise<any[]> {
+  async newInstrumentInstructions(args: NewInstrumentArgs): Promise<Instruction[]> {
     NewInstrumentArgsSchema.parse(args);
     if (this.signer == null) {
       throw new Error('Wallet is not connected');

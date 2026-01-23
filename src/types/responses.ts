@@ -236,7 +236,7 @@ export interface ClientRefProgramData {
   address: Address;
   expiration: number;
   clientId: number;
-  disount: number;
+  discount: number;
   ratio: number;
 }
 

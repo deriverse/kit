@@ -20,7 +20,6 @@ export default defineConfig(
   {
     rules: {
       'prefer-const': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   {
@@ -28,6 +27,7 @@ export default defineConfig(
     rules: {
       '@typescript-eslint/no-unused-expressions': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 );

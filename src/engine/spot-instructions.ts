@@ -53,11 +53,11 @@ export interface SpotInstructionContext extends AccountHelperContext {
   uiNumbers: boolean;
   signer: Address;
   rootAccount: Address;
-  clientPrimaryAccount?: Address;
-  clientCommunityAccount?: Address;
-  refClientPrimaryAccount?: Address;
-  refClientCommunityAccount?: Address;
-  privateMode?: boolean;
+  clientPrimaryAccount: Address;
+  clientCommunityAccount: Address;
+  refClientPrimaryAccount: Address | null;
+  refClientCommunityAccount: Address | null;
+  privateMode: boolean;
 }
 
 /**
@@ -128,7 +128,7 @@ async function buildDepositInstruction(
     let refId: number;
     if (args.refId != null && args.refId != undefined) {
       refId = args.refId;
-      if (args.refWallet == null || args.refWallet == undefined) {
+      if (args.refWallet == null) {
         throw new Error('Ref Wallet Not Found');
       }
       keys.push({
@@ -237,7 +237,7 @@ async function buildSpotLpInstruction(
       }),
       role: AccountRole.WRITABLE,
     },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -246,11 +246,11 @@ async function buildSpotLpInstruction(
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount!, role: AccountRole.WRITABLE });
+    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
-  const minPrice = args.minPrice == undefined || args.minPrice == null ? 0 : args.minPrice;
-  const maxPrice = args.maxPrice == undefined || args.maxPrice == null ? 0 : args.maxPrice;
+  const minPrice = args.minPrice ?? 0;
+  const maxPrice = args.maxPrice ?? 0;
 
   return {
     accounts: keys,
@@ -276,13 +276,13 @@ async function buildNewSpotOrderInstruction(
 ): Promise<Instruction> {
   let buf = newSpotOrderData(
     12,
-    args.ioc == null || args.ioc == undefined ? 0 : args.ioc,
-    args.orderType == null || args.orderType == undefined ? 0 : args.orderType,
+    args.ioc ?? 0,
+    args.orderType ?? 0,
     args.side,
     args.instrId,
     Math.round(args.price * 1000000000),
     Math.round(args.qty * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
-    args.edgePrice == null || args.edgePrice == undefined ? 0 : args.edgePrice * 1000000000,
+    (args.edgePrice ?? 0) * 1000000000,
   );
 
   let keys = [
@@ -299,11 +299,11 @@ async function buildNewSpotOrderInstruction(
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
+  if (ctx.refClientPrimaryAccount != null) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
   }
 
-  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
+  if (ctx.refClientCommunityAccount != null) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -344,11 +344,11 @@ async function buildSpotQuotesReplaceInstruction(
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (ctx.refClientPrimaryAccount != null && ctx.refClientPrimaryAccount != undefined) {
+  if (ctx.refClientPrimaryAccount != null) {
     keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
   }
 
-  if (ctx.refClientCommunityAccount != null && ctx.refClientCommunityAccount != undefined) {
+  if (ctx.refClientCommunityAccount != null) {
     keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
   }
 
@@ -368,7 +368,7 @@ async function buildSpotOrderCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -404,7 +404,7 @@ async function buildSpotMassCancelInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount!, role: AccountRole.WRITABLE },
+    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),

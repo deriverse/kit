@@ -183,6 +183,9 @@ export function getPerpPriceStep(price: number): number {
 }
 
 export function perpSeatReserve(activeUsers: number): number {
+  if (activeUsers >= 25000) {
+    throw new Error('Active users cannot exceed 24999');
+  }
   return (250000 * activeUsers) / (25000 - activeUsers);
 }
 

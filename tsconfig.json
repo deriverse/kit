@@ -28,7 +28,6 @@
     "vitest.config.ts",
     "node_modules",
     "dist",
-    "src/*.old.ts",
     "src/auto_buffer.ts",
     "src/auto_data.ts",
     "src/instruction_models.ts",

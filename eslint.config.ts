@@ -7,7 +7,6 @@ export default defineConfig(
     ignores: [
       'dist/**',
       'node_modules/**',
-      'src/*.old.ts',
       'src/auto_buffer.ts',
       'src/auto_data.ts',
       'src/instruction_models.ts',

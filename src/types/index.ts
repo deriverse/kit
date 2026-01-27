@@ -86,6 +86,3 @@ export {
   GetInstrAccountByTagArgsSchema,
   UpdateInstrDataArgsSchema,
 } from './schemas';
-
-// for backward compatibility
-export { VERSION, PROGRAM_ID, MARKET_DEPTH } from '../constants';

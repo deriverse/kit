@@ -10,7 +10,7 @@ import {
   getBase64Encoder,
   Base58EncodedBytes,
 } from '@solana/kit';
-import { encode } from 'bs58';
+import bs58 from 'bs58';
 import { Buffer } from 'buffer';
 
 import { getInstrAccountByTagArgs } from '../types';
@@ -140,7 +140,7 @@ async function findAccountsByTag(ctx: AccountHelperContext, tag: number, dataSli
           memcmp: {
             offset: BigInt(0),
             encoding: 'base58',
-            bytes: encode(tagBuf) as Base58EncodedBytes,
+            bytes: bs58.encode(tagBuf) as Base58EncodedBytes,
           },
         },
       ],

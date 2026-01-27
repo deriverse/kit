@@ -101,7 +101,6 @@ async function buildUpgradeToPerpInstructions(
   });
   const perpMapsAccountSize = 168576;
   const perpMapsAccountLamports = await rpcGetMinBalance(BigInt(perpMapsAccountSize));
-  // Cast signer for the instruction - the caller provides the actual TransactionSigner when needed
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
     payer: ctx.signer as unknown as TransactionSigner,
     baseAccount: ctx.signer as unknown as TransactionSigner,
@@ -208,11 +207,11 @@ async function buildUpgradeToPerpInstructions(
     },
   ];
 
-  const upgradeIx = {
+  const upgradeIx: Instruction = {
     accounts: keys,
     programAddress: ctx.programId,
     data: upgradeToPerpData(10, args.instrId),
-  } as Instruction;
+  };
   return [createMapsAccountIx, upgradeIx];
 }
 
@@ -542,7 +541,6 @@ async function buildNewInstrumentInstructions(
   });
   const mapsAccountSize = 42184;
   const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
-  // Cast signer for the instruction - the caller provides the actual TransactionSigner when needed
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
     payer: ctx.signer as unknown as TransactionSigner,
     baseAccount: ctx.signer as unknown as TransactionSigner,

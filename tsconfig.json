@@ -1,18 +1,37 @@
 {
   "compilerOptions": {
-    "target": "es2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-    "lib": ["es6"],                                      /* Specify a set of bundled library declaration files that describe the target runtime environment. */
-    "module": "commonjs",                                /* Specify what module code is generated. */
-    "rootDir": "src",                                    /* Specify the root folder within your source files. */
-    "resolveJsonModule": true,                           /* Enable importing .json files. */
-    "allowJs": true,                                     /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
-    "outDir": "dist",                                   /* Specify an output folder for all emitted files. */
-    "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
-    "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
-    "strict": false,                                      /* Enable all strict type-checking options. */
-    "noImplicitAny": false,                               /* Enable error reporting for expressions and declarations with an implied 'any' type. */
-    "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
+    "target": "ES2020" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+    "lib": [
+      "ES2020"
+    ] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
+    "module": "ESNext" /* Specify what module code is generated. */,
+    "moduleResolution": "Bundler" /* Specify how TypeScript looks up a file from a given module specifier. */,
+    "rootDir": "src" /* Specify the root folder within your source files. */,
+    "resolveJsonModule": true /* Enable importing .json files. */,
+    "allowJs": true /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */,
+    "outDir": "dist" /* Specify an output folder for all emitted files. */,
+    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
+    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "declaration": true,
-    "sourceMap": false,
-  }
+    "sourceMap": false
+  },
+  "include": ["src"],
+  "exclude": [
+    "tests",
+    "vitest.config.ts",
+    "node_modules",
+    "dist",
+    "src/auto_buffer.ts",
+    "src/auto_data.ts",
+    "src/instruction_models.ts",
+    "src/structure_models.ts",
+    "src/logs_models.ts"
+  ]
 }

@@ -1,0 +1,106 @@
+import { describe, it, expect } from 'vitest';
+import {
+  NewSpotOrderArgsSchema,
+  DepositArgsSchema,
+  PerpChangeLeverageArgsSchema,
+  PerpBuySeatArgsSchema,
+  SpotQuotesReplaceArgsSchema,
+} from './schemas';
+
+describe('Zod Schemas', () => {
+  describe('common validators', () => {
+    it('rejects negative integers', () => {
+      const result = DepositArgsSchema.safeParse({ tokenId: -1 });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects non-positive numbers', () => {
+      const result = NewSpotOrderArgsSchema.safeParse({
+        instrId: 1,
+        price: 0,
+        qty: 10,
+        side: 0,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid side values', () => {
+      const result = NewSpotOrderArgsSchema.safeParse({
+        instrId: 1,
+        price: 100,
+        qty: 10,
+        side: 2,
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].message).toBe('Side must be 0 (Bid) or 1 (Ask)');
+    });
+  });
+
+  describe('leverage validation', () => {
+    it('accepts leverage between 1 and 100', () => {
+      expect(PerpChangeLeverageArgsSchema.safeParse({ instrId: 1, leverage: 1 }).success).toBe(true);
+      expect(PerpChangeLeverageArgsSchema.safeParse({ instrId: 1, leverage: 100 }).success).toBe(true);
+    });
+
+    it('rejects leverage outside 1-100', () => {
+      expect(PerpChangeLeverageArgsSchema.safeParse({ instrId: 1, leverage: 0 }).success).toBe(false);
+      expect(PerpChangeLeverageArgsSchema.safeParse({ instrId: 1, leverage: 101 }).success).toBe(false);
+    });
+  });
+
+  describe('slippage validation', () => {
+    it('accepts slippage between 0 and 1', () => {
+      expect(PerpBuySeatArgsSchema.safeParse({ instrId: 1, amount: 100, slippage: 0 }).success).toBe(true);
+      expect(PerpBuySeatArgsSchema.safeParse({ instrId: 1, amount: 100, slippage: 1 }).success).toBe(true);
+      expect(PerpBuySeatArgsSchema.safeParse({ instrId: 1, amount: 100, slippage: 0.5 }).success).toBe(true);
+    });
+
+    it('rejects slippage outside 0-1', () => {
+      expect(PerpBuySeatArgsSchema.safeParse({ instrId: 1, amount: 100, slippage: -0.1 }).success).toBe(false);
+      expect(PerpBuySeatArgsSchema.safeParse({ instrId: 1, amount: 100, slippage: 1.1 }).success).toBe(false);
+    });
+  });
+
+  describe('nonnegative number validation', () => {
+    it('accepts zero for quote prices/quantities', () => {
+      const result = SpotQuotesReplaceArgsSchema.safeParse({
+        instrId: 1,
+        bidOrderIdToCancel: 0,
+        newBidPrice: 0,
+        newBidQty: 0,
+        askOrderIdToCancel: 0,
+        newAskPrice: 0,
+        newAskQty: 0,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects negative prices', () => {
+      const result = SpotQuotesReplaceArgsSchema.safeParse({
+        instrId: 1,
+        bidOrderIdToCancel: 0,
+        newBidPrice: -1,
+        newBidQty: 0,
+        askOrderIdToCancel: 0,
+        newAskPrice: 0,
+        newAskQty: 0,
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].message).toBe('Price must be non-negative');
+    });
+  });
+
+  describe('valid input acceptance', () => {
+    it('accepts valid NewSpotOrderArgs', () => {
+      const result = NewSpotOrderArgsSchema.safeParse({
+        instrId: 1,
+        price: 100.5,
+        qty: 10,
+        side: 1,
+        ioc: 0,
+        orderType: 1,
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+});

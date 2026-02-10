@@ -2,7 +2,7 @@
   "name": "@deriverse/kit",
   "version": "1.0.40",
   "description": "",
-  "type": "module",
+  "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

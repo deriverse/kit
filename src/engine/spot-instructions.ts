@@ -1,4 +1,4 @@
-import { Address, AccountRole, Instruction } from '@solana/kit';
+import { Address, AccountRole } from '@solana/kit';
 
 import {
   Instrument,
@@ -10,6 +10,7 @@ import {
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
   SwapArgs,
+  Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
 import {

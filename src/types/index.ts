@@ -1,3 +1,5 @@
+import { IAccountMeta, IInstruction } from '@solana/kit';
+
 export { InstrMask, AccountType, LogType } from './enums';
 
 export {
@@ -86,3 +88,6 @@ export {
   GetInstrAccountByTagArgsSchema,
   UpdateInstrDataArgsSchema,
 } from './schemas';
+
+export type Instruction = IInstruction;
+export type AccountMeta = IAccountMeta;

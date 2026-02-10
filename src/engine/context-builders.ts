@@ -1,15 +1,16 @@
-import { AccountRole, AccountMeta } from '@solana/kit';
+import { AccountRole } from '@solana/kit';
 
 import { AccountType } from '../types/enums';
 import { InstrAccountHeaderModel } from '../structure_models';
 import { getInstrAccountByTag, AccountHelperContext } from './account-helpers';
+import { AccountMeta } from '../types';
 
 /**
  * Build spot trading context accounts
  */
 async function getSpotContext(
   ctx: AccountHelperContext,
-  instrAccountHeaderModel: InstrAccountHeaderModel
+  instrAccountHeaderModel: InstrAccountHeaderModel,
 ): Promise<AccountMeta[]> {
   const args = {
     assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -57,7 +58,7 @@ async function getSpotContext(
  */
 async function getPerpContext(
   ctx: AccountHelperContext,
-  instrAccountHeaderModel: InstrAccountHeaderModel
+  instrAccountHeaderModel: InstrAccountHeaderModel,
 ): Promise<AccountMeta[]> {
   const args = {
     assetTokenId: instrAccountHeaderModel.assetTokenId,
@@ -132,7 +133,7 @@ async function getPerpContext(
  */
 async function getSpotCandles(
   ctx: AccountHelperContext,
-  instrAccountHeaderModel: InstrAccountHeaderModel
+  instrAccountHeaderModel: InstrAccountHeaderModel,
 ): Promise<AccountMeta[]> {
   const args = {
     assetTokenId: instrAccountHeaderModel.assetTokenId,

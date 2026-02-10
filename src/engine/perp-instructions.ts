@@ -1,7 +1,6 @@
 import {
   Address,
   AccountRole,
-  Instruction,
   createAddressWithSeed,
   TransactionSigner,
   SolanaRpcResponse,
@@ -22,6 +21,7 @@ import {
   PerpChangeLeverageArgs,
   PerpStatisticsResetArgs,
   NewInstrumentArgs,
+  Instruction,
 } from '../types';
 import { AccountType, InstrMask } from '../types/enums';
 import {

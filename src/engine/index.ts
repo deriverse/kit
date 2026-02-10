@@ -7,9 +7,7 @@ import {
   getBase64Encoder,
   getProgramDerivedAddress,
   getAddressEncoder,
-  AccountMeta,
   Commitment,
-  Instruction,
 } from '@solana/kit';
 import { Buffer } from 'buffer';
 
@@ -70,6 +68,8 @@ import {
   GetClientSpotOrdersArgsSchema,
   GetClientPerpOrdersArgsSchema,
   EngineArgsSchema,
+  AccountMeta,
+  Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
 import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, setDecimals } from '../constants';

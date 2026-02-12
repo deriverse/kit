@@ -1,17 +1,19 @@
-export function newOperatorData(tag: number): Buffer {
-  let buf = Buffer.alloc(4);
+export function newOperatorData(tag: number, version: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(version, 4);
   return buf;
 }
 
-export function newRootAccountData(tag: number, privateMode: number, lutSlot: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function newRootAccountData(tag: number, privateMode: number, version: number, lutSlot: number): Buffer {
+  let buf = Buffer.alloc(12);
   buf.writeUint8(tag, 0);
   buf.writeUint8(privateMode, 1);
   buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(lutSlot, 4);
+  buf.writeUint32LE(version, 4);
+  buf.writeUint32LE(lutSlot, 8);
   return buf;
 }
 
@@ -178,14 +180,15 @@ export function withdrawData(tag: number, tokenId: number, amount: number): Buff
   return buf;
 }
 
-export function swapData(tag: number, inputCrncy: number, instrId: number, price: number, amount: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function swapData(tag: number, inputCrncy: number, instrId: number, price: number, amount: number, refFeeRate: number, minAmountOut: number): Buffer {
+  let buf = Buffer.alloc(40);
   buf.writeUint8(tag, 0);
   buf.writeUint8(inputCrncy, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
   buf.writeBigInt64LE(BigInt(Math.floor(price)), 8);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(minAmountOut)), 24);
   return buf;
 }
 
@@ -246,8 +249,8 @@ export function upgradeToPerpData(tag: number, instrId: number): Buffer {
   return buf;
 }
 
-export function setInstrReadyForPerpUpgradeData(tag: number, instrId: number, variance: number): Buffer {
-  let buf = Buffer.alloc(16);
+export function setInstrReadyForPerpUpgradeData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
@@ -324,11 +327,12 @@ export function pointsProgramExpiration(tag: number, newExpirationTime: number):
   return buf;
 }
 
-export function setVarianceData(tag: number, variance: number): Buffer {
-  let buf = Buffer.alloc(12);
+export function setVarianceData(tag: number, instrId: number, variance: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
   return buf;
 }
 
@@ -392,6 +396,34 @@ export function activateClientRefProgramData(tag: number, refId: number): Buffer
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(refId, 4);
+  return buf;
+}
+
+export function cleanCandlesData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function vmInitWithdrawData(tag: number, tokenId: number, amount: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(tokenId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  return buf;
+}
+
+export function vmChangeWhitelistData(tag: number, mask: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(mask, 4);
   return buf;
 }
 

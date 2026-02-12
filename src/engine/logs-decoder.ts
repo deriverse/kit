@@ -7,6 +7,7 @@ import { TokenStateModel } from '../structure_models';
 import { tokenDec } from './utils';
 import {
   BuyMarketSeatReportModel,
+  ChangePointsRecordModel,
   DepositReportModel,
   DrvsAirdropReportModel,
   EarningsReportModel,
@@ -27,6 +28,7 @@ import {
   PerpPlaceOrderReportModel,
   PerpSocLossReportModel,
   PerpWithdrawReportModel,
+  PlaceSwapOrderReportModel,
   SellMarketSeatReportModel,
   SpotFeesReportModel,
   SpotFillOrderReportModel,
@@ -37,6 +39,17 @@ import {
   SpotOrderRevokeReportModel,
   SpotPlaceMassCancelReportModel,
   SpotPlaceOrderReportModel,
+  SwapRefFeesReportModel,
+  VmChangeListReportModel,
+  VmFinalizeActivateReportModel,
+  VmFinalizeDeactivateReportModel,
+  VmInitActivateCancelReportModel,
+  VmInitActivateReportModel,
+  VmInitDeactivateCancelReportModel,
+  VmInitDeactivateReportModel,
+  VmInitWithdrawCancelReportModel,
+  VmInitWithdrawFinalizeReportModel,
+  VmInitWithdrawReportModel,
   WithdrawReportModel,
 } from '../logs_models';
 
@@ -448,6 +461,117 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
       case LogType.perpChangeLeverage: {
         if (buffer.length == PerpChangeLeverageReportModel.LENGTH) {
           let report = PerpChangeLeverageReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.swapOrder: {
+        if (buffer.length == PlaceSwapOrderReportModel.LENGTH) {
+          let report = PlaceSwapOrderReportModel.fromBuffer(buffer);
+          if (uiNumbers) {
+            const instrInfo = instruments.get(report.instrId);
+            if (instrInfo) {
+              assetTokenDec = tokenDec(tokens, instrInfo.header.assetTokenId, uiNumbers);
+              crncyTokenDec = tokenDec(tokens, instrInfo.header.crncyTokenId, uiNumbers);
+              report.qty /= assetTokenDec;
+            }
+            report.price /= dec;
+          }
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.changedPoints: {
+        if (buffer.length == ChangePointsRecordModel.LENGTH) {
+          let report = ChangePointsRecordModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.swapFees: {
+        if (buffer.length == SwapRefFeesReportModel.LENGTH) {
+          let report = SwapRefFeesReportModel.fromBuffer(buffer);
+          if (uiNumbers) {
+            report.fees /= crncyTokenDec;
+          }
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitActivate: {
+        if (buffer.length == VmInitActivateReportModel.LENGTH) {
+          let report = VmInitActivateReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitActivateCancel: {
+        if (buffer.length == VmInitActivateCancelReportModel.LENGTH) {
+          let report = VmInitActivateCancelReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmFinalizeActivate: {
+        if (buffer.length == VmFinalizeActivateReportModel.LENGTH) {
+          let report = VmFinalizeActivateReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitDeactivate: {
+        if (buffer.length == VmInitDeactivateReportModel.LENGTH) {
+          let report = VmInitDeactivateReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitDeactivateCancel: {
+        if (buffer.length == VmInitDeactivateCancelReportModel.LENGTH) {
+          let report = VmInitDeactivateCancelReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmFinalizeDeactivate: {
+        if (buffer.length == VmFinalizeDeactivateReportModel.LENGTH) {
+          let report = VmFinalizeDeactivateReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmChangeList: {
+        if (buffer.length == VmChangeListReportModel.LENGTH) {
+          let report = VmChangeListReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitWithdraw: {
+        if (buffer.length == VmInitWithdrawReportModel.LENGTH) {
+          let report = VmInitWithdrawReportModel.fromBuffer(buffer);
+          if (uiNumbers) {
+            crncyTokenDec = tokenDec(tokens, report.tokenId, uiNumbers);
+            report.amount /= crncyTokenDec;
+          }
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitWithdrawCancel: {
+        if (buffer.length == VmInitWithdrawCancelReportModel.LENGTH) {
+          let report = VmInitWithdrawCancelReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.vmInitWithdrawFinalize: {
+        if (buffer.length == VmInitWithdrawFinalizeReportModel.LENGTH) {
+          let report = VmInitWithdrawFinalizeReportModel.fromBuffer(buffer);
+          if (uiNumbers) {
+            crncyTokenDec = tokenDec(tokens, report.tokenId, uiNumbers);
+            report.amount /= crncyTokenDec;
+          }
           logs.push(report);
         }
         break;

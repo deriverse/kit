@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Address, Commitment } from '@solana/kit';
+import { MAX_SWAP_FEE_RATE } from '../constants';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
@@ -79,6 +80,11 @@ const SwapArgsSchema = z.object({
   amount: positiveNumber.meta({ description: 'Amount to swap' }),
   limitPrice: positiveNumber.meta({ description: 'Limit price' }),
   crncyInput: z.boolean().meta({ description: 'Currency token as input token' }),
+  refFeeRate: z
+    .number()
+    .min(0)
+    .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` }),
+  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }),
 });
 
 const SpotOrderCancelArgsSchema = z.object({

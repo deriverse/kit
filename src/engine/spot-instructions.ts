@@ -470,6 +470,8 @@ async function buildSwapInstruction(
           ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
           : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
     ),
+    args.refFeeRate,
+    args.minAmountOut,
   );
 
   let keys = [

@@ -34,6 +34,18 @@ export enum LogType {
   swapOrder = 31,
   moveSpot = 32,
   newPrivateClient = 33,
+  changedPoints = 34,
+  swapFees = 35,
+  vmInitActivate = 36,
+  vmInitActivateCancel = 37,
+  vmFinalizeActivate = 38,
+  vmInitDeactivate = 39,
+  vmInitDeactivateCancel = 40,
+  vmFinalizeDeactivate = 41,
+  vmChangeList = 42,
+  vmInitWithdraw = 43,
+  vmInitWithdrawCancel = 44,
+  vmInitWithdrawFinalize = 45,
 }
 
 export class PerpChangeLeverageReportModel {
@@ -541,8 +553,8 @@ export class SpotPlaceOrderReportModel {
   }
 }
 
-export class SwapOrderReportModel {
-  static readonly LENGTH = 4 * 1 + 3 * 4 + 3 * 8; // 40 bytes
+export class PlaceSwapOrderReportModel {
+  static readonly LENGTH = 4 * 1 + 3 * 4 + 4 * 8; // 48 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_SIDE = 1;
@@ -552,6 +564,7 @@ export class SwapOrderReportModel {
   static readonly OFFSET_PRICE = 24;
   static readonly OFFSET_TIME = 32;
   static readonly OFFSET_INSTR_ID = 36;
+  static readonly OFFSET_SWAP_REF_RATE = 40;
 
   tag: number;
   side: number;
@@ -561,8 +574,9 @@ export class SwapOrderReportModel {
   price: number;
   time: number;
   instrId: number;
-  static fromBuffer(buffer: Buffer, offset?: number): SwapOrderReportModel {
-    const result = new SwapOrderReportModel();
+  swapRefRate: number;
+  static fromBuffer(buffer: Buffer, offset?: number): PlaceSwapOrderReportModel {
+    const result = new PlaceSwapOrderReportModel();
     let autoBuffer = new AutoBuffer(buffer, offset);
     result.tag = autoBuffer.readU8();
     result.side = autoBuffer.readU8();
@@ -574,6 +588,7 @@ export class SwapOrderReportModel {
     result.price = autoBuffer.readI64();
     result.time = autoBuffer.readU32();
     result.instrId = autoBuffer.readU32();
+    result.swapRefRate = autoBuffer.readF64();
     return result;
   }
 }
@@ -999,6 +1014,287 @@ export class MoveSpotAvailFundsReportModel {
     result.time = autoBuffer.readU32();
     result.qty = autoBuffer.readI64();
     result.crncy = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class ChangePointsRecordModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4; // 16 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_POINTS = 8;
+  static readonly OFFSET_TIME = 12;
+
+  tag: number;
+  clientId: number;
+  points: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): ChangePointsRecordModel {
+    const result = new ChangePointsRecordModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.points = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class SwapRefFeesReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 1 * 4 + 1 * 8; // 16 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_FEES = 8;
+
+  tag: number;
+  fees: number;
+  static fromBuffer(buffer: Buffer, offset?: number): SwapRefFeesReportModel {
+    const result = new SwapRefFeesReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    autoBuffer.readU32();
+    result.fees = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class VmInitActivateReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4; // 16 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitActivateReportModel {
+    const result = new VmInitActivateReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmInitActivateCancelReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitActivateCancelReportModel {
+    const result = new VmInitActivateCancelReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmFinalizeActivateReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmFinalizeActivateReportModel {
+    const result = new VmFinalizeActivateReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmInitDeactivateReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitDeactivateReportModel {
+    const result = new VmInitDeactivateReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmInitDeactivateCancelReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitDeactivateCancelReportModel {
+    const result = new VmInitDeactivateCancelReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmFinalizeDeactivateReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmFinalizeDeactivateReportModel {
+    const result = new VmFinalizeDeactivateReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmChangeListReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 2 * 4; // 12 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TIME = 8;
+
+  tag: number;
+  clientId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmChangeListReportModel {
+    const result = new VmChangeListReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmInitWithdrawReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TOKEN_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_AMOUNT = 16;
+
+  tag: number;
+  clientId: number;
+  tokenId: number;
+  time: number;
+  amount: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitWithdrawReportModel {
+    const result = new VmInitWithdrawReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.tokenId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.amount = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class VmInitWithdrawCancelReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4; // 16 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TOKEN_ID = 8;
+  static readonly OFFSET_TIME = 12;
+
+  tag: number;
+  clientId: number;
+  tokenId: number;
+  time: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitWithdrawCancelReportModel {
+    const result = new VmInitWithdrawCancelReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.tokenId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    return result;
+  }
+}
+
+export class VmInitWithdrawFinalizeReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_TOKEN_ID = 8;
+  static readonly OFFSET_TIME = 12;
+  static readonly OFFSET_AMOUNT = 16;
+
+  tag: number;
+  clientId: number;
+  tokenId: number;
+  time: number;
+  amount: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmInitWithdrawFinalizeReportModel {
+    const result = new VmInitWithdrawFinalizeReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.tokenId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.amount = autoBuffer.readI64();
     return result;
   }
 }

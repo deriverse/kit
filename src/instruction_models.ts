@@ -192,33 +192,21 @@ export function swapData(tag: number, inputCrncy: number, instrId: number, price
   return buf;
 }
 
-export function spotQuotesReplaceData(tag: number, instrId: number, newBidPrice: number, newBidQty: number, oldBidOrderId: number, newAskPrice: number, newAskQty: number, oldAskOrderId: number): Buffer {
-  let buf = Buffer.alloc(56);
+export function spotQuotesReplaceData(tag: number, mask: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
+  buf.writeUint16LE(mask, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(Math.floor(newBidPrice)), 8);
-  buf.writeBigInt64LE(BigInt(Math.floor(newBidQty)), 16);
-  buf.writeBigInt64LE(BigInt(Math.floor(oldBidOrderId)), 24);
-  buf.writeBigInt64LE(BigInt(Math.floor(newAskPrice)), 32);
-  buf.writeBigInt64LE(BigInt(Math.floor(newAskQty)), 40);
-  buf.writeBigInt64LE(BigInt(Math.floor(oldAskOrderId)), 48);
   return buf;
 }
 
-export function perpQuotesReplaceData(tag: number, instrId: number, newBidPrice: number, newBidQty: number, oldBidOrderId: number, newAskPrice: number, newAskQty: number, oldAskOrderId: number): Buffer {
-  let buf = Buffer.alloc(56);
+export function perpQuotesReplaceData(tag: number, mask: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
+  buf.writeUint16LE(mask, 2);
   buf.writeUint32LE(instrId, 4);
-  buf.writeBigInt64LE(BigInt(Math.floor(newBidPrice)), 8);
-  buf.writeBigInt64LE(BigInt(Math.floor(newBidQty)), 16);
-  buf.writeBigInt64LE(BigInt(Math.floor(oldBidOrderId)), 24);
-  buf.writeBigInt64LE(BigInt(Math.floor(newAskPrice)), 32);
-  buf.writeBigInt64LE(BigInt(Math.floor(newAskQty)), 40);
-  buf.writeBigInt64LE(BigInt(Math.floor(oldAskOrderId)), 48);
   return buf;
 }
 

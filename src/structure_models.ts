@@ -14,6 +14,18 @@ export enum AssetType {
   perp = 0x40000000,
 }
 
+export enum VmFlag {
+  active = 0x80000000,
+  change = 0x40000000,
+  withdraw = 0x20000000,
+}
+
+export enum SlotFlag {
+  spot = 0b001,
+  perp = 0b010,
+  option = 0b100,
+}
+
 export enum AccountType {
   clientCommunity = 35,
   clientDrv = 32,
@@ -1443,6 +1455,68 @@ export class PxOrdersModel {
     result.link = autoData.readU32();
     result.begin = autoData.readU32();
     result.end = autoData.readU32();
+    return result;
+  }
+}
+
+export class VmMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): VmMaskModel {
+    const result = new VmMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
+    return result;
+  }
+}
+
+export class SlotFlagsModel {
+  static readonly LENGTH = 1 * 1; // 1 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SlotFlagsModel {
+    const result = new SlotFlagsModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU8();
+    return result;
+  }
+}
+
+export class QuoteOrderModel {
+  static readonly LENGTH = 3 * 8; // 24 bytes
+
+  static readonly OFFSET_NEW_PRICE = 0;
+  static readonly OFFSET_NEW_QTY = 8;
+  static readonly OFFSET_OLD_ID = 16;
+
+  newPrice: number;
+  newQty: number;
+  oldId: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): QuoteOrderModel {
+    const result = new QuoteOrderModel();
+    let autoData = new AutoData(data, offset);
+    result.newPrice = autoData.readI64();
+    result.newQty = autoData.readI64();
+    result.oldId = autoData.readI64();
+    return result;
+  }
+}
+
+export class QuoteMaskModel {
+  static readonly LENGTH = 1 * 2; // 2 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): QuoteMaskModel {
+    const result = new QuoteMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU16();
     return result;
   }
 }

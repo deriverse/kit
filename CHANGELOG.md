@@ -2,6 +2,10 @@
 
 ## [1.0.42] - 2025-02-20
 
+### Changed
+
+- **Spot/Perp quotes replace**: Replaced fixed bid/ask fields with dynamic `orders` array (up to 12 `QuoteOrder` entries with `newPrice`, `newQty`, `oldId`, `side`); instruction data now uses `QuoteMask` header + appended order entries
+
 ### Added
 
 - **VM log models**: Added transaction log decoding for VM operations — `VmInitActivate`, `VmInitActivateCancel`, `VmFinalizeActivate`, `VmInitDeactivate`, `VmInitDeactivateCancel`, `VmFinalizeDeactivate`, `VmChangeList`, `VmInitWithdraw`, `VmInitWithdrawCancel`, `VmInitWithdrawFinalize`

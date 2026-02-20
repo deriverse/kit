@@ -336,12 +336,10 @@ describe('perp instruction builders', () => {
       const instr = ctx.instruments.get(1)!;
       const args: PerpQuotesReplaceArgs = {
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 12345,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 67890,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 12345, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 67890, side: 1 },
+        ],
       };
 
       const instruction = await buildPerpQuotesReplaceInstruction(ctx, args, instr);
@@ -359,12 +357,10 @@ describe('perp instruction builders', () => {
       const instr = ctx.instruments.get(1)!;
       const args: PerpQuotesReplaceArgs = {
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 12345,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 67890,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 12345, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 67890, side: 1 },
+        ],
       };
 
       const instruction = await buildPerpQuotesReplaceInstruction(ctx, args, instr);

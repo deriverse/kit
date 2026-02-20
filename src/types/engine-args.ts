@@ -20,6 +20,7 @@ import {
   PerpChangeLeverageArgsSchema,
   PerpStatisticsResetArgsSchema,
   PerpForcedCloseArgsSchema,
+  EstimateArgsSchema,
   NewInstrumentArgsSchema,
   GetInstrIdArgsSchema,
   GetSpotContextArgsSchema,
@@ -52,6 +53,7 @@ export type PerpMassCancelArgs = z.infer<typeof PerpMassCancelArgsSchema>;
 export type PerpChangeLeverageArgs = z.infer<typeof PerpChangeLeverageArgsSchema>;
 export type PerpStatisticsResetArgs = z.infer<typeof PerpStatisticsResetArgsSchema>;
 export type PerpForcedCloseArgs = z.infer<typeof PerpForcedCloseArgsSchema>;
+export type EstimateArgs = z.infer<typeof EstimateArgsSchema>;
 export type NewInstrumentArgs = z.infer<typeof NewInstrumentArgsSchema>;
 export type GetInstrIdArgs = z.infer<typeof GetInstrIdArgsSchema>;
 export type GetSpotContextArgs = z.infer<typeof GetSpotContextArgsSchema>;

@@ -270,3 +270,15 @@ export interface GetClientDataResponse {
   refLinks: RefLink[];
   community: ClientCommunityData;
 }
+
+/**
+ * Result of an orderbook fill estimation
+ * @property {number} remainingQty Unfilled quantity
+ * @property {number} sumCurrencyTokens Total currency tokens spent (buy) or received (sell)
+ * @property {number | null} px Last execution price, null if nothing filled
+ */
+export interface EstimateResult {
+  remainingQty: number;
+  sumCurrencyTokens: number;
+  px: number | null;
+}

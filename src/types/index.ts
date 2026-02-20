@@ -18,6 +18,7 @@ export {
   PerpStatisticsResetArgs,
   PerpChangeLeverageArgs,
   PerpForcedCloseArgs,
+  EstimateArgs,
   GetInstrIdArgs,
   GetSpotContextArgs,
   getInstrAccountByTagArgs,
@@ -52,6 +53,7 @@ export {
   ClientCommunityData,
   ClientRefProgramData,
   GetClientDataResponse,
+  EstimateResult,
 } from './responses';
 
 export { LogMessage } from './log-message';
@@ -77,6 +79,7 @@ export {
   PerpChangeLeverageArgsSchema,
   PerpStatisticsResetArgsSchema,
   PerpForcedCloseArgsSchema,
+  EstimateArgsSchema,
   NewInstrumentArgsSchema,
   GetInstrIdArgsSchema,
   GetClientSpotOrdersInfoArgsSchema,

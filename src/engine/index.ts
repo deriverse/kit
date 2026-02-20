@@ -43,6 +43,8 @@ import {
   PerpBuySeatArgs,
   SwapArgs,
   PerpSellSeatArgs,
+  EstimateArgs,
+  EstimateResult,
   LogMessage,
   DepositArgsSchema,
   WithdrawArgsSchema,
@@ -68,6 +70,7 @@ import {
   GetClientSpotOrdersArgsSchema,
   GetClientPerpOrdersArgsSchema,
   EngineArgsSchema,
+  EstimateArgsSchema,
   AccountMeta,
   Instruction,
 } from '../types';
@@ -133,6 +136,7 @@ import {
   buildNewRefLinkInstruction,
   buildNewInstrumentInstructions,
 } from './perp-instructions';
+import { FillEstimateEngine, OrderSide } from './fill-estimate';
 
 type Address = SolanaAddress<string>;
 
@@ -881,6 +885,29 @@ export class Engine {
     await this.requireClient();
     const instr = await this.getPerpInstrumentWithUpdate(args.instrId);
     return buildPerpStatisticsResetInstruction(this.getPerpInstructionContext(), args, instr);
+  }
+
+  // ============================================
+  // ESTIMATION
+  // ============================================
+
+  async estimate(args: EstimateArgs): Promise<EstimateResult> {
+    EstimateArgsSchema.parse(args);
+    const type = args.type ?? 'spot';
+    await this.updateInstrData({ instrId: args.instrId });
+    const instr = this.requireInstrument(args.instrId);
+    const assetDecimals = this.tokens.get(instr.header.assetTokenId)?.mask ?? 0;
+    const crncyDecimals = this.tokens.get(instr.header.crncyTokenId)?.mask ?? 0;
+    const engine = new FillEstimateEngine(
+      type === 'spot' ? instr.header.assetTokens : 0,
+      type === 'spot' ? instr.header.crncyTokens : 0,
+      type === 'spot' ? instr.spotBids : instr.perpBids,
+      type === 'spot' ? instr.spotAsks : instr.perpAsks,
+      assetDecimals & 0xff,
+      crncyDecimals & 0xff,
+    );
+    const side = args.side === 0 ? OrderSide.Bid : OrderSide.Ask;
+    return engine.estimate(args.qty, args.price, side);
   }
 
   // ============================================

@@ -217,6 +217,7 @@ const EstimateArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   side: side.meta({ description: '0 - Bid (buy), 1 - Ask (sell)' }),
   qty: positiveNumber.meta({ description: 'Quantity to fill' }),
+  price: positiveNumber.meta({ description: 'Limit price' }),
   type: z.enum(['spot', 'perp']).optional().meta({ description: 'Market type, defaults to spot' }),
 });
 

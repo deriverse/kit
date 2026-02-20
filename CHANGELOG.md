@@ -11,7 +11,6 @@
 - **New instruction builders**: `cleanCandlesData`, `vmInitWithdrawData`, `vmChangeWhitelistData`
 - **New constant**: `MAX_SWAP_FEE_RATE` (0.0002)
 - **New model**: `DiscriminatorModel`, `AssetType` enum
-- **Estimate schema**: Added `EstimateArgsSchema` for orderbook fill simulation
 
 ### Changed
 

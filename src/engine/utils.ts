@@ -182,11 +182,15 @@ export function getPerpPriceStep(price: number): number {
   }
 }
 
+const MAX_SUPPLY = 262_200;
+const INIT_SEAT_PRICE = 1.0;
+
 export function perpSeatReserve(activeUsers: number): number {
-  if (activeUsers >= 25000) {
-    throw new Error('Active users cannot exceed 24999');
+  const differenceToMax = MAX_SUPPLY - activeUsers;
+  if (differenceToMax <= 0) {
+    throw new Error('Active users cannot exceed MAX_SUPPLY');
   }
-  return (250000 * activeUsers) / (25000 - activeUsers);
+  return (MAX_SUPPLY * INIT_SEAT_PRICE * activeUsers) / differenceToMax;
 }
 
 export function getMultipleSpotOrders(

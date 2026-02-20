@@ -85,6 +85,7 @@ const SwapArgsSchema = z.object({
     .min(0)
     .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` }),
   minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }),
+  feeTakerWallet: solanaAddress.optional().meta({ description: 'Fee taker wallet address' }),
 });
 
 const SpotOrderCancelArgsSchema = z.object({
@@ -212,6 +213,13 @@ const DistribDividendsArgsSchema = z.object({
   instruments: z.array(nonNegativeInt).meta({ description: 'Instruments ID' }),
 });
 
+const EstimateArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  side: side.meta({ description: '0 - Bid (buy), 1 - Ask (sell)' }),
+  qty: positiveNumber.meta({ description: 'Quantity to fill' }),
+  type: z.enum(['spot', 'perp']).optional().meta({ description: 'Market type, defaults to spot' }),
+});
+
 const GetClientSpotOrdersInfoArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   clientId: nonNegativeInt.meta({
@@ -285,6 +293,7 @@ export {
   GetInstrAccountByTagArgsSchema,
   UpdateInstrDataArgsSchema,
   DistribDividendsArgsSchema,
+  EstimateArgsSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
   GetClientSpotOrdersArgsSchema,

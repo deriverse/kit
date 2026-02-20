@@ -495,6 +495,12 @@ async function buildSwapInstruction(
     { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
+  if (args.feeTakerWallet && args.refFeeRate > 0) {
+    const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
+    keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: args.feeTakerWallet, role: AccountRole.WRITABLE });
+  }
+
   return { accounts: keys, programAddress: ctx.programId, data: buf };
 }
 

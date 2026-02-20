@@ -255,6 +255,7 @@ async function buildPerpBuySeatInstruction(
     { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
+    { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -290,7 +291,7 @@ async function buildPerpSellSeatInstruction(
 
   const slippage = args.slippage ?? 0;
   const slippagePrice =
-    (perpSeatReserve(instr.header.perpClientsCount + 1) - perpSeatReserve(instr.header.perpClientsCount)) /
+    (perpSeatReserve(instr.header.perpClientsCount) - perpSeatReserve(instr.header.perpClientsCount - 1)) /
     (1 + slippage);
   const crncyDec = tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers);
 
@@ -453,7 +454,7 @@ async function buildPerpChangeLeverageInstruction(
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: perpChangeLeverageData(37, args.instrId, args.leverage),
+    data: perpChangeLeverageData(37, args.leverage, args.instrId),
   };
 }
 

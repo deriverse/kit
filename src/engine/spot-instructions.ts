@@ -19,10 +19,11 @@ import {
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
+  DF,
   lpDec,
 } from '../constants';
 import { findAssociatedTokenAddress, getLookupTableAddress, tokenDec } from './utils';
-import { TokenStateModel } from '../structure_models';
+import { TokenStateModel, QuoteOrderModel } from '../structure_models';
 import {
   depositData,
   withdrawData,
@@ -261,8 +262,8 @@ async function buildSpotLpInstruction(
       args.side,
       args.instrId,
       Math.round(args.amount * lpDec),
-      minPrice * 1000000000,
-      maxPrice * 1000000000,
+      minPrice * DF,
+      maxPrice * DF,
     ),
   };
 }
@@ -281,9 +282,9 @@ async function buildNewSpotOrderInstruction(
     args.orderType ?? 0,
     args.side,
     args.instrId,
-    Math.round(args.price * 1000000000),
+    Math.round(args.price * DF),
     Math.round(args.qty * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
-    (args.edgePrice ?? 0) * 1000000000,
+    (args.edgePrice ?? 0) * DF,
   );
 
   let keys = [
@@ -320,16 +321,29 @@ async function buildSpotQuotesReplaceInstruction(
   instr: Instrument,
 ): Promise<Instruction> {
   let assetTokenDecFactor = tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers);
-  let buf = spotQuotesReplaceData(
-    34,
-    args.instrId,
-    Math.round(args.newBidPrice * 1000000000),
-    Math.round(args.newBidQty * assetTokenDecFactor),
-    args.bidOrderIdToCancel,
-    Math.round(args.newAskPrice * 1000000000),
-    Math.round(args.newAskQty * assetTokenDecFactor),
-    args.askOrderIdToCancel,
-  );
+
+  if (args.orders.length > 12) {
+    throw new Error('Exceeded orders limit of 12 for spot quotes replace instruction');
+  }
+
+  let mask = args.orders.length & 0b1111;
+  for (let i = 0; i < args.orders.length; i++) {
+    if (args.orders[i].side === 0) {
+      mask |= 1 << (4 + i);
+    }
+  }
+
+  let headerBuf = spotQuotesReplaceData(34, mask, args.instrId);
+
+  let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
+  for (let i = 0; i < args.orders.length; i++) {
+    const offset = i * QuoteOrderModel.LENGTH;
+    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newPrice * DF)), offset + QuoteOrderModel.OFFSET_NEW_PRICE);
+    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)), offset + QuoteOrderModel.OFFSET_NEW_QTY);
+    ordersBuf.writeBigInt64LE(BigInt(Math.floor(args.orders[i].oldId)), offset + QuoteOrderModel.OFFSET_OLD_ID);
+  }
+
+  let buf = Buffer.concat([headerBuf, ordersBuf]);
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
@@ -463,13 +477,15 @@ async function buildSwapInstruction(
     26,
     args.crncyInput ? 1 : 0,
     instrId,
-    Math.round(args.limitPrice * 1000000000),
+    Math.round(args.limitPrice * DF),
     Math.round(
       args.amount *
         (args.crncyInput
           ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
           : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
     ),
+    args.refFeeRate,
+    args.minAmountOut,
   );
 
   let keys = [
@@ -492,6 +508,12 @@ async function buildSwapInstruction(
     { address: crncyTokenProgramId, role: AccountRole.READONLY },
     { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
   ];
+
+  if (args.feeTakerWallet && args.refFeeRate > 0) {
+    const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
+    keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: args.feeTakerWallet, role: AccountRole.WRITABLE });
+  }
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };
 }

@@ -9,6 +9,8 @@ export const SYSTEM_PROGRAM_ID = address('11111111111111111111111111111111');
 export const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+export const MAX_SWAP_FEE_RATE = 0.0002;
+export const DF = 1000000000;
 
 export let dec = 1000000000;
 export let lpDec = 10000;

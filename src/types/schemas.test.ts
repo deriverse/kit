@@ -65,12 +65,7 @@ describe('Zod Schemas', () => {
     it('accepts zero for quote prices/quantities', () => {
       const result = SpotQuotesReplaceArgsSchema.safeParse({
         instrId: 1,
-        bidOrderIdToCancel: 0,
-        newBidPrice: 0,
-        newBidQty: 0,
-        askOrderIdToCancel: 0,
-        newAskPrice: 0,
-        newAskQty: 0,
+        orders: [{ newPrice: 0, newQty: 0, oldId: 0, side: 0 }],
       });
       expect(result.success).toBe(true);
     });
@@ -78,15 +73,21 @@ describe('Zod Schemas', () => {
     it('rejects negative prices', () => {
       const result = SpotQuotesReplaceArgsSchema.safeParse({
         instrId: 1,
-        bidOrderIdToCancel: 0,
-        newBidPrice: -1,
-        newBidQty: 0,
-        askOrderIdToCancel: 0,
-        newAskPrice: 0,
-        newAskQty: 0,
+        orders: [{ newPrice: -1, newQty: 0, oldId: 0, side: 0 }],
       });
       expect(result.success).toBe(false);
       expect(result.error?.issues[0].message).toBe('Price must be non-negative');
+    });
+
+    it('rejects more than 12 orders', () => {
+      const orders = Array.from({ length: 13 }, () => ({ newPrice: 1, newQty: 1, oldId: 0, side: 0 }));
+      const result = SpotQuotesReplaceArgsSchema.safeParse({ instrId: 1, orders });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects empty orders array', () => {
+      const result = SpotQuotesReplaceArgsSchema.safeParse({ instrId: 1, orders: [] });
+      expect(result.success).toBe(false);
     });
   });
 

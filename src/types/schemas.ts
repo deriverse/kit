@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Address, Commitment } from '@solana/kit';
+import { MAX_SWAP_FEE_RATE } from '../constants';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
@@ -51,26 +52,22 @@ const NewSpotOrderArgsSchema = z.object({
   edgePrice: positiveNumber.optional(),
 });
 
+const QuoteOrderSchema = z.object({
+  newPrice: z
+    .number()
+    .nonnegative({ error: 'Price must be non-negative' })
+    .meta({ description: 'New order price' }),
+  newQty: z
+    .number()
+    .nonnegative({ error: 'Quantity must be non-negative' })
+    .meta({ description: 'New order quantity' }),
+  oldId: nonNegativeInt.meta({ description: 'Old order ID to cancel, zero means no action' }),
+  side: side.meta({ description: '0 - Bid, 1 - Ask' }),
+});
+
 const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  bidOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on bid side, zero means no action' }),
-  newBidPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order bid price' }),
-  newBidQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order bid quantity, zero means no action' }),
-  askOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on ask side, zero means no action' }),
-  newAskPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order ask price' }),
-  newAskQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order ask quantity, zero means no action' }),
+  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 
 const SwapArgsSchema = z.object({
@@ -79,6 +76,12 @@ const SwapArgsSchema = z.object({
   amount: positiveNumber.meta({ description: 'Amount to swap' }),
   limitPrice: positiveNumber.meta({ description: 'Limit price' }),
   crncyInput: z.boolean().meta({ description: 'Currency token as input token' }),
+  refFeeRate: z
+    .number()
+    .min(0)
+    .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` }),
+  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }),
+  feeTakerWallet: solanaAddress.optional().meta({ description: 'Fee taker wallet address' }),
 });
 
 const SpotOrderCancelArgsSchema = z.object({
@@ -130,24 +133,7 @@ const NewPerpOrderArgsSchema = z.object({
 
 const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  bidOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on bid side, zero means no action' }),
-  newBidPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order bid price' }),
-  newBidQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order bid quantity, zero means no action' }),
-  askOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on ask side, zero means no action' }),
-  newAskPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order ask price' }),
-  newAskQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order ask quantity, zero means no action' }),
+  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 
 const PerpOrderCancelArgsSchema = z.object({

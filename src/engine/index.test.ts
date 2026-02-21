@@ -497,12 +497,10 @@ describe('Engine instruction methods', () => {
 
       await engine.spotQuotesReplaceInstruction({
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 1,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 2,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
       });
 
       expect(buildSpotQuotesReplaceInstruction).toHaveBeenCalled();
@@ -539,9 +537,43 @@ describe('Engine instruction methods', () => {
         amount: 100,
         limitPrice: 100,
         crncyInput: true,
+        refFeeRate: 0,
+        minAmountOut: 0,
       });
 
       expect(buildSwapInstruction).toHaveBeenCalled();
+    });
+
+    it('should not call buildSwapInstruction because refFeeRate out of maximum', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await expect(
+        engine.swapInstruction({
+          assetMint: 'AssetMint1111111111111111111111111111' as Address,
+          crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+          amount: 100,
+          limitPrice: 100,
+          crncyInput: true,
+          refFeeRate: 0.0003,
+          minAmountOut: 0,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('should not call buildSwapInstruction because minAmountOut below 0', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await expect(
+        engine.swapInstruction({
+          assetMint: 'AssetMint1111111111111111111111111111' as Address,
+          crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+          amount: 100,
+          limitPrice: 100,
+          crncyInput: true,
+          refFeeRate: 0.0002,
+          minAmountOut: -0.005,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -625,12 +657,10 @@ describe('Engine instruction methods', () => {
 
       await engine.perpQuotesReplaceInstruction({
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 1,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 2,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
       });
 
       expect(buildPerpQuotesReplaceInstruction).toHaveBeenCalled();

@@ -18,6 +18,9 @@ import {
   PerpPlaceOrderReportModel,
   PerpSocLossReportModel,
   PerpWithdrawReportModel,
+  ChangePointsRecordModel,
+  MoveSpotAvailFundsReportModel,
+  PlaceSwapOrderReportModel,
   SellMarketSeatReportModel,
   SpotFeesReportModel,
   SpotFillOrderReportModel,
@@ -28,6 +31,17 @@ import {
   SpotOrderRevokeReportModel,
   SpotPlaceMassCancelReportModel,
   SpotPlaceOrderReportModel,
+  SwapRefFeesReportModel,
+  VmChangeListReportModel,
+  VmFinalizeActivateReportModel,
+  VmFinalizeDeactivateReportModel,
+  VmInitActivateCancelReportModel,
+  VmInitActivateReportModel,
+  VmInitDeactivateCancelReportModel,
+  VmInitDeactivateReportModel,
+  VmInitWithdrawCancelReportModel,
+  VmInitWithdrawFinalizeReportModel,
+  VmInitWithdrawReportModel,
   WithdrawReportModel,
 } from '../logs_models';
 
@@ -61,4 +75,18 @@ export type LogMessage =
   | PerpSocLossReportModel
   | PerpChangeLeverageReportModel
   | BuyMarketSeatReportModel
-  | SellMarketSeatReportModel;
+  | SellMarketSeatReportModel
+  | PlaceSwapOrderReportModel
+  | MoveSpotAvailFundsReportModel
+  | ChangePointsRecordModel
+  | SwapRefFeesReportModel
+  | VmInitActivateReportModel
+  | VmInitActivateCancelReportModel
+  | VmFinalizeActivateReportModel
+  | VmInitDeactivateReportModel
+  | VmInitDeactivateCancelReportModel
+  | VmFinalizeDeactivateReportModel
+  | VmChangeListReportModel
+  | VmInitWithdrawReportModel
+  | VmInitWithdrawCancelReportModel
+  | VmInitWithdrawFinalizeReportModel;

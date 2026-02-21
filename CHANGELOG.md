@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.0.42] - 2025-02-20
+
+### Changed
+
+- **Spot/Perp quotes replace**: Replaced fixed bid/ask fields with dynamic `orders` array (up to 12 `QuoteOrder` entries with `newPrice`, `newQty`, `oldId`, `side`); instruction data now uses `QuoteMask` header + appended order entries
+
+### Added
+
+- **VM log models**: Added transaction log decoding for VM operations — `VmInitActivate`, `VmInitActivateCancel`, `VmFinalizeActivate`, `VmInitDeactivate`, `VmInitDeactivateCancel`, `VmFinalizeDeactivate`, `VmChangeList`, `VmInitWithdraw`, `VmInitWithdrawCancel`, `VmInitWithdrawFinalize`
+- **Swap log models**: Added `PlaceSwapOrderReportModel`, `SwapRefFeesReportModel`, `ChangePointsRecordModel`
+- **LogMessage type**: Added `MoveSpotAvailFundsReportModel` to the `LogMessage` union
+- **Swap args**: Added `refFeeRate`, `minAmountOut`, `feeTakerWallet` fields to `SwapArgs`; fee taker accounts appended to swap instruction when `feeTakerWallet` is set
+- **New instruction builders**: `cleanCandlesData`, `vmInitWithdrawData`, `vmChangeWhitelistData`
+- **New constant**: `MAX_SWAP_FEE_RATE` (0.0002)
+- **New model**: `DiscriminatorModel`, `AssetType` enum
+
+### Changed
+
+- **Structure models**: Regenerated and reordered models; removed `ClientSpotModel`, `ClientPerpModel`, stale `futuresXxx` account types, and `OrderType.forcedClose`
+- **`ClientPrimaryAccountHeaderModel`**: Consolidated `vmInstr0`..`vmInstr7` into `vmInstrs: number[]`
+- **Instruction models**: `newOperatorData`, `newRootAccountData` now accept `version`; `setVarianceData` now accepts `instrId`; `setInstrReadyForPerpUpgradeData` removed `variance` param; `swapData` extended to include `refFeeRate` and `minAmountOut`
+- **`SwapOrderReportModel`**: Renamed to `PlaceSwapOrderReportModel`, extended with `swapRefRate`
+- **`perpSeatReserve`**: Updated formula to use `MAX_SUPPLY` (262,200) and `INIT_SEAT_PRICE`
+
+### Fixed
+
+- **perpSellSeatInstruction**: Fixed slippage price calculation — was using `perpClientsCount + 1` instead of `perpClientsCount` for sell-side reserve
+- **perpChangeLeverageInstruction**: Fixed swapped `leverage` and `instrId` parameters in `perpChangeLeverageData` call
+- **perpBuySeatInstruction**: Added missing community account to instruction keys
+
 ## [1.0.40] - 2025-01-23
 
 ### Breaking Changes

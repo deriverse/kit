@@ -5,22 +5,32 @@ export enum OrderType {
   limit = 0,
   market = 1,
   marginCall = 2,
-  forcedClose = 3,
+}
+
+export enum AssetType {
+  token = 0x10000000,
+  spotLp = 0x20000000,
+  spotOrders = 0x30000000,
+  perp = 0x40000000,
+}
+
+export enum VmFlag {
+  active = 0x80000000,
+  change = 0x40000000,
+  withdraw = 0x20000000,
+}
+
+export enum SlotFlag {
+  spot = 0b001,
+  perp = 0b010,
+  option = 0b100,
 }
 
 export enum AccountType {
   clientCommunity = 35,
+  clientDrv = 32,
   clientPrimary = 31,
   community = 34,
-  futuresAskOrders = 29,
-  futuresAsksTree = 27,
-  futuresBidOrders = 28,
-  futuresBidsTree = 26,
-  futuresClientAccounts = 23,
-  futuresClientInfos = 24,
-  futuresClientInfos2 = 25,
-  futuresLines = 30,
-  futuresMaps = 22,
   holder = 1,
   root = 2,
   instr = 7,
@@ -310,43 +320,6 @@ export class HolderAccountHeaderModel {
     let autoData = new AutoData(data, offset);
     result.tag = autoData.readU32();
     result.operatorsCount = autoData.readU32();
-    return result;
-  }
-}
-
-export class OperatorModel {
-  static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
-
-  static readonly OFFSET_OPERATOR_ADDRESS = 0;
-  static readonly OFFSET_VERSION = 32;
-  static readonly OFFSET_RESERVED = 36;
-
-  operatorAddress: Address<any>;
-  version: number;
-  reserved: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): OperatorModel {
-    const result = new OperatorModel();
-    let autoData = new AutoData(data, offset);
-    result.operatorAddress = autoData.readAddress();
-    result.version = autoData.readU32();
-    result.reserved = autoData.readU32();
-    return result;
-  }
-}
-
-export class LineQuotesModel {
-  static readonly LENGTH = 2 * 8; // 16 bytes
-
-  static readonly OFFSET_PX = 0;
-  static readonly OFFSET_QTY = 8;
-
-  px: number;
-  qty: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): LineQuotesModel {
-    const result = new LineQuotesModel();
-    let autoData = new AutoData(data, offset);
-    result.px = autoData.readI64();
-    result.qty = autoData.readI64();
     return result;
   }
 }
@@ -970,107 +943,6 @@ export class TokenStateModel {
   }
 }
 
-export class BaseCrncyRecordModel {
-  static readonly LENGTH = 2 * 4 + 6 * 8; // 56 bytes
-
-  static readonly OFFSET_CRNCY_TOKEN_ID = 0;
-  static readonly OFFSET_DECS_COUNT = 4;
-  static readonly OFFSET_FUNDS = 8;
-  static readonly OFFSET_RATE = 16;
-  static readonly OFFSET_DENOMINATOR = 24;
-  static readonly OFFSET_LOCKED_DRVS_AMOUNT = 32;
-  static readonly OFFSET_LOCKED_DRVS_DIVIDENDS_VALUE = 40;
-  static readonly OFFSET_MASK = 48;
-
-  crncyTokenId: number;
-  decsCount: number;
-  funds: number;
-  rate: number;
-  denominator: number;
-  lockedDrvsAmount: number;
-  lockedDrvsDividendsValue: number;
-  mask: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): BaseCrncyRecordModel {
-    const result = new BaseCrncyRecordModel();
-    let autoData = new AutoData(data, offset);
-    result.crncyTokenId = autoData.readU32();
-    result.decsCount = autoData.readU32();
-    result.funds = autoData.readI64();
-    result.rate = autoData.readF64();
-    result.denominator = autoData.readF64();
-    result.lockedDrvsAmount = autoData.readI64();
-    result.lockedDrvsDividendsValue = autoData.readI64();
-    result.mask = autoData.readI64();
-    return result;
-  }
-}
-
-export class ClientSpotModel {
-  static readonly LENGTH = 4 * 4; // 16 bytes
-
-  static readonly OFFSET_ASSET_ID = 0;
-  static readonly OFFSET_TEMP_CLIENT_ID = 4;
-  static readonly OFFSET_SLOT = 8;
-  static readonly OFFSET_PADDING = 12;
-
-  assetId: number;
-  tempClientId: number;
-  slot: number;
-  padding: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientSpotModel {
-    const result = new ClientSpotModel();
-    let autoData = new AutoData(data, offset);
-    result.assetId = autoData.readU32();
-    result.tempClientId = autoData.readU32();
-    result.slot = autoData.readU32();
-    result.padding = autoData.readU32();
-    return result;
-  }
-}
-
-export class ClientPerpModel {
-  static readonly LENGTH = 4 * 4; // 16 bytes
-
-  static readonly OFFSET_ASSET_ID = 0;
-  static readonly OFFSET_TEMP_CLIENT_ID = 4;
-  static readonly OFFSET_SLOT = 8;
-  static readonly OFFSET_PADDING = 12;
-
-  assetId: number;
-  tempClientId: number;
-  slot: number;
-  padding: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientPerpModel {
-    const result = new ClientPerpModel();
-    let autoData = new AutoData(data, offset);
-    result.assetId = autoData.readU32();
-    result.tempClientId = autoData.readU32();
-    result.slot = autoData.readU32();
-    result.padding = autoData.readU32();
-    return result;
-  }
-}
-
-export class AssetRecordModel {
-  static readonly LENGTH = 2 * 4 + 1 * 8; // 16 bytes
-
-  static readonly OFFSET_ASSET_ID = 0;
-  static readonly OFFSET_TEMP_ID = 4;
-  static readonly OFFSET_VALUE = 8;
-
-  assetId: number;
-  tempId: number;
-  value: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): AssetRecordModel {
-    const result = new AssetRecordModel();
-    let autoData = new AutoData(data, offset);
-    result.assetId = autoData.readU32();
-    result.tempId = autoData.readU32();
-    result.value = autoData.readI64();
-    return result;
-  }
-}
-
 export class SpotClientInfoModel {
   static readonly LENGTH = 4 * 4 + 2 * 8; // 32 bytes
 
@@ -1265,14 +1137,7 @@ export class ClientPrimaryAccountHeaderModel {
   static readonly OFFSET_LUT_ADDRESS = 40;
   static readonly OFFSET_REF_ADDRESS = 72;
   static readonly OFFSET_VM_WALLET_ADDRESS = 104;
-  static readonly OFFSET_VM_INSTR_0 = 136;
-  static readonly OFFSET_VM_INSTR_1 = 140;
-  static readonly OFFSET_VM_INSTR_2 = 144;
-  static readonly OFFSET_VM_INSTR_3 = 148;
-  static readonly OFFSET_VM_INSTR_4 = 152;
-  static readonly OFFSET_VM_INSTR_5 = 156;
-  static readonly OFFSET_VM_INSTR_6 = 160;
-  static readonly OFFSET_VM_INSTR_7 = 164;
+  static readonly OFFSET_VM_INSTRS = 136;
   static readonly OFFSET_VM_WITHDRAW_TOKEN_ID = 168;
   static readonly OFFSET_VM_MASK = 172;
   static readonly OFFSET_VM_WITHDRAW_AMOUNT = 176;
@@ -1315,14 +1180,7 @@ export class ClientPrimaryAccountHeaderModel {
   lutAddress: Address<any>;
   refAddress: Address<any>;
   vmWalletAddress: Address<any>;
-  vmInstr0: number;
-  vmInstr1: number;
-  vmInstr2: number;
-  vmInstr3: number;
-  vmInstr4: number;
-  vmInstr5: number;
-  vmInstr6: number;
-  vmInstr7: number;
+  vmInstrs: number[];
   vmWithdrawTokenId: number;
   vmMask: number;
   vmWithdrawAmount: number;
@@ -1367,14 +1225,7 @@ export class ClientPrimaryAccountHeaderModel {
     result.lutAddress = autoData.readAddress();
     result.refAddress = autoData.readAddress();
     result.vmWalletAddress = autoData.readAddress();
-    result.vmInstr0 = autoData.readU32();
-    result.vmInstr1 = autoData.readU32();
-    result.vmInstr2 = autoData.readU32();
-    result.vmInstr3 = autoData.readU32();
-    result.vmInstr4 = autoData.readU32();
-    result.vmInstr5 = autoData.readU32();
-    result.vmInstr6 = autoData.readU32();
-    result.vmInstr7 = autoData.readU32();
+    result.vmInstrs = Array.from({length: 8}, () => autoData.readU32());
     result.vmWithdrawTokenId = autoData.readU32();
     result.vmMask = autoData.readU32();
     result.vmWithdrawAmount = autoData.readI64();
@@ -1410,6 +1261,115 @@ export class ClientPrimaryAccountHeaderModel {
     result.reservedValue6 = autoData.readI64();
     result.reservedValue7 = autoData.readI64();
     result.reservedValue8 = autoData.readI64();
+    return result;
+  }
+}
+
+export class DiscriminatorModel {
+  static readonly LENGTH = 2 * 4; // 8 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_VERSION = 4;
+
+  tag: number;
+  version: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): DiscriminatorModel {
+    const result = new DiscriminatorModel();
+    let autoData = new AutoData(data, offset);
+    result.tag = autoData.readU32();
+    result.version = autoData.readU32();
+    return result;
+  }
+}
+
+export class OperatorModel {
+  static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
+
+  static readonly OFFSET_OPERATOR_ADDRESS = 0;
+  static readonly OFFSET_VERSION = 32;
+  static readonly OFFSET_RESERVED = 36;
+
+  operatorAddress: Address<any>;
+  version: number;
+  reserved: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): OperatorModel {
+    const result = new OperatorModel();
+    let autoData = new AutoData(data, offset);
+    result.operatorAddress = autoData.readAddress();
+    result.version = autoData.readU32();
+    result.reserved = autoData.readU32();
+    return result;
+  }
+}
+
+export class LineQuotesModel {
+  static readonly LENGTH = 2 * 8; // 16 bytes
+
+  static readonly OFFSET_PX = 0;
+  static readonly OFFSET_QTY = 8;
+
+  px: number;
+  qty: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): LineQuotesModel {
+    const result = new LineQuotesModel();
+    let autoData = new AutoData(data, offset);
+    result.px = autoData.readI64();
+    result.qty = autoData.readI64();
+    return result;
+  }
+}
+
+export class BaseCrncyRecordModel {
+  static readonly LENGTH = 2 * 4 + 6 * 8; // 56 bytes
+
+  static readonly OFFSET_CRNCY_TOKEN_ID = 0;
+  static readonly OFFSET_DECS_COUNT = 4;
+  static readonly OFFSET_FUNDS = 8;
+  static readonly OFFSET_RATE = 16;
+  static readonly OFFSET_DENOMINATOR = 24;
+  static readonly OFFSET_LOCKED_DRVS_AMOUNT = 32;
+  static readonly OFFSET_LOCKED_DRVS_DIVIDENDS_VALUE = 40;
+  static readonly OFFSET_MASK = 48;
+
+  crncyTokenId: number;
+  decsCount: number;
+  funds: number;
+  rate: number;
+  denominator: number;
+  lockedDrvsAmount: number;
+  lockedDrvsDividendsValue: number;
+  mask: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): BaseCrncyRecordModel {
+    const result = new BaseCrncyRecordModel();
+    let autoData = new AutoData(data, offset);
+    result.crncyTokenId = autoData.readU32();
+    result.decsCount = autoData.readU32();
+    result.funds = autoData.readI64();
+    result.rate = autoData.readF64();
+    result.denominator = autoData.readF64();
+    result.lockedDrvsAmount = autoData.readI64();
+    result.lockedDrvsDividendsValue = autoData.readI64();
+    result.mask = autoData.readI64();
+    return result;
+  }
+}
+
+export class AssetRecordModel {
+  static readonly LENGTH = 2 * 4 + 1 * 8; // 16 bytes
+
+  static readonly OFFSET_ASSET_ID = 0;
+  static readonly OFFSET_TEMP_ID = 4;
+  static readonly OFFSET_VALUE = 8;
+
+  assetId: number;
+  tempId: number;
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): AssetRecordModel {
+    const result = new AssetRecordModel();
+    let autoData = new AutoData(data, offset);
+    result.assetId = autoData.readU32();
+    result.tempId = autoData.readU32();
+    result.value = autoData.readI64();
     return result;
   }
 }
@@ -1495,6 +1455,68 @@ export class PxOrdersModel {
     result.link = autoData.readU32();
     result.begin = autoData.readU32();
     result.end = autoData.readU32();
+    return result;
+  }
+}
+
+export class VmMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): VmMaskModel {
+    const result = new VmMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
+    return result;
+  }
+}
+
+export class SlotFlagsModel {
+  static readonly LENGTH = 1 * 1; // 1 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SlotFlagsModel {
+    const result = new SlotFlagsModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU8();
+    return result;
+  }
+}
+
+export class QuoteOrderModel {
+  static readonly LENGTH = 3 * 8; // 24 bytes
+
+  static readonly OFFSET_NEW_PRICE = 0;
+  static readonly OFFSET_NEW_QTY = 8;
+  static readonly OFFSET_OLD_ID = 16;
+
+  newPrice: number;
+  newQty: number;
+  oldId: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): QuoteOrderModel {
+    const result = new QuoteOrderModel();
+    let autoData = new AutoData(data, offset);
+    result.newPrice = autoData.readI64();
+    result.newQty = autoData.readI64();
+    result.oldId = autoData.readI64();
+    return result;
+  }
+}
+
+export class QuoteMaskModel {
+  static readonly LENGTH = 1 * 2; // 2 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): QuoteMaskModel {
+    const result = new QuoteMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU16();
     return result;
   }
 }

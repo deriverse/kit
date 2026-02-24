@@ -249,6 +249,16 @@ export async function findAssociatedTokenAddress(
   return address;
 }
 
+export function buildQuotesMask(orders: { side: number }[]): number {
+  let mask = orders.length & 0b1111;
+  for (let i = 0; i < orders.length; i++) {
+    if (orders[i].side === 1) {
+      mask |= 1 << (4 + i);
+    }
+  }
+  return mask;
+}
+
 export async function getLookupTableAddress(authority: Address, slot: number): Promise<Address> {
   let buf = Buffer.alloc(8);
   buf.writeBigInt64LE(BigInt(slot), 0);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSpotPriceStep, getPerpPriceStep } from './utils';
+import { getSpotPriceStep, getPerpPriceStep, buildQuotesMask } from './utils';
 
 describe('getSpotPriceStep', () => {
   // All threshold boundaries from the implementation
@@ -122,5 +122,51 @@ describe('getPerpPriceStep', () => {
     expect(getPerpPriceStep(0.9)).toBe(0.00002);         // <= 1
     expect(getPerpPriceStep(1.5)).toBe(0.00005);         // <= 2
     expect(getPerpPriceStep(99)).toBe(0.002);            // <= 100
+  });
+});
+
+describe('buildQuotesMask', () => {
+  it('single bid order: bit 4 stays 0', () => {
+    const mask = buildQuotesMask([{ side: 0 }]);
+    expect(mask).toBe(0b0_0001); // length=1, no side bits
+  });
+
+  it('single ask order: bit 4 set to 1', () => {
+    const mask = buildQuotesMask([{ side: 1 }]);
+    expect(mask).toBe(0b1_0001); // length=1, bit4=1
+  });
+
+  it('mixed orders: bid, ask, bid', () => {
+    const mask = buildQuotesMask([{ side: 0 }, { side: 1 }, { side: 0 }]);
+    // length=3 (0b0011), bit5=1 (second order is ask)
+    expect(mask).toBe(0b010_0011);
+  });
+
+  it('all bids: no side bits set', () => {
+    const mask = buildQuotesMask([{ side: 0 }, { side: 0 }, { side: 0 }, { side: 0 }]);
+    expect(mask).toBe(4); // just the length
+  });
+
+  it('all asks: all side bits set', () => {
+    const mask = buildQuotesMask([{ side: 1 }, { side: 1 }, { side: 1 }]);
+    // length=3 (0b0011), bits 4,5,6 set
+    expect(mask).toBe(3 | (1 << 4) | (1 << 5) | (1 << 6));
+  });
+
+  it('12 orders max with mixed sides', () => {
+    const orders = Array.from({ length: 12 }, (_, i) => ({ side: i % 2 as number }));
+    const mask = buildQuotesMask(orders);
+    // length = 12 (0b1100)
+    expect(mask & 0b1111).toBe(12);
+    // even indices (0,2,4,6,8,10) are bid=0, odd indices (1,3,5,7,9,11) are ask=1
+    for (let i = 0; i < 12; i++) {
+      const bit = (mask >> (4 + i)) & 1;
+      expect(bit).toBe(i % 2);
+    }
+  });
+
+  it('empty orders array', () => {
+    const mask = buildQuotesMask([]);
+    expect(mask).toBe(0);
   });
 });

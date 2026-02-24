@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.43] - 2026-02-24
+
+### Fixed
+
+- **Spot/Perp quotes replace**: Fixed bid/ask side mask — bid is now 0 and ask is 1 (was inverted)
+
+### Changed
+
+- **`buildQuotesMask`**: Extracted shared mask-building logic from perp and spot quotes replace into a reusable utility function with unit tests
+
 ## [1.0.42] - 2025-02-20
 
 ### Changed

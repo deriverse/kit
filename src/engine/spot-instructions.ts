@@ -22,7 +22,7 @@ import {
   DF,
   lpDec,
 } from '../constants';
-import { findAssociatedTokenAddress, getLookupTableAddress, tokenDec } from './utils';
+import { findAssociatedTokenAddress, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
 import { TokenStateModel, QuoteOrderModel } from '../structure_models';
 import {
   depositData,
@@ -326,12 +326,7 @@ async function buildSpotQuotesReplaceInstruction(
     throw new Error('Exceeded orders limit of 12 for spot quotes replace instruction');
   }
 
-  let mask = args.orders.length & 0b1111;
-  for (let i = 0; i < args.orders.length; i++) {
-    if (args.orders[i].side === 0) {
-      mask |= 1 << (4 + i);
-    }
-  }
+  let mask = buildQuotesMask(args.orders);
 
   let headerBuf = spotQuotesReplaceData(34, mask, args.instrId);
 

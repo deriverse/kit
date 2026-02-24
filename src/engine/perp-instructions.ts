@@ -31,7 +31,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   DF,
 } from '../constants';
-import { perpSeatReserve, getLookupTableAddress, tokenDec } from './utils';
+import { perpSeatReserve, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
 import { TokenStateModel, RootStateModel, QuoteOrderModel } from '../structure_models';
 import {
   upgradeToPerpData,
@@ -360,12 +360,7 @@ async function buildPerpQuotesReplaceInstruction(
     throw new Error('Exceeded orders limit of 12 for perp quotes replace instruction');
   }
 
-  let mask = args.orders.length & 0b1111;
-  for (let i = 0; i < args.orders.length; i++) {
-    if (args.orders[i].side === 0) {
-      mask |= 1 << (4 + i);
-    }
-  }
+  let mask = buildQuotesMask(args.orders);
 
   let headerBuf = perpQuotesReplaceData(42, mask, args.instrId);
 

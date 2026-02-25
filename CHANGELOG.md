@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.44] - 2025-02-25
+
+### Added
+
+- **Estimate**: `Engine.estimate()` — simulates order execution against AMM pool and orderbook, returns fill price, cost, and remaining quantity
+
 ## [1.0.42] - 2025-02-20
 
 ### Added

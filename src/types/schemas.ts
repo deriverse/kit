@@ -52,26 +52,22 @@ const NewSpotOrderArgsSchema = z.object({
   edgePrice: positiveNumber.optional(),
 });
 
+const QuoteOrderSchema = z.object({
+  newPrice: z
+    .number()
+    .nonnegative({ error: 'Price must be non-negative' })
+    .meta({ description: 'New order price' }),
+  newQty: z
+    .number()
+    .nonnegative({ error: 'Quantity must be non-negative' })
+    .meta({ description: 'New order quantity' }),
+  oldId: nonNegativeInt.meta({ description: 'Old order ID to cancel, zero means no action' }),
+  side: side.meta({ description: '0 - Bid, 1 - Ask' }),
+});
+
 const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  bidOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on bid side, zero means no action' }),
-  newBidPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order bid price' }),
-  newBidQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order bid quantity, zero means no action' }),
-  askOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on ask side, zero means no action' }),
-  newAskPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order ask price' }),
-  newAskQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order ask quantity, zero means no action' }),
+  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 
 const SwapArgsSchema = z.object({
@@ -137,24 +133,7 @@ const NewPerpOrderArgsSchema = z.object({
 
 const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  bidOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on bid side, zero means no action' }),
-  newBidPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order bid price' }),
-  newBidQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order bid quantity, zero means no action' }),
-  askOrderIdToCancel: nonNegativeInt.meta({ description: 'Order ID to cancel on ask side, zero means no action' }),
-  newAskPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order ask price' }),
-  newAskQty: z
-    .number()
-    .nonnegative({ error: 'Quantity must be non-negative' })
-    .meta({ description: 'New order ask quantity, zero means no action' }),
+  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 
 const PerpOrderCancelArgsSchema = z.object({
@@ -294,7 +273,6 @@ export {
   GetInstrAccountByTagArgsSchema,
   UpdateInstrDataArgsSchema,
   DistribDividendsArgsSchema,
-  EstimateArgsSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
   GetClientSpotOrdersArgsSchema,

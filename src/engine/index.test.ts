@@ -497,12 +497,10 @@ describe('Engine instruction methods', () => {
 
       await engine.spotQuotesReplaceInstruction({
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 1,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 2,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
       });
 
       expect(buildSpotQuotesReplaceInstruction).toHaveBeenCalled();
@@ -659,12 +657,10 @@ describe('Engine instruction methods', () => {
 
       await engine.perpQuotesReplaceInstruction({
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 1,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 2,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
       });
 
       expect(buildPerpQuotesReplaceInstruction).toHaveBeenCalled();

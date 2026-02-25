@@ -59,12 +59,16 @@ vi.mock('./context-builders', () => ({
   ]),
 }));
 
-vi.mock('./utils', () => ({
-  findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
-  getLookupTableAddress: vi.fn().mockResolvedValue('MockLUT1111111111111111111111111' as Address),
-  perpSeatReserve: vi.fn().mockReturnValue(100),
-  tokenDec: vi.fn().mockReturnValue(1000000000), // 10^9
-}));
+vi.mock('./utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./utils')>();
+  return {
+    ...actual,
+    findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
+    getLookupTableAddress: vi.fn().mockResolvedValue('MockLUT1111111111111111111111111' as Address),
+    perpSeatReserve: vi.fn().mockReturnValue(100),
+    tokenDec: vi.fn().mockReturnValue(1000000000), // 10^9
+  };
+});
 
 // Helper to create a mock token
 function createMockToken(id: number, decimals: number = 9): TokenStateModel {
@@ -336,12 +340,10 @@ describe('perp instruction builders', () => {
       const instr = ctx.instruments.get(1)!;
       const args: PerpQuotesReplaceArgs = {
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 12345,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 67890,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 12345, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 67890, side: 1 },
+        ],
       };
 
       const instruction = await buildPerpQuotesReplaceInstruction(ctx, args, instr);
@@ -359,12 +361,10 @@ describe('perp instruction builders', () => {
       const instr = ctx.instruments.get(1)!;
       const args: PerpQuotesReplaceArgs = {
         instrId: 1,
-        newBidPrice: 99,
-        newBidQty: 10,
-        bidOrderIdToCancel: 12345,
-        newAskPrice: 101,
-        newAskQty: 10,
-        askOrderIdToCancel: 67890,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 12345, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 67890, side: 1 },
+        ],
       };
 
       const instruction = await buildPerpQuotesReplaceInstruction(ctx, args, instr);

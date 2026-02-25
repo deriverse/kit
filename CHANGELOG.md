@@ -6,7 +6,21 @@
 
 - **Estimate**: `Engine.estimate()` — simulates order execution against AMM pool and orderbook, returns fill price, cost, and remaining quantity
 
+## [1.0.43] - 2026-02-24
+
+### Fixed
+
+- **Spot/Perp quotes replace**: Fixed bid/ask side mask — bid is now 0 and ask is 1 (was inverted)
+
+### Changed
+
+- **`buildQuotesMask`**: Extracted shared mask-building logic from perp and spot quotes replace into a reusable utility function with unit tests
+
 ## [1.0.42] - 2025-02-20
+
+### Changed
+
+- **Spot/Perp quotes replace**: Replaced fixed bid/ask fields with dynamic `orders` array (up to 12 `QuoteOrder` entries with `newPrice`, `newQty`, `oldId`, `side`); instruction data now uses `QuoteMask` header + appended order entries
 
 ### Added
 
@@ -17,7 +31,6 @@
 - **New instruction builders**: `cleanCandlesData`, `vmInitWithdrawData`, `vmChangeWhitelistData`
 - **New constant**: `MAX_SWAP_FEE_RATE` (0.0002)
 - **New model**: `DiscriminatorModel`, `AssetType` enum
-- **Estimate schema**: Added `EstimateArgsSchema` for orderbook fill simulation
 
 ### Changed
 

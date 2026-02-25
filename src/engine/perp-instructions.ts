@@ -29,9 +29,10 @@ import {
   ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
+  DF,
 } from '../constants';
-import { perpSeatReserve, getLookupTableAddress, tokenDec } from './utils';
-import { TokenStateModel, RootStateModel } from '../structure_models';
+import { perpSeatReserve, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
+import { TokenStateModel, RootStateModel, QuoteOrderModel } from '../structure_models';
 import {
   upgradeToPerpData,
   perpDepositData,
@@ -338,9 +339,9 @@ async function buildNewPerpOrderInstruction(
       args.orderType ?? 0,
       args.side,
       args.instrId,
-      args.price * 1000000000,
+      args.price * DF,
       args.qty * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers),
-      (args.edgePrice ?? 0) * 1000000000,
+      (args.edgePrice ?? 0) * DF,
     ),
   };
 }
@@ -354,16 +355,24 @@ async function buildPerpQuotesReplaceInstruction(
   instr: Instrument,
 ): Promise<Instruction> {
   let assetTokenDecFactor = tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers);
-  let buf = perpQuotesReplaceData(
-    42,
-    args.instrId,
-    Math.round(args.newBidPrice * 1000000000),
-    Math.round(args.newBidQty * assetTokenDecFactor),
-    args.bidOrderIdToCancel,
-    Math.round(args.newAskPrice * 1000000000),
-    Math.round(args.newAskQty * assetTokenDecFactor),
-    args.askOrderIdToCancel,
-  );
+
+  if (args.orders.length > 12) {
+    throw new Error('Exceeded orders limit of 12 for perp quotes replace instruction');
+  }
+
+  let mask = buildQuotesMask(args.orders);
+
+  let headerBuf = perpQuotesReplaceData(42, mask, args.instrId);
+
+  let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
+  for (let i = 0; i < args.orders.length; i++) {
+    const offset = i * QuoteOrderModel.LENGTH;
+    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newPrice * DF)), offset + QuoteOrderModel.OFFSET_NEW_PRICE);
+    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)), offset + QuoteOrderModel.OFFSET_NEW_QTY);
+    ordersBuf.writeBigInt64LE(BigInt(Math.floor(args.orders[i].oldId)), offset + QuoteOrderModel.OFFSET_OLD_ID);
+  }
+
+  let buf = Buffer.concat([headerBuf, ordersBuf]);
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
@@ -632,7 +641,7 @@ async function buildNewInstrumentInstructions(
   const newInstrIx = {
     accounts: keys,
     programAddress: ctx.programId,
-    data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * 1000000000),
+    data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * DF),
   } as Instruction;
   return [createMapsAccountIx, newInstrIx];
 }

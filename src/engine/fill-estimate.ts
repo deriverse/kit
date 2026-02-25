@@ -1,3 +1,4 @@
+import { DF } from '../constants';
 import { LineQuotesModel } from '../structure_models';
 import { EstimateResult } from '../types/responses';
 
@@ -6,7 +7,7 @@ export enum OrderSide {
   Ask = 1,
 }
 
-const MAX_I64 = Number.MAX_SAFE_INTEGER;
+const MAX_PRICE = Number.MAX_SAFE_INTEGER;
 
 export class FillEstimateEngine {
   poolAssetTokens: number;
@@ -14,7 +15,7 @@ export class FillEstimateEngine {
   bidLines: LineQuotesModel[];
   askLines: LineQuotesModel[];
   private _df: number;
-  private _px: number | null = null; // last price (for impact), null if not filled
+  private _px: number | null = null;
 
   constructor(
     poolAssetTokens: number,
@@ -28,19 +29,14 @@ export class FillEstimateEngine {
     this.poolCrncyTokens = poolCrncyTokens;
     this.bidLines = bidLines;
     this.askLines = askLines;
-    const dc = 9 + assetTokensDecimals - crncyTokensDecimals;
-    let df = 1;
-    for (let i = 0; i < dc; ++i) {
-      df *= 10;
-    }
-    this._df = df;
+    this._df = DF * Math.pow(10, assetTokensDecimals - crncyTokensDecimals);
   }
 
   private changePx(tradedQty: number, tradedSum: number, side: OrderSide): void {
     const lastPx = (tradedSum * this._df) / tradedQty;
     if (this._px === null) {
       this._px = lastPx;
-    } else if (side === OrderSide.Bid) {
+    } else if (side === OrderSide.Ask) {
       if (lastPx < this._px) {
         this._px = lastPx;
       }
@@ -50,12 +46,12 @@ export class FillEstimateEngine {
   }
 
   private getAmmPx(k: number, qty: number, side: OrderSide): number {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       const newPoolAssetTokens = this.poolAssetTokens + qty;
       return (k * this._df) / (newPoolAssetTokens * newPoolAssetTokens);
     } else {
       if (qty > this.poolAssetTokens) {
-        return MAX_I64;
+        return MAX_PRICE;
       } else {
         const newPoolAssetTokens = this.poolAssetTokens - qty;
         return (k * this._df) / (newPoolAssetTokens * newPoolAssetTokens);
@@ -64,7 +60,7 @@ export class FillEstimateEngine {
   }
 
   private getAmmSum(k: number, qty: number, side: OrderSide): number {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       if (this.poolAssetTokens === 0) {
         return 0;
       } else {
@@ -82,7 +78,7 @@ export class FillEstimateEngine {
 
   private getAmmQty(k: number, price: number, side: OrderSide): number {
     const t = Math.sqrt((k * this._df) / price);
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       return Math.max(0, t - this.poolAssetTokens);
     } else {
       return Math.max(0, this.poolAssetTokens - t);
@@ -90,7 +86,7 @@ export class FillEstimateEngine {
   }
 
   private changePoolAssetTokens(qty: number, side: OrderSide): void {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       this.poolAssetTokens += qty;
     } else {
       this.poolAssetTokens -= qty;
@@ -98,7 +94,7 @@ export class FillEstimateEngine {
   }
 
   private changePoolCrncyTokens(qty: number, side: OrderSide): void {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       this.poolCrncyTokens -= qty;
     } else {
       this.poolCrncyTokens += qty;
@@ -106,7 +102,7 @@ export class FillEstimateEngine {
   }
 
   private ammLastLine(ammPx: number, linePx: number, side: OrderSide): boolean {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       return ammPx >= linePx;
     } else {
       return ammPx <= linePx;
@@ -114,7 +110,7 @@ export class FillEstimateEngine {
   }
 
   private lineIsUnreachable(price: number, linePx: number, side: OrderSide): boolean {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       return price > linePx;
     } else {
       return price < linePx;
@@ -122,7 +118,7 @@ export class FillEstimateEngine {
   }
 
   private ammCoverLine(ammPx: number, price: number, linePx: number, side: OrderSide): boolean {
-    if (side === OrderSide.Bid) {
+    if (side === OrderSide.Ask) {
       return Math.max(ammPx, price) <= linePx;
     } else {
       return Math.min(ammPx, price) >= linePx;
@@ -130,7 +126,7 @@ export class FillEstimateEngine {
   }
 
   private ammPartialFill(ammPx: number, price: number, side: OrderSide): boolean {
-    return side === OrderSide.Bid ? ammPx < price : ammPx > price;
+    return side === OrderSide.Ask ? ammPx < price : ammPx > price;
   }
 
   private fill(
@@ -151,7 +147,7 @@ export class FillEstimateEngine {
   estimate(qty: number, price: number, side: OrderSide): EstimateResult {
     this._px = null;
     const k = this.poolAssetTokens * this.poolCrncyTokens;
-    const lines = side === OrderSide.Bid ? this.bidLines : this.askLines;
+    const lines = side === OrderSide.Ask ? this.bidLines : this.askLines;
     const depth = lines.length;
     let remainingQty = qty;
     let sumCurrencyTokens = 0;

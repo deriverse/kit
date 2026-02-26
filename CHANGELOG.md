@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.44] - 2026-02-26
+
+### Changed
+
+- **Deposit/Withdraw builders**: Moved `buildDepositInstruction` and `buildWithdrawInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+
+### Added
+
+- **`customId`**: Added optional `customId` field to `DepositArgs` and `WithdrawArgs`
+
 ## [1.0.43] - 2026-02-24
 
 ### Fixed

@@ -29,6 +29,7 @@ const DepositArgsSchema = z.object({
   refId: nonNegativeInt.optional().meta({ description: 'Referal Link ID for new account. Zero means no ref link' }),
   refWallet: solanaAddress.optional().meta({ description: 'Referal Wallet' }),
   all_funds: z.boolean().optional(),
+  customId: z.number().int().optional().meta({ description: 'Optional custom identifier' }),
 });
 
 const WithdrawArgsSchema = z.object({
@@ -38,6 +39,7 @@ const WithdrawArgsSchema = z.object({
     .array(InstrIdSchema)
     .optional()
     .meta({ description: 'List of instruments ID to withdraw from client temporary instrument accounts' }),
+  customId: z.number().int().optional().meta({ description: 'Optional custom identifier' }),
 });
 
 const NewSpotOrderArgsSchema = z.object({

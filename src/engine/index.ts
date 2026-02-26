@@ -109,9 +109,8 @@ import {
   getClientSpotOrders as getClientSpotOrdersFn,
   getClientPerpOrders as getClientPerpOrdersFn,
 } from './client-queries';
+import { buildDepositInstruction, buildWithdrawInstruction } from './instructions';
 import {
-  buildDepositInstruction,
-  buildWithdrawInstruction,
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,

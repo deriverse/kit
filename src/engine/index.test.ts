@@ -17,8 +17,8 @@ vi.mock('./account-helpers', () => ({
   AccountHelperContext: {},
 }));
 
-// Mock spot-instructions
-vi.mock('./spot-instructions', () => ({
+// Mock instructions (deposit/withdraw)
+vi.mock('./instructions', () => ({
   buildDepositInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -29,6 +29,10 @@ vi.mock('./spot-instructions', () => ({
     accounts: [],
     data: new Uint8Array([8]),
   }),
+}));
+
+// Mock spot-instructions
+vi.mock('./spot-instructions', () => ({
   buildSpotLpInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -144,9 +148,8 @@ vi.mock('./logs-decoder', () => ({
 }));
 
 // Import mocked modules for assertions
+import { buildDepositInstruction, buildWithdrawInstruction } from './instructions';
 import {
-  buildDepositInstruction,
-  buildWithdrawInstruction,
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,

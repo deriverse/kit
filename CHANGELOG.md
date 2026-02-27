@@ -8,7 +8,7 @@
 
 ### Added
 
-- **`customId`**: Added optional `customId` field to `DepositArgs` and `WithdrawArgs`
+- **`customId`**: Added optional `customId` field to `DepositArgs` and `WithdrawArgs`, and required `customId` field to `withdrawData` and `depositData` instruction models
 
 ## [1.0.43] - 2026-02-24
 

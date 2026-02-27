@@ -69,7 +69,16 @@ async function buildDepositInstruction(
     return {
       accounts: keys,
       programAddress: ctx.programId,
-      data: depositData(7, 0, allFunds, args.tokenId, amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), 0, 0, args.customId),
+      data: depositData(
+        7,
+        0,
+        allFunds,
+        args.tokenId,
+        amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
+        0,
+        0,
+        args.customId ?? 0,
+      ),
     };
   } else {
     const slot = Number(await rpcGetSlot()) - 1;
@@ -113,7 +122,7 @@ async function buildDepositInstruction(
         amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
         slot,
         refId,
-        args.customId,
+        args.customId ?? 0,
       ),
     };
   }
@@ -175,7 +184,12 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: withdrawData(8, args.tokenId, args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), args.customId),
+    data: withdrawData(
+      8,
+      args.tokenId,
+      args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
+      args.customId ?? 0,
+    ),
   };
 }
 

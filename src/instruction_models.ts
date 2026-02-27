@@ -108,8 +108,8 @@ export function newInstrumentData(tag: number, crncyTokenId: number, lutSlot: nu
   return buf;
 }
 
-export function depositData(tag: number, competitionId: number, depositAll: number, tokenId: number, amount: number, lutSlot: number, refId: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function depositData(tag: number, competitionId: number, depositAll: number, tokenId: number, amount: number, lutSlot: number, refId: number, customId: number): Buffer {
+  let buf = Buffer.alloc(32);
   buf.writeUint8(tag, 0);
   buf.writeUint8(competitionId, 1);
   buf.writeUint8(depositAll, 2);
@@ -118,6 +118,7 @@ export function depositData(tag: number, competitionId: number, depositAll: numb
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
   buf.writeUint32LE(lutSlot, 16);
   buf.writeUint32LE(refId, 20);
+  buf.writeBigInt64LE(BigInt(Math.floor(customId)), 24);
   return buf;
 }
 
@@ -170,13 +171,14 @@ export function perpWithdrawData(tag: number, instrId: number, amount: number): 
   return buf;
 }
 
-export function withdrawData(tag: number, tokenId: number, amount: number): Buffer {
-  let buf = Buffer.alloc(16);
+export function withdrawData(tag: number, tokenId: number, amount: number, customId: number): Buffer {
+  let buf = Buffer.alloc(24);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(tokenId, 4);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  buf.writeBigInt64LE(BigInt(Math.floor(customId)), 16);
   return buf;
 }
 

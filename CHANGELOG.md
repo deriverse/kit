@@ -6,6 +6,7 @@
 
 - **Deposit/Withdraw builders**: Moved `buildDepositInstruction` and `buildWithdrawInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
 - **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, and `emaPx`
+- **`updateInstrDataFromBuffer` / `updateInstrData`**: Cached `getInstrAccountByTagFn` result — reuses the address from `this.instruments` map on subsequent calls instead of re-deriving the PDA every time
 
 ### Added
 

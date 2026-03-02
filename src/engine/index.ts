@@ -550,14 +550,8 @@ export class Engine {
     if (!instr) {
       throw new Error('Instrument not found!');
     }
-    const ctx = this.getAccountHelperContext();
-    let instrAccount = await getInstrAccountByTagFn(ctx, {
-      assetTokenId: instr.header.assetTokenId,
-      crncyTokenId: instr.header.crncyTokenId,
-      tag: AccountType.INSTR,
-    });
     const info = await this.rpc
-      .getAccountInfo(instrAccount, { commitment: this.commitment, encoding: 'base64' })
+      .getAccountInfo(instr.address, { commitment: this.commitment, encoding: 'base64' })
       .send();
 
     if (info.value == null) {
@@ -664,14 +658,16 @@ export class Engine {
       perpAsks.push(line);
     }
 
-    const ctx = this.getAccountHelperContext();
+    const existingInstr = this.instruments.get(header.instrId);
     
-    const instrAddress = await getInstrAccountByTagFn(ctx, {
-      assetTokenId: header.assetTokenId,
-      crncyTokenId: header.crncyTokenId,
-      tag: AccountType.INSTR,
-    });
-    
+    const instrAddress = existingInstr
+      ? existingInstr.address
+      : await getInstrAccountByTagFn(this.getAccountHelperContext(), {
+          assetTokenId: header.assetTokenId,
+          crncyTokenId: header.crncyTokenId,
+          tag: AccountType.INSTR,
+        });
+
     this.instruments.set(header.instrId, {
       address: instrAddress,
       header: header,

@@ -609,6 +609,16 @@ export class Engine {
     header.perpLongSpotPriceForWithdrowal /= dec;
     header.perpShortSpotPriceForWithdrowal /= dec;
     header.poolFees /= crncyTokenDec;
+    header.lastTradeAssetTokens /= assetTokenDec;
+    header.lastTradeCrncyTokens /= crncyTokenDec;
+    header.alltimeAssetTokens /= assetTokenDec;
+    header.alltimeCrncyTokens /= crncyTokenDec;
+    header.perpAlltimeAssetTokens /= assetTokenDec;
+    header.perpAlltimeCrncyTokens /= crncyTokenDec;
+    header.lpDayFees /= crncyTokenDec;
+    header.lpPrevDayFees /= crncyTokenDec;
+    header.lpAlltimeFees /= crncyTokenDec;
+    header.emaPx /= dec;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];
     let perpBids: Array<LineQuotesModel> = [];
@@ -653,17 +663,15 @@ export class Engine {
       line.qty /= assetTokenDec;
       perpAsks.push(line);
     }
-    let pattern = Buffer.alloc(16);
-    pattern.writeInt32LE(this.version, 0);
-    pattern.writeInt32LE(AccountType.INSTR, 4);
-    pattern.writeInt32LE(header.assetTokenId, 8);
-    pattern.writeInt32LE(header.crncyTokenId, 12);
-    const instrAddress = (
-      await getProgramDerivedAddress({
-        programAddress: this.programId,
-        seeds: [pattern, getAddressEncoder().encode(this.drvsAuthority)],
-      })
-    )[0];
+
+    const ctx = this.getAccountHelperContext();
+    
+    const instrAddress = await getInstrAccountByTagFn(ctx, {
+      assetTokenId: header.assetTokenId,
+      crncyTokenId: header.crncyTokenId,
+      tag: AccountType.INSTR,
+    });
+    
     this.instruments.set(header.instrId, {
       address: instrAddress,
       header: header,

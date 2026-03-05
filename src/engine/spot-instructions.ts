@@ -111,7 +111,7 @@ async function buildDepositInstruction(
     return {
       accounts: keys,
       programAddress: ctx.programId,
-      data: depositData(7, 0, allFunds, args.tokenId, amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), 0, 0),
+      data: depositData(7, 0, allFunds, args.tokenId, amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), 0, 0, args.customId ?? 0),
     };
   } else {
     const slot = Number(await rpcGetSlot()) - 1;
@@ -155,6 +155,7 @@ async function buildDepositInstruction(
         amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
         slot,
         refId,
+        args.customId ?? 0,
       ),
     };
   }
@@ -216,7 +217,7 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: withdrawData(8, args.tokenId, args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers)),
+    data: withdrawData(8, args.tokenId, args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), args.customId ?? 0),
   };
 }
 
@@ -328,7 +329,7 @@ async function buildSpotQuotesReplaceInstruction(
 
   let mask = buildQuotesMask(args.orders);
 
-  let headerBuf = spotQuotesReplaceData(34, mask, args.instrId);
+  let headerBuf = spotQuotesReplaceData(34, args.bump ?? 0, args.orderType ?? 0, mask, args.instrId);
 
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {

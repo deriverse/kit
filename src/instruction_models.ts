@@ -108,8 +108,8 @@ export function newInstrumentData(tag: number, crncyTokenId: number, lutSlot: nu
   return buf;
 }
 
-export function depositData(tag: number, competitionId: number, depositAll: number, tokenId: number, amount: number, lutSlot: number, refId: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function depositData(tag: number, competitionId: number, depositAll: number, tokenId: number, amount: number, lutSlot: number, refId: number, customId: number): Buffer {
+  let buf = Buffer.alloc(32);
   buf.writeUint8(tag, 0);
   buf.writeUint8(competitionId, 1);
   buf.writeUint8(depositAll, 2);
@@ -118,6 +118,7 @@ export function depositData(tag: number, competitionId: number, depositAll: numb
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
   buf.writeUint32LE(lutSlot, 16);
   buf.writeUint32LE(refId, 20);
+  buf.writeBigInt64LE(BigInt(Math.floor(customId)), 24);
   return buf;
 }
 
@@ -170,13 +171,14 @@ export function perpWithdrawData(tag: number, instrId: number, amount: number): 
   return buf;
 }
 
-export function withdrawData(tag: number, tokenId: number, amount: number): Buffer {
-  let buf = Buffer.alloc(16);
+export function withdrawData(tag: number, tokenId: number, amount: number, customId: number): Buffer {
+  let buf = Buffer.alloc(24);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(tokenId, 4);
   buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  buf.writeBigInt64LE(BigInt(Math.floor(customId)), 16);
   return buf;
 }
 
@@ -192,21 +194,29 @@ export function swapData(tag: number, inputCrncy: number, instrId: number, price
   return buf;
 }
 
-export function spotQuotesReplaceData(tag: number, mask: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function spotQuotesReplaceData(tag: number, bump: number, orderType: number, mask: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(mask, 2);
-  buf.writeUint32LE(instrId, 4);
+  buf.writeUint8(bump, 1);
+  buf.writeUint8(orderType, 2);
+  buf.writeUint8(0, 3);
+  buf.writeUint16LE(mask, 4);
+  buf.writeUint16LE(0, 6);
+  buf.writeUint32LE(instrId, 8);
+  buf.writeUint32LE(0, 12);
   return buf;
 }
 
-export function perpQuotesReplaceData(tag: number, mask: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function perpQuotesReplaceData(tag: number, bump: number, orderType: number, mask: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(mask, 2);
-  buf.writeUint32LE(instrId, 4);
+  buf.writeUint8(bump, 1);
+  buf.writeUint8(orderType, 2);
+  buf.writeUint8(0, 3);
+  buf.writeUint16LE(mask, 4);
+  buf.writeUint16LE(0, 6);
+  buf.writeUint32LE(instrId, 8);
+  buf.writeUint32LE(0, 12);
   return buf;
 }
 

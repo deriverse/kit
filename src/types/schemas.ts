@@ -29,6 +29,7 @@ const DepositArgsSchema = z.object({
   refId: nonNegativeInt.optional().meta({ description: 'Referal Link ID for new account. Zero means no ref link' }),
   refWallet: solanaAddress.optional().meta({ description: 'Referal Wallet' }),
   all_funds: z.boolean().optional(),
+  customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
 });
 
 const WithdrawArgsSchema = z.object({
@@ -38,6 +39,7 @@ const WithdrawArgsSchema = z.object({
     .array(InstrIdSchema)
     .optional()
     .meta({ description: 'List of instruments ID to withdraw from client temporary instrument accounts' }),
+  customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
 });
 
 const NewSpotOrderArgsSchema = z.object({
@@ -67,6 +69,8 @@ const QuoteOrderSchema = z.object({
 
 const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
+  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
   orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 
@@ -133,6 +137,8 @@ const NewPerpOrderArgsSchema = z.object({
 
 const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
+  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
   orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
 });
 

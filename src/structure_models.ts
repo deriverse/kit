@@ -5,6 +5,7 @@ export enum OrderType {
   limit = 0,
   market = 1,
   marginCall = 2,
+  makerOnly = 3,
 }
 
 export enum AssetType {

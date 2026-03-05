@@ -44,7 +44,7 @@ import {
   findClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext, getSpotCandles } from './context-builders';
+import { getSpotContext, getSpotOneSidedContext, getSpotCandles } from './context-builders';
 
 /**
  * Context needed for spot instruction builders
@@ -380,15 +380,15 @@ async function buildSpotOrderCancelInstruction(
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
-    ...(await getSpotContext(ctx, instr.header)),
-    {
-      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
-      role: drvs ? AccountRole.WRITABLE : AccountRole.READONLY,
-    },
+    ...(await getSpotOneSidedContext(ctx, instr.header, args.side)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
   if (drvs) {
+    keys.push({
+      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
+      role: AccountRole.WRITABLE,
+    });
     keys.push({
       address: await findClientCommunityAccount(ctx, ctx.signer),
       role: AccountRole.WRITABLE,
@@ -484,32 +484,34 @@ async function buildSwapInstruction(
     args.minAmountOut,
   );
 
+  const swapSide = args.crncyInput ? 1 : 0;
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
-    { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
-    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
-    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
     { address: args.assetMint, role: AccountRole.READONLY },
     { address: args.crncyMint, role: AccountRole.READONLY },
-    { address: await getTokenAccount(ctx, args.assetMint), role: AccountRole.READONLY },
-    { address: await getTokenAccount(ctx, args.crncyMint), role: AccountRole.READONLY },
+    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
+    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),
+    ...(await getSpotCandles(ctx, instr.header)),
+    { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
     { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
-    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: assetTokenProgramId, role: AccountRole.READONLY },
-    { address: crncyTokenProgramId, role: AccountRole.READONLY },
-    { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
   if (args.feeTakerWallet && args.refFeeRate > 0) {
     const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
     keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
-    keys.push({ address: args.feeTakerWallet, role: AccountRole.WRITABLE });
   }
+
+  keys.push({ address: assetTokenProgramId, role: AccountRole.READONLY });
+  if (assetTokenProgramId !== crncyTokenProgramId) {
+    keys.push({ address: crncyTokenProgramId, role: AccountRole.READONLY });
+  }
+  keys.push({ address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY });
+  keys.push({ address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY });
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };
 }

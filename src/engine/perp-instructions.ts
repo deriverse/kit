@@ -362,7 +362,7 @@ async function buildPerpQuotesReplaceInstruction(
 
   let mask = buildQuotesMask(args.orders);
 
-  let headerBuf = perpQuotesReplaceData(42, mask, args.instrId);
+  let headerBuf = perpQuotesReplaceData(42, args.bump ?? 0, args.orderType ?? 0, mask, args.instrId);
 
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {

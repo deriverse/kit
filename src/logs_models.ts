@@ -130,19 +130,21 @@ export class EarningsReportModel {
 }
 
 export class DepositReportModel {
-  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 2 * 8; // 32 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_CLIENT_ID = 4;
   static readonly OFFSET_TOKEN_ID = 8;
   static readonly OFFSET_TIME = 12;
   static readonly OFFSET_AMOUNT = 16;
+  static readonly OFFSET_CUSTOM_ID = 24;
 
   tag: number;
   clientId: number;
   tokenId: number;
   time: number;
   amount: number;
+  customId: number;
   static fromBuffer(buffer: Buffer, offset?: number): DepositReportModel {
     const result = new DepositReportModel();
     let autoBuffer = new AutoBuffer(buffer, offset);
@@ -153,6 +155,7 @@ export class DepositReportModel {
     result.tokenId = autoBuffer.readU32();
     result.time = autoBuffer.readU32();
     result.amount = autoBuffer.readI64();
+    result.customId = autoBuffer.readI64();
     return result;
   }
 }
@@ -301,19 +304,21 @@ export class SellMarketSeatReportModel {
 }
 
 export class WithdrawReportModel {
-  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 1 * 8; // 24 bytes
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4 + 2 * 8; // 32 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_CLIENT_ID = 4;
   static readonly OFFSET_TOKEN_ID = 8;
   static readonly OFFSET_TIME = 12;
   static readonly OFFSET_AMOUNT = 16;
+  static readonly OFFSET_CUSTOM_ID = 24;
 
   tag: number;
   clientId: number;
   tokenId: number;
   time: number;
   amount: number;
+  customId: number;
   static fromBuffer(buffer: Buffer, offset?: number): WithdrawReportModel {
     const result = new WithdrawReportModel();
     let autoBuffer = new AutoBuffer(buffer, offset);
@@ -324,6 +329,7 @@ export class WithdrawReportModel {
     result.tokenId = autoBuffer.readU32();
     result.time = autoBuffer.readU32();
     result.amount = autoBuffer.readI64();
+    result.customId = autoBuffer.readI64();
     return result;
   }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.44] - 2026-03-05
+
+### Changed
+
+- **`depositData`**: Added `customId` parameter
+- **`withdrawData`**: Added `customId` parameter
+- **`spotQuotesReplaceData`/`perpQuotesReplaceData`**: Added `bump` and `orderType` parameters
+
 ## [1.0.43] - 2026-02-24
 
 ### Fixed

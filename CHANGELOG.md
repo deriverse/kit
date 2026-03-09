@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.46] - 2026-03-09
+
+### Changed
+
+- **`buildSwapInstruction`**: Use `getSpotOneSidedContext` instead of `getSpotContext`, reorder accounts, conditionally include `crncyTokenProgramId`, remove `feeTakerWallet` and token account lookups
+
 ## [1.0.45] - 2026-03-09
 
 ### Changed

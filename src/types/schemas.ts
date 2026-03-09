@@ -78,13 +78,14 @@ const SwapArgsSchema = z.object({
   assetMint: solanaAddress.meta({ description: 'Asset Token Mint' }),
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
   amount: positiveNumber.meta({ description: 'Amount to swap' }),
-  limitPrice: positiveNumber.meta({ description: 'Limit price' }),
+  limitPrice: z.number().min(0, { error: 'Limit price must be at least 0' }).meta({ description: 'Limit price' }),
   crncyInput: z.boolean().meta({ description: 'Currency token as input token' }),
   refFeeRate: z
     .number()
     .min(0)
-    .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` }),
-  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }),
+    .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` })
+    .optional(),
+  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }).optional(),
   feeTakerWallet: solanaAddress.optional().meta({ description: 'Fee taker wallet address' }),
 });
 

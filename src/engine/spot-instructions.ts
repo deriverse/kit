@@ -480,8 +480,8 @@ async function buildSwapInstruction(
           ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
           : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
     ),
-    args.refFeeRate,
-    args.minAmountOut,
+    args.refFeeRate ?? 0,
+    args.minAmountOut ?? 0,
   );
 
   let keys = [
@@ -505,7 +505,7 @@ async function buildSwapInstruction(
     { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (args.feeTakerWallet && args.refFeeRate > 0) {
+  if (args.feeTakerWallet && args.refFeeRate) {
     const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
     keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
     keys.push({ address: args.feeTakerWallet, role: AccountRole.WRITABLE });

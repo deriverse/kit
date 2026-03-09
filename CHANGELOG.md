@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.45] - 2026-03-09
+
+### Changed
+
+- **`SwapArgsSchema`**: `limitPrice` now accept `0`
+- **`SwapArgsSchema`**: `refFeeRate` and `minAmountOut` are now optional (default to `0`)
+
 ## [1.0.44] - 2026-03-05
 
 ### Changed

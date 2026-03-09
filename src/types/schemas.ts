@@ -172,6 +172,9 @@ const NewInstrumentArgsSchema = z.object({
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
   newProgramAccountAddress: solanaAddress.optional(),
   initialPrice: positiveNumber,
+  mask: nonNegativeInt.optional().default(0),
+  minQty: z.number().optional().default(0),
+  fixedFeeRate: z.number().optional().default(0),
 });
 
 const GetInstrIdArgsSchema = z.object({

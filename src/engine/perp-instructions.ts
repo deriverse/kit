@@ -641,7 +641,7 @@ async function buildNewInstrumentInstructions(
   const newInstrIx = {
     accounts: keys,
     programAddress: ctx.programId,
-    data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * DF),
+    data: newInstrumentData(9, args.mask, crncyTokenId, slot, args.initialPrice * DF, args.minQty, args.fixedFeeRate),
   } as Instruction;
   return [createMapsAccountIx, newInstrIx];
 }

@@ -96,15 +96,16 @@ export function spotLpData(tag: number, side: number, instrId: number, amount: n
   return buf;
 }
 
-export function newInstrumentData(tag: number, crncyTokenId: number, lutSlot: number, price: number): Buffer {
-  let buf = Buffer.alloc(24);
+export function newInstrumentData(tag: number, mask: number, crncyTokenId: number, lutSlot: number, price: number, minQty: number, fixedFeeRate: number): Buffer {
+  let buf = Buffer.alloc(40);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
+  buf.writeUint8(mask, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(0, 4);
   buf.writeUint32LE(crncyTokenId, 8);
   buf.writeUint32LE(lutSlot, 12);
   buf.writeBigInt64LE(BigInt(Math.floor(price)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(minQty)), 24);
   return buf;
 }
 
@@ -182,8 +183,8 @@ export function withdrawData(tag: number, tokenId: number, amount: number, custo
   return buf;
 }
 
-export function swapData(tag: number, inputCrncy: number, instrId: number, price: number, amount: number, refFeeRate: number, minAmountOut: number): Buffer {
-  let buf = Buffer.alloc(40);
+export function swapData(tag: number, inputCrncy: number, instrId: number, price: number, amount: number, minAmountOut: number): Buffer {
+  let buf = Buffer.alloc(32);
   buf.writeUint8(tag, 0);
   buf.writeUint8(inputCrncy, 1);
   buf.writeUint16LE(0, 2);
@@ -422,6 +423,44 @@ export function vmChangeWhitelistData(tag: number, mask: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(mask, 4);
+  return buf;
+}
+
+export function withdrawSwapFeesData(tag: number, instrId: number, amount: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  return buf;
+}
+
+export function setSAMMinQtyData(tag: number, instrId: number, minQty: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(minQty)), 8);
+  return buf;
+}
+
+export function changeSAMFeesPolicyData(tag: number, samFeeType: number, instrId: number, feeRate: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(samFeeType, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function suspendInstrumentData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
   return buf;
 }
 

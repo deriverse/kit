@@ -727,6 +727,9 @@ describe('Engine instruction methods', () => {
           assetMint: 'AssetMint1111111111111111111111111111' as Address,
           crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
           initialPrice: 100,
+          mask: 0,
+          minQty: 0,
+          fixedFeeRate: 0,
         }),
       ).rejects.toThrow('Wallet is not connected');
     });
@@ -738,6 +741,9 @@ describe('Engine instruction methods', () => {
         assetMint: 'AssetMint1111111111111111111111111111' as Address,
         crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
         initialPrice: 100,
+        mask: 0,
+        minQty: 0,
+        fixedFeeRate: 0,
       });
 
       expect(buildNewInstrumentInstructions).toHaveBeenCalled();

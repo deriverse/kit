@@ -5,6 +5,13 @@
 ### Changed
 
 - **`buildSwapInstruction`**: Use `getSpotOneSidedContext` instead of `getSpotContext`, reorder accounts, conditionally include `crncyTokenProgramId`, remove `feeTakerWallet` and token account lookups
+- **`swapData`**: Removed `refFeeRate` parameter
+- **`newInstrumentData`**: Added `mask`, `minQty`, `fixedFeeRate` parameters
+- **`NewInstrumentArgsSchema`**: Added `mask`, `minQty`, `fixedFeeRate` fields
+- **`InstrAccountHeaderModel`**: Renamed `emaPx` to `shortEmaPx`, added `swapFees`, `similarAssetsMinQty`, `fixedFeeRate`, `midEmaPx`, `longEmaPx` fields
+- **New models**: `InstrFlag`, `TokenFlag`, `InstrMaskModel`, `InstrInputMaskModel`, `TokenMaskModel`, `PerpLossCoverageReportModel`
+- **New instructions**: `withdrawSwapFeesData`, `setSAMMinQtyData`, `changeSAMFeesPolicyData`, `suspendInstrumentData`
+- **`LogType`**: Added `perpLossCoverage`
 
 ## [1.0.45] - 2026-03-09
 

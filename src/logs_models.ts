@@ -46,6 +46,29 @@ export enum LogType {
   vmInitWithdraw = 43,
   vmInitWithdrawCancel = 44,
   vmInitWithdrawFinalize = 45,
+  perpLossCoverage = 46,
+}
+
+export class PerpLossCoverageReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 1 * 4 + 1 * 8; // 16 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_CLIENT_ID = 4;
+  static readonly OFFSET_LOSS_COVERAGE = 8;
+
+  tag: number;
+  clientId: number;
+  lossCoverage: number;
+  static fromBuffer(buffer: Buffer, offset?: number): PerpLossCoverageReportModel {
+    const result = new PerpLossCoverageReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.clientId = autoBuffer.readU32();
+    result.lossCoverage = autoBuffer.readI64();
+    return result;
+  }
 }
 
 export class PerpChangeLeverageReportModel {

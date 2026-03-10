@@ -8,6 +8,26 @@ export enum OrderType {
   makerOnly = 3,
 }
 
+export enum InstrFlag {
+  perpActive = 0x40000000,
+  readyToPerpUpgrade = 0x01000000,
+  zeroFees = 0x1,
+  fixedFees = 0x2,
+  similarAssets = 0x4,
+  usdStablecoin = 0x8,
+  forex = 0x10,
+  suspended = 0x20,
+  longMarginCall = 0x40,
+  shortMarginCall = 0x80,
+}
+
+export enum TokenFlag {
+  token2022 = 0x80000000,
+  baseCrncy = 0x40000000,
+  wrappedToken = 0x20000000,
+  sAMCrncy = 0x10000000,
+}
+
 export enum AssetType {
   token = 0x10000000,
   spotLp = 0x20000000,
@@ -412,7 +432,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PREV_DAY_TRADES = 104;
   static readonly OFFSET_PERP_INSURANCE_FUND = 112;
   static readonly OFFSET_PERP_PRICE_DELTA = 120;
-  static readonly OFFSET_EMA_PX = 128;
+  static readonly OFFSET_SHORT_EMA_PX = 128;
   static readonly OFFSET_LP_PREV_DAY_FEES = 136;
   static readonly OFFSET_ASSET_TOKENS = 144;
   static readonly OFFSET_CRNCY_TOKENS = 152;
@@ -532,11 +552,11 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PERP_ALLTIME_CRNCY_TOKENS = 984;
   static readonly OFFSET_LIQUIDATION_THRESHOLD = 992;
   static readonly OFFSET_SEATS_RESERVE = 1000;
-  static readonly OFFSET_RESERVED_VALUE4 = 1008;
-  static readonly OFFSET_RESERVED_VALUE5 = 1016;
-  static readonly OFFSET_RESERVED_VALUE6 = 1024;
-  static readonly OFFSET_RESERVED_VALUE7 = 1032;
-  static readonly OFFSET_RESERVED_VALUE8 = 1040;
+  static readonly OFFSET_SWAP_FEES = 1008;
+  static readonly OFFSET_SIMILAR_ASSETS_MIN_QTY = 1016;
+  static readonly OFFSET_FIXED_FEE_RATE = 1024;
+  static readonly OFFSET_MID_EMA_PX = 1032;
+  static readonly OFFSET_LONG_EMA_PX = 1040;
   static readonly OFFSET_RESERVED_VALUE9 = 1048;
   static readonly OFFSET_RESERVED_VALUE10 = 1056;
 
@@ -560,7 +580,7 @@ export class InstrAccountHeaderModel {
   prevDayTrades: number;
   perpInsuranceFund: number;
   perpPriceDelta: number;
-  emaPx: number;
+  shortEmaPx: number;
   lpPrevDayFees: number;
   assetTokens: number;
   crncyTokens: number;
@@ -680,11 +700,11 @@ export class InstrAccountHeaderModel {
   perpAlltimeCrncyTokens: number;
   liquidationThreshold: number;
   seatsReserve: number;
-  reservedValue4: number;
-  reservedValue5: number;
-  reservedValue6: number;
-  reservedValue7: number;
-  reservedValue8: number;
+  swapFees: number;
+  similarAssetsMinQty: number;
+  fixedFeeRate: number;
+  midEmaPx: number;
+  longEmaPx: number;
   reservedValue9: number;
   reservedValue10: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrAccountHeaderModel {
@@ -710,7 +730,7 @@ export class InstrAccountHeaderModel {
     result.prevDayTrades = autoData.readI64();
     result.perpInsuranceFund = autoData.readI64();
     result.perpPriceDelta = autoData.readF64();
-    result.emaPx = autoData.readF64();
+    result.shortEmaPx = autoData.readF64();
     result.lpPrevDayFees = autoData.readI64();
     result.assetTokens = autoData.readI64();
     result.crncyTokens = autoData.readI64();
@@ -830,11 +850,11 @@ export class InstrAccountHeaderModel {
     result.perpAlltimeCrncyTokens = autoData.readF64();
     result.liquidationThreshold = autoData.readF64();
     result.seatsReserve = autoData.readI64();
-    result.reservedValue4 = autoData.readI64();
-    result.reservedValue5 = autoData.readI64();
-    result.reservedValue6 = autoData.readI64();
-    result.reservedValue7 = autoData.readI64();
-    result.reservedValue8 = autoData.readI64();
+    result.swapFees = autoData.readI64();
+    result.similarAssetsMinQty = autoData.readI64();
+    result.fixedFeeRate = autoData.readF64();
+    result.midEmaPx = autoData.readF64();
+    result.longEmaPx = autoData.readF64();
     result.reservedValue9 = autoData.readI64();
     result.reservedValue10 = autoData.readI64();
     return result;
@@ -1262,6 +1282,48 @@ export class ClientPrimaryAccountHeaderModel {
     result.reservedValue6 = autoData.readI64();
     result.reservedValue7 = autoData.readI64();
     result.reservedValue8 = autoData.readI64();
+    return result;
+  }
+}
+
+export class InstrMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrMaskModel {
+    const result = new InstrMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
+    return result;
+  }
+}
+
+export class InstrInputMaskModel {
+  static readonly LENGTH = 1 * 1; // 1 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrInputMaskModel {
+    const result = new InstrInputMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU8();
+    return result;
+  }
+}
+
+export class TokenMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): TokenMaskModel {
+    const result = new TokenMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
     return result;
   }
 }

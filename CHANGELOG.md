@@ -12,6 +12,7 @@
 - **New models**: `InstrFlag`, `TokenFlag`, `InstrMaskModel`, `InstrInputMaskModel`, `TokenMaskModel`, `PerpLossCoverageReportModel`
 - **New instructions**: `withdrawSwapFeesData`, `setSAMMinQtyData`, `changeSAMFeesPolicyData`, `suspendInstrumentData`
 - **`LogType`**: Added `perpLossCoverage`
+- **`updateInstrDataFromBuffer`**: Divide `shortEmaPx`, `midEmaPx`, `longEmaPx` by `dec`
 
 ## [1.0.45] - 2026-03-09
 

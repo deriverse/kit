@@ -609,6 +609,9 @@ export class Engine {
     header.perpLastPx /= dec;
     header.perpLongSpotPriceForWithdrowal /= dec;
     header.perpShortSpotPriceForWithdrowal /= dec;
+    header.shortEmaPx /= dec;
+    header.midEmaPx /= dec;
+    header.longEmaPx /= dec;
     header.poolFees /= crncyTokenDec;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];

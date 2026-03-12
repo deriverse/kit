@@ -18,7 +18,7 @@ import {
   PerpPlaceOrderReportModel,
   PerpSocLossReportModel,
   PerpWithdrawReportModel,
-  ChangePointsRecordModel,
+  ChangePointsReportModel,
   MoveSpotAvailFundsReportModel,
   PlaceSwapOrderReportModel,
   SellMarketSeatReportModel,
@@ -78,7 +78,7 @@ export type LogMessage =
   | SellMarketSeatReportModel
   | PlaceSwapOrderReportModel
   | MoveSpotAvailFundsReportModel
-  | ChangePointsRecordModel
+  | ChangePointsReportModel
   | SwapRefFeesReportModel
   | VmInitActivateReportModel
   | VmInitActivateCancelReportModel

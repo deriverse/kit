@@ -557,7 +557,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_FIXED_FEE_RATE = 1024;
   static readonly OFFSET_MID_EMA_PX = 1032;
   static readonly OFFSET_LONG_EMA_PX = 1040;
-  static readonly OFFSET_RESERVED_VALUE9 = 1048;
+  static readonly OFFSET_LOG_SEQ_NO = 1048;
   static readonly OFFSET_RESERVED_VALUE10 = 1056;
 
   tag: number;
@@ -705,7 +705,7 @@ export class InstrAccountHeaderModel {
   fixedFeeRate: number;
   midEmaPx: number;
   longEmaPx: number;
-  reservedValue9: number;
+  logSeqNo: number;
   reservedValue10: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrAccountHeaderModel {
     const result = new InstrAccountHeaderModel();
@@ -855,7 +855,7 @@ export class InstrAccountHeaderModel {
     result.fixedFeeRate = autoData.readF64();
     result.midEmaPx = autoData.readF64();
     result.longEmaPx = autoData.readF64();
-    result.reservedValue9 = autoData.readI64();
+    result.logSeqNo = autoData.readI64();
     result.reservedValue10 = autoData.readI64();
     return result;
   }
@@ -1150,7 +1150,7 @@ export class PerpClientInfo5Model {
 }
 
 export class ClientPrimaryAccountHeaderModel {
-  static readonly LENGTH = 28 * 4 + 17 * 8 + 4 * 32; // 376 bytes
+  static readonly LENGTH = 30 * 4 + 16 * 8 + 4 * 32; // 376 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -1186,7 +1186,8 @@ export class ClientPrimaryAccountHeaderModel {
   static readonly OFFSET_ASSETS_COUNT = 300;
   static readonly OFFSET_SPOT_FILLED_ORDERS = 304;
   static readonly OFFSET_PERP_FILLED_ORDERS = 308;
-  static readonly OFFSET_RESERVED_VALUE1 = 312;
+  static readonly OFFSET_LOG_SEQ_NO = 312;
+  static readonly OFFSET_RESERVED_VALUE1 = 316;
   static readonly OFFSET_RESERVED_VALUE2 = 320;
   static readonly OFFSET_RESERVED_VALUE3 = 328;
   static readonly OFFSET_RESERVED_VALUE4 = 336;
@@ -1229,6 +1230,7 @@ export class ClientPrimaryAccountHeaderModel {
   assetsCount: number;
   spotFilledOrders: number;
   perpFilledOrders: number;
+  logSeqNo: number;
   reservedValue1: number;
   reservedValue2: number;
   reservedValue3: number;
@@ -1274,7 +1276,8 @@ export class ClientPrimaryAccountHeaderModel {
     result.assetsCount = autoData.readU32();
     result.spotFilledOrders = autoData.readU32();
     result.perpFilledOrders = autoData.readU32();
-    result.reservedValue1 = autoData.readI64();
+    result.logSeqNo = autoData.readU32();
+    result.reservedValue1 = autoData.readU32();
     result.reservedValue2 = autoData.readI64();
     result.reservedValue3 = autoData.readI64();
     result.reservedValue4 = autoData.readI64();

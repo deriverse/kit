@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.47] - 2026-03-12
+
+### Changed
+
+- **Log models**: Updated log models
+- **Structure models**: Updated structure models
+- **Rename**: `ChangePointsRecordModel` renamed to `ChangePointsReportModel`
+
 ## [1.0.46] - 2026-03-09
 
 ### Changed

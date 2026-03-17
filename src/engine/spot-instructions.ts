@@ -42,6 +42,8 @@ import {
   getInstrId,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
 import { getSpotContext, getSpotOneSidedContext, getSpotCandles } from './context-builders';
@@ -55,8 +57,8 @@ export interface SpotInstructionContext extends AccountHelperContext {
   uiNumbers: boolean;
   signer: Address;
   rootAccount: Address;
-  clientPrimaryAccount: Address;
-  clientCommunityAccount: Address;
+  clientPrimaryAccount: Address | null;
+  clientCommunityAccount: Address | null;
   refClientPrimaryAccount: Address | null;
   refClientCommunityAccount: Address | null;
   privateMode: boolean;
@@ -106,7 +108,7 @@ async function buildDepositInstruction(
         address: await getAccountByTag(ctx, AccountType.COMMUNITY),
         role: AccountRole.WRITABLE,
       });
-      keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+      keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
     }
     return {
       accounts: keys,
@@ -172,6 +174,8 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
   const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
   const clientTokenAccount = await findAssociatedTokenAddress(ctx.signer, tokenProgramId, token.address);
 
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: clientTokenAccount, role: AccountRole.WRITABLE },
@@ -179,7 +183,7 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
     { address: token.address, role: AccountRole.READONLY },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: await getTokenAccount(ctx, token.address), role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     { address: tokenProgramId, role: AccountRole.READONLY },
     { address: ctx.drvsAuthority, role: AccountRole.READONLY },
@@ -211,7 +215,7 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
   }
 
   return {
@@ -229,6 +233,8 @@ async function buildSpotLpInstruction(
   args: SpotLpArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
@@ -240,7 +246,7 @@ async function buildSpotLpInstruction(
       }),
       role: AccountRole.WRITABLE,
     },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -249,7 +255,7 @@ async function buildSpotLpInstruction(
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
   }
 
   const minPrice = args.minPrice ?? 0;
@@ -374,12 +380,13 @@ async function buildSpotOrderCancelInstruction(
   args: SpotOrderCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -410,12 +417,13 @@ async function buildSpotMassCancelInstruction(
   args: SpotMassCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),

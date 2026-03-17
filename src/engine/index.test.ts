@@ -820,7 +820,7 @@ describe('Engine instruction methods', () => {
         expect.anything(),
         expect.objectContaining({
           mask: 0,
-          minQty: 0,
+          minQty: 1,
           fixedFeeRate: 0,
         }),
         expect.any(Function),

@@ -30,9 +30,11 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
   DF,
+  STANDARD_MAPS_SIZE,
+  EXTENDED_MAPS_SIZE,
 } from '../constants';
 import { perpSeatReserve, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
-import { TokenStateModel, RootStateModel, QuoteOrderModel } from '../structure_models';
+import { TokenStateModel, RootStateModel, QuoteOrderModel, InstrFlag } from '../structure_models';
 import {
   upgradeToPerpData,
   perpDepositData,
@@ -367,8 +369,14 @@ async function buildPerpQuotesReplaceInstruction(
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {
     const offset = i * QuoteOrderModel.LENGTH;
-    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newPrice * DF)), offset + QuoteOrderModel.OFFSET_NEW_PRICE);
-    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)), offset + QuoteOrderModel.OFFSET_NEW_QTY);
+    ordersBuf.writeBigInt64LE(
+      BigInt(Math.round(args.orders[i].newPrice * DF)),
+      offset + QuoteOrderModel.OFFSET_NEW_PRICE,
+    );
+    ordersBuf.writeBigInt64LE(
+      BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)),
+      offset + QuoteOrderModel.OFFSET_NEW_QTY,
+    );
     ordersBuf.writeBigInt64LE(BigInt(Math.floor(args.orders[i].oldId)), offset + QuoteOrderModel.OFFSET_OLD_ID);
   }
 
@@ -549,7 +557,8 @@ async function buildNewInstrumentInstructions(
     programAddress: ctx.programId,
     seed: mapsAccountSeed,
   });
-  const mapsAccountSize = 42184;
+  const mapsAccountSize =
+    (args.mask & InstrFlag.similarAssets) !== 0 ? EXTENDED_MAPS_SIZE : STANDARD_MAPS_SIZE;
   const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
     payer: ctx.signer as unknown as TransactionSigner,

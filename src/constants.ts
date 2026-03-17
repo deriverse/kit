@@ -10,6 +10,8 @@ export const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623V
 export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 export const MAX_SWAP_FEE_RATE = 0.0002;
+export const STANDARD_MAPS_SIZE = 42184; // spot::memory_maps::MAPS_SIZE
+export const EXTENDED_MAPS_SIZE = 68712; // extended_spot::memory_maps::MAPS_SIZE
 export const DF = 1000000000;
 
 export let dec = 1000000000;

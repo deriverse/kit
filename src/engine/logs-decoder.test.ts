@@ -70,10 +70,13 @@ function createDepositBuffer(clientId: number, tokenId: number, time: number, am
   buffer.writeUInt8(LogType.deposit, 0); // tag
   buffer.writeUInt8(0, 1); // padding
   buffer.writeUInt16LE(0, 2); // padding
-  buffer.writeUInt32LE(clientId, 4);
-  buffer.writeUInt32LE(tokenId, 8);
-  buffer.writeUInt32LE(time, 12);
-  buffer.writeBigInt64LE(amount, 16);
+  buffer.writeUInt32LE(0, 4); // padding
+  buffer.writeUInt32LE(0, DepositReportModel.OFFSET_SEQ_NO); // seqNo
+  buffer.writeUInt32LE(clientId, DepositReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(tokenId, DepositReportModel.OFFSET_TOKEN_ID);
+  buffer.writeUInt32LE(time, DepositReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(amount, DepositReportModel.OFFSET_AMOUNT);
+  buffer.writeBigInt64LE(BigInt(0), DepositReportModel.OFFSET_CUSTOM_ID); // customId
   return buffer;
 }
 
@@ -83,10 +86,13 @@ function createWithdrawBuffer(clientId: number, tokenId: number, time: number, a
   buffer.writeUInt8(LogType.withdraw, 0); // tag
   buffer.writeUInt8(0, 1); // padding
   buffer.writeUInt16LE(0, 2); // padding
-  buffer.writeUInt32LE(clientId, 4);
-  buffer.writeUInt32LE(tokenId, 8);
-  buffer.writeUInt32LE(time, 12);
-  buffer.writeBigInt64LE(amount, 16);
+  buffer.writeUInt32LE(0, 4); // padding
+  buffer.writeUInt32LE(0, WithdrawReportModel.OFFSET_SEQ_NO); // seqNo
+  buffer.writeUInt32LE(clientId, WithdrawReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(tokenId, WithdrawReportModel.OFFSET_TOKEN_ID);
+  buffer.writeUInt32LE(time, WithdrawReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(amount, WithdrawReportModel.OFFSET_AMOUNT);
+  buffer.writeBigInt64LE(BigInt(0), WithdrawReportModel.OFFSET_CUSTOM_ID); // customId
   return buffer;
 }
 
@@ -198,10 +204,12 @@ function createFeesDepositBuffer(clientId: number, tokenId: number, time: number
   buffer.writeUInt8(LogType.feesDeposit, 0);
   buffer.writeUInt8(0, 1);
   buffer.writeUInt16LE(0, 2);
-  buffer.writeUInt32LE(clientId, 4);
-  buffer.writeUInt32LE(tokenId, 8);
-  buffer.writeUInt32LE(time, 12);
-  buffer.writeBigInt64LE(amount, 16);
+  buffer.writeUInt32LE(0, 4); // padding
+  buffer.writeUInt32LE(0, FeesDepositReportModel.OFFSET_SEQ_NO);
+  buffer.writeUInt32LE(clientId, FeesDepositReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(tokenId, FeesDepositReportModel.OFFSET_TOKEN_ID);
+  buffer.writeUInt32LE(time, FeesDepositReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(amount, FeesDepositReportModel.OFFSET_AMOUNT);
   return buffer;
 }
 
@@ -210,10 +218,12 @@ function createFeesWithdrawBuffer(clientId: number, tokenId: number, time: numbe
   buffer.writeUInt8(LogType.feesWithdraw, 0);
   buffer.writeUInt8(0, 1);
   buffer.writeUInt16LE(0, 2);
-  buffer.writeUInt32LE(clientId, 4);
-  buffer.writeUInt32LE(tokenId, 8);
-  buffer.writeUInt32LE(time, 12);
-  buffer.writeBigInt64LE(amount, 16);
+  buffer.writeUInt32LE(0, 4); // padding
+  buffer.writeUInt32LE(0, FeesWithdrawReportModel.OFFSET_SEQ_NO);
+  buffer.writeUInt32LE(clientId, FeesWithdrawReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(tokenId, FeesWithdrawReportModel.OFFSET_TOKEN_ID);
+  buffer.writeUInt32LE(time, FeesWithdrawReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(amount, FeesWithdrawReportModel.OFFSET_AMOUNT);
   return buffer;
 }
 
@@ -377,10 +387,12 @@ function createEarningsBuffer(clientId: number, tokenId: number, time: number, a
   buffer.writeUInt8(LogType.earnings, 0);
   buffer.writeUInt8(0, 1);
   buffer.writeUInt16LE(0, 2);
-  buffer.writeUInt32LE(clientId, 4);
-  buffer.writeUInt32LE(tokenId, 8);
-  buffer.writeUInt32LE(time, 12);
-  buffer.writeBigInt64LE(amount, 16);
+  buffer.writeUInt32LE(0, 4); // padding
+  buffer.writeUInt32LE(0, EarningsReportModel.OFFSET_SEQ_NO);
+  buffer.writeUInt32LE(clientId, EarningsReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(tokenId, EarningsReportModel.OFFSET_TOKEN_ID);
+  buffer.writeUInt32LE(time, EarningsReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(amount, EarningsReportModel.OFFSET_AMOUNT);
   return buffer;
 }
 

@@ -187,6 +187,16 @@ async function findClientCommunityAccount(
   return address;
 }
 
+function requireClientPrimaryAccount(ctx: { clientPrimaryAccount: Address | null }): Address {
+  if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+  return ctx.clientPrimaryAccount;
+}
+
+function requireClientCommunityAccount(ctx: { clientCommunityAccount: Address | null }): Address {
+  if (ctx.clientCommunityAccount === null) throw new Error('Client community account not found');
+  return ctx.clientCommunityAccount;
+}
+
 export {
   getAccountByTag,
   getInstrAccountByTag,
@@ -196,4 +206,6 @@ export {
   findAccountsByTag,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
 };

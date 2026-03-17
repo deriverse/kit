@@ -207,12 +207,6 @@ export class Engine {
     if (this.signer === null) {
       throw new Error('Wallet is not connected');
     }
-    if (this.clientPrimaryAccount === null) {
-      throw new Error('Client primary account not found');
-    }
-    if (this.clientCommunityAccount === null) {
-      throw new Error('Client community account not found');
-    }
     return {
       ...this.getAccountHelperContext(),
       instruments: this.instruments,

@@ -891,13 +891,10 @@ export class Engine {
   // ============================================
 
   async newInstrumentInstructions(args: NewInstrumentArgs): Promise<Instruction[]> {
-    NewInstrumentArgsSchema.parse(args);
-    if (this.signer == null) {
-      throw new Error('Wallet is not connected');
-    }
+    const parsed = NewInstrumentArgsSchema.parse(args);
     return buildNewInstrumentInstructions(
       this.getPerpInstructionContext(),
-      args,
+      parsed,
       () => this.rpc.getSlot().send(),
       (address) => this.rpc.getAccountInfo(address).send(),
       (size) => this.rpc.getMinimumBalanceForRentExemption(size).send(),

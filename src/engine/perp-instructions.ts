@@ -20,7 +20,7 @@ import {
   PerpMassCancelArgs,
   PerpChangeLeverageArgs,
   PerpStatisticsResetArgs,
-  NewInstrumentArgs,
+  ParsedNewInstrumentArgs,
   Instruction,
 } from '../types';
 import { AccountType, InstrMask } from '../types/enums';
@@ -512,7 +512,7 @@ async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<
  */
 async function buildNewInstrumentInstructions(
   ctx: PerpInstructionContext,
-  args: NewInstrumentArgs,
+  args: ParsedNewInstrumentArgs,
   rpcGetSlot: () => Promise<bigint>,
   rpcGetAccountInfo: (address: Address) => Promise<SolanaRpcResponse<AccountInfoBase | null>>,
   rpcGetMinBalance: (size: bigint) => Promise<bigint>,

@@ -55,10 +55,7 @@ const NewSpotOrderArgsSchema = z.object({
 });
 
 const QuoteOrderSchema = z.object({
-  newPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order price' }),
+  newPrice: z.number().nonnegative({ error: 'Price must be non-negative' }).meta({ description: 'New order price' }),
   newQty: z
     .number()
     .nonnegative({ error: 'Quantity must be non-negative' })
@@ -71,7 +68,11 @@ const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
   orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
-  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
+  orders: z
+    .array(QuoteOrderSchema)
+    .min(1)
+    .max(12, { error: 'Exceeded orders limit of 12' })
+    .meta({ description: 'Quote orders to place/replace' }),
 });
 
 const SwapArgsSchema = z.object({
@@ -140,7 +141,11 @@ const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
   orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
-  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
+  orders: z
+    .array(QuoteOrderSchema)
+    .min(1)
+    .max(12, { error: 'Exceeded orders limit of 12' })
+    .meta({ description: 'Quote orders to place/replace' }),
 });
 
 const PerpOrderCancelArgsSchema = z.object({
@@ -172,9 +177,9 @@ const NewInstrumentArgsSchema = z.object({
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
   newProgramAccountAddress: solanaAddress.optional(),
   initialPrice: positiveNumber,
-  mask: nonNegativeInt.optional().default(0),
-  minQty: z.number().optional().default(0),
-  fixedFeeRate: z.number().optional().default(0),
+  mask: nonNegativeInt.default(0),
+  minQty: z.number().default(0),
+  fixedFeeRate: z.number().default(0),
 });
 
 const GetInstrIdArgsSchema = z.object({

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.48] - 2026-03-17
+
+### Fixed
+
+- **`NewInstrumentArgs`**: Changed from `z.infer` to `z.input` so fields with defaults (`mask`, `minQty`, `fixedFeeRate`) are optional in the input type
+- **`newInstrumentInstructions`**: Removed signer check
+- **`ParsedNewInstrumentArgs`**: Added new type (`z.infer`) for internal use after parsing, ensuring defaults are resolved
+- **`buildNewInstrumentInstructions`**: Maps account size now selected dynamically based on `InstrFlag.similarAssets` mask — standard (42,184) or extended (68,712)
+- **Constants**: Added `STANDARD_MAPS_SIZE` and `EXTENDED_MAPS_SIZE`
+- **Tests**: Updated log decoder test buffer helpers to match regenerated models (new `seqNo` and `customId` fields)
+
 ## [1.0.47] - 2026-03-12
 
 ### Changed

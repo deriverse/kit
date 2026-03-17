@@ -748,6 +748,28 @@ describe('Engine instruction methods', () => {
 
       expect(buildNewInstrumentInstructions).toHaveBeenCalled();
     });
+
+    it('applies default values for mask, minQty, and fixedFeeRate when omitted', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await engine.newInstrumentInstructions({
+        assetMint: 'AssetMint1111111111111111111111111111' as Address,
+        crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+        initialPrice: 100,
+      });
+
+      expect(buildNewInstrumentInstructions).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          mask: 0,
+          minQty: 0,
+          fixedFeeRate: 0,
+        }),
+        expect.any(Function),
+        expect.any(Function),
+        expect.any(Function),
+      );
+    });
   });
 
   describe('getClientData', () => {

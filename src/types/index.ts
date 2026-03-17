@@ -29,6 +29,7 @@ export {
   PerpSellSeatArgs,
   NewPerpOrderArgs,
   NewInstrumentArgs,
+  ParsedNewInstrumentArgs,
   GetClientSpotOrdersInfoArgs,
   GetClientPerpOrdersInfoArgs,
   GetClientSpotOrdersArgs,

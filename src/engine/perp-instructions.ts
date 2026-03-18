@@ -581,8 +581,7 @@ async function buildNewInstrumentInstructions(
     programAddress: ctx.programId,
     seed: mapsAccountSeed,
   });
-  const mapsAccountSize =
-    (args.mask & InstrFlag.similarAssets) !== 0 ? EXTENDED_MAPS_SIZE : STANDARD_MAPS_SIZE;
+  const mapsAccountSize = (args.mask & InstrFlag.similarAssets) !== 0 ? EXTENDED_MAPS_SIZE : STANDARD_MAPS_SIZE;
   const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
     payer: ctx.signer as unknown as TransactionSigner,
@@ -671,10 +670,20 @@ async function buildNewInstrumentInstructions(
     },
   ];
 
+  const assetDec = tokenDec(ctx.tokens, assetTokenId, ctx.uiNumbers);
+
   const newInstrIx = {
     accounts: keys,
     programAddress: ctx.programId,
-    data: newInstrumentData(9, args.mask, crncyTokenId, slot, args.initialPrice * DF, args.minQty, args.fixedFeeRate),
+    data: newInstrumentData(
+      9,
+      args.mask,
+      crncyTokenId,
+      slot,
+      args.initialPrice * DF,
+      args.minQty * assetDec,
+      args.fixedFeeRate,
+    ),
   } as Instruction;
   return [createMapsAccountIx, newInstrIx];
 }

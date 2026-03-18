@@ -8,6 +8,8 @@
 - **`getSpotInstructionContext`**: Removed throws for null client accounts — only signer check remains
 - **Instruction builders**: Each builder that needs client accounts validates at point of use via `requireClientPrimaryAccount` / `requireClientCommunityAccount` (shared from `account-helpers.ts`)
 - **No client accounts required**: `buildSwapInstruction`, `buildUpgradeToPerpInstructions`, `buildNewInstrumentInstructions` work without client accounts set
+- **`buildNewInstrumentInstructions`**: `minQty` is now scaled by the asset token's decimal factor
+- **`NewInstrumentArgsSchema`**: `minQty` default changed from `0` to `1`
 
 ## [1.0.48] - 2026-03-17
 

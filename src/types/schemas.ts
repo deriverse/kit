@@ -178,7 +178,7 @@ const NewInstrumentArgsSchema = z.object({
   newProgramAccountAddress: solanaAddress.optional(),
   initialPrice: positiveNumber,
   mask: nonNegativeInt.default(0),
-  minQty: z.number().default(0),
+  minQty: z.number().default(1),
   fixedFeeRate: z.number().default(0),
 });
 

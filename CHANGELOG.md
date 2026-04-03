@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.50] - 2026-04-03
+
+### Changed
+
+- **Instruction models**: Updated instruction models
+- **Log models**: Updated log models
+- **Structure models**: Updated structure models
+
 ## [1.0.49] - 2026-03-17
 
 ### Changed

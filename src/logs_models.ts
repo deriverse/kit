@@ -19,6 +19,7 @@ export enum LogType {
   vmInitWithdrawFinalize = 45,
   changedPoints = 34,
   moveSpot = 32,
+  vmDirectWithdraw = 47,
   perpDeposit = 3,
   perpWithdraw = 4,
   spotLpTrade = 7,
@@ -1460,6 +1461,40 @@ export class VmInitWithdrawFinalizeReportModel {
     autoBuffer.readU8();
     autoBuffer.readU16();
     autoBuffer.readU32();
+    result.seqNo = autoBuffer.readU32();
+    result.clientId = autoBuffer.readU32();
+    result.tokenId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.amount = autoBuffer.readI64();
+    return result;
+  }
+}
+
+export class VmDirectWithdrawReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 5 * 4 + 1 * 8; // 32 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_WITHDRAWAL_RECORD_ID = 4;
+  static readonly OFFSET_SEQ_NO = 8;
+  static readonly OFFSET_CLIENT_ID = 12;
+  static readonly OFFSET_TOKEN_ID = 16;
+  static readonly OFFSET_TIME = 20;
+  static readonly OFFSET_AMOUNT = 24;
+
+  tag: number;
+  withdrawalRecordId: number;
+  seqNo: number;
+  clientId: number;
+  tokenId: number;
+  time: number;
+  amount: number;
+  static fromBuffer(buffer: Buffer, offset?: number): VmDirectWithdrawReportModel {
+    const result = new VmDirectWithdrawReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    autoBuffer.readU8();
+    autoBuffer.readU16();
+    result.withdrawalRecordId = autoBuffer.readU32();
     result.seqNo = autoBuffer.readU32();
     result.clientId = autoBuffer.readU32();
     result.tokenId = autoBuffer.readU32();

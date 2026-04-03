@@ -464,3 +464,21 @@ export function suspendInstrumentData(tag: number, instrId: number): Buffer {
   return buf;
 }
 
+export function vmDirectWithdrawData(tag: number, tokenId: number, amount: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(tokenId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  return buf;
+}
+
+export function vmRemoveWithdrawalAddressData(tag: number): Buffer {
+  let buf = Buffer.alloc(4);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  return buf;
+}
+

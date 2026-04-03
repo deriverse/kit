@@ -6,26 +6,7 @@ export enum OrderType {
   market = 1,
   marginCall = 2,
   makerOnly = 3,
-}
-
-export enum InstrFlag {
-  perpActive = 0x40000000,
-  readyToPerpUpgrade = 0x01000000,
-  zeroFees = 0x1,
-  fixedFees = 0x2,
-  similarAssets = 0x4,
-  usdStablecoin = 0x8,
-  forex = 0x10,
-  suspended = 0x20,
-  longMarginCall = 0x40,
-  shortMarginCall = 0x80,
-}
-
-export enum TokenFlag {
-  token2022 = 0x80000000,
-  baseCrncy = 0x40000000,
-  wrappedToken = 0x20000000,
-  sAMCrncy = 0x10000000,
+  makerPriceDeviation = 4,
 }
 
 export enum AssetType {
@@ -45,6 +26,34 @@ export enum SlotFlag {
   spot = 0b001,
   perp = 0b010,
   option = 0b100,
+}
+
+export enum VmWhitelistTag {
+  vacant = 0,
+  withdrawAccount = 1,
+  programId = 2,
+  marketId = 3,
+}
+
+export enum InstrFlag {
+  perpActive = 0x40000000,
+  readyToPerpUpgrade = 0x01000000,
+  zeroFees = 0x1,
+  fixedFees = 0x2,
+  similarAssets = 0x4,
+  usdStablecoin = 0x8,
+  forex = 0x10,
+  suspended = 0x20,
+  longMarginCall = 0x40,
+  shortMarginCall = 0x80,
+  expandableCandles = 0x100,
+}
+
+export enum TokenFlag {
+  token2022 = 0x80000000,
+  baseCrncy = 0x40000000,
+  wrappedToken = 0x20000000,
+  sAMCrncy = 0x10000000,
 }
 
 export enum AccountType {
@@ -82,6 +91,7 @@ export enum AccountType {
   perpShortPxTree = 49,
   perpRebalanceTimeTree = 50,
   privateClients = 51,
+  vmClient = 52,
 }
 
 export class ClientCommunityRecordModel {
@@ -1289,48 +1299,6 @@ export class ClientPrimaryAccountHeaderModel {
   }
 }
 
-export class InstrMaskModel {
-  static readonly LENGTH = 1 * 4; // 4 bytes
-
-  static readonly OFFSET_VALUE = 0;
-
-  value: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrMaskModel {
-    const result = new InstrMaskModel();
-    let autoData = new AutoData(data, offset);
-    result.value = autoData.readU32();
-    return result;
-  }
-}
-
-export class InstrInputMaskModel {
-  static readonly LENGTH = 1 * 1; // 1 bytes
-
-  static readonly OFFSET_VALUE = 0;
-
-  value: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrInputMaskModel {
-    const result = new InstrInputMaskModel();
-    let autoData = new AutoData(data, offset);
-    result.value = autoData.readU8();
-    return result;
-  }
-}
-
-export class TokenMaskModel {
-  static readonly LENGTH = 1 * 4; // 4 bytes
-
-  static readonly OFFSET_VALUE = 0;
-
-  value: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): TokenMaskModel {
-    const result = new TokenMaskModel();
-    let autoData = new AutoData(data, offset);
-    result.value = autoData.readU32();
-    return result;
-  }
-}
-
 export class DiscriminatorModel {
   static readonly LENGTH = 2 * 4; // 8 bytes
 
@@ -1583,6 +1551,111 @@ export class QuoteMaskModel {
     const result = new QuoteMaskModel();
     let autoData = new AutoData(data, offset);
     result.value = autoData.readU16();
+    return result;
+  }
+}
+
+export class ClientVmAccountHeaderModel {
+  static readonly LENGTH = 6 * 4; // 24 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_VERSION = 4;
+  static readonly OFFSET_ID = 8;
+  static readonly OFFSET_COUNT = 12;
+  static readonly OFFSET_SLOT = 16;
+  static readonly OFFSET_RESERVED = 20;
+
+  tag: number;
+  version: number;
+  id: number;
+  count: number;
+  slot: number;
+  reserved: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientVmAccountHeaderModel {
+    const result = new ClientVmAccountHeaderModel();
+    let autoData = new AutoData(data, offset);
+    result.tag = autoData.readU32();
+    result.version = autoData.readU32();
+    result.id = autoData.readU32();
+    result.count = autoData.readU32();
+    result.slot = autoData.readU32();
+    result.reserved = autoData.readU32();
+    return result;
+  }
+}
+
+export class VmWhitelistRecordModel {
+  static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_REFERENCE = 4;
+  static readonly OFFSET_ADDRESS = 8;
+
+  tag: number;
+  reference: number;
+  address: Address<any>;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): VmWhitelistRecordModel {
+    const result = new VmWhitelistRecordModel();
+    let autoData = new AutoData(data, offset);
+    result.tag = autoData.readU32();
+    result.reference = autoData.readU32();
+    result.address = autoData.readAddress();
+    return result;
+  }
+}
+
+export class CappedI64Model {
+  static readonly LENGTH = 1 * 8; // 8 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CappedI64Model {
+    const result = new CappedI64Model();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readI64();
+    return result;
+  }
+}
+
+export class InstrMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrMaskModel {
+    const result = new InstrMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
+    return result;
+  }
+}
+
+export class InstrInputMaskModel {
+  static readonly LENGTH = 1 * 1; // 1 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrInputMaskModel {
+    const result = new InstrInputMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU8();
+    return result;
+  }
+}
+
+export class TokenMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): TokenMaskModel {
+    const result = new TokenMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
     return result;
   }
 }

@@ -253,6 +253,54 @@ const GetClientPerpOrdersArgsSchema = z.object({
   }),
 });
 
+const VmInitActivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmFinalizeActivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmFinalizeDeactivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmInitWithdrawArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+  amount: positiveNumber.meta({ description: 'Amount to withdraw' }),
+});
+
+const VmInitWithdrawCancelArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID of pending withdrawal' }),
+});
+
+const VmInitWithdrawFinalizeArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+});
+
+const VmChangeListArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  mask: nonNegativeInt.meta({ description: 'VM whitelist mask' }),
+  whitelist: z.array(z.number()).optional().meta({ description: 'Instrument whitelist array' }),
+});
+
+const VmAddWithdrawalAddressArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
+});
+
+const VmRemoveWithdrawalAddressArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  withdrawalAddress: solanaAddress.meta({ description: 'Withdrawal address to remove from whitelist' }),
+});
+
+const VmDirectWithdrawArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+  amount: positiveNumber.meta({ description: 'Amount to withdraw' }),
+  withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
+});
+
 export {
   EngineArgsSchema,
   InstrIdSchema,
@@ -284,4 +332,14 @@ export {
   GetClientPerpOrdersInfoArgsSchema,
   GetClientSpotOrdersArgsSchema,
   GetClientPerpOrdersArgsSchema,
+  VmInitActivateArgsSchema,
+  VmFinalizeActivateArgsSchema,
+  VmFinalizeDeactivateArgsSchema,
+  VmInitWithdrawArgsSchema,
+  VmInitWithdrawCancelArgsSchema,
+  VmInitWithdrawFinalizeArgsSchema,
+  VmChangeListArgsSchema,
+  VmAddWithdrawalAddressArgsSchema,
+  VmRemoveWithdrawalAddressArgsSchema,
+  VmDirectWithdrawArgsSchema,
 };

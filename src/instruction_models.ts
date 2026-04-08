@@ -417,12 +417,13 @@ export function vmInitWithdrawData(tag: number, tokenId: number, amount: number)
   return buf;
 }
 
-export function vmChangeWhitelistData(tag: number, mask: number): Buffer {
-  let buf = Buffer.alloc(8);
+export function vmChangeWhitelistData(tag: number, mask: number, whitelist: number[]): Buffer {
+  let buf = Buffer.alloc(40);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(mask, 4);
+  for (let i = 0; i < 8; i++) { buf.writeUint32LE(whitelist[i] ?? 0, 8 + i * 4); }
   return buf;
 }
 
@@ -461,6 +462,25 @@ export function suspendInstrumentData(tag: number, instrId: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function vmDirectWithdrawData(tag: number, tokenId: number, amount: number): Buffer {
+  let buf = Buffer.alloc(16);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(tokenId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  return buf;
+}
+
+export function vmRemoveWithdrawalAddressData(tag: number, withdrawalAddress: Uint8Array): Buffer {
+  let buf = Buffer.alloc(36);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.set(withdrawalAddress, 4);
   return buf;
 }
 

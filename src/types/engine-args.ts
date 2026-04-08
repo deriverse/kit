@@ -30,6 +30,16 @@ import {
   GetClientPerpOrdersInfoArgsSchema,
   GetClientSpotOrdersArgsSchema,
   GetClientPerpOrdersArgsSchema,
+  VmInitActivateArgsSchema,
+  VmFinalizeActivateArgsSchema,
+  VmFinalizeDeactivateArgsSchema,
+  VmInitWithdrawArgsSchema,
+  VmInitWithdrawCancelArgsSchema,
+  VmInitWithdrawFinalizeArgsSchema,
+  VmChangeListArgsSchema,
+  VmAddWithdrawalAddressArgsSchema,
+  VmRemoveWithdrawalAddressArgsSchema,
+  VmDirectWithdrawArgsSchema,
 } from './schemas';
 
 export type EngineArgs = z.infer<typeof EngineArgsSchema>;
@@ -63,3 +73,13 @@ export type GetClientSpotOrdersInfoArgs = z.infer<typeof GetClientSpotOrdersInfo
 export type GetClientPerpOrdersInfoArgs = z.infer<typeof GetClientPerpOrdersInfoArgsSchema>;
 export type GetClientSpotOrdersArgs = z.infer<typeof GetClientSpotOrdersArgsSchema>;
 export type GetClientPerpOrdersArgs = z.infer<typeof GetClientPerpOrdersArgsSchema>;
+export type VmInitActivateArgs = z.infer<typeof VmInitActivateArgsSchema>;
+export type VmFinalizeActivateArgs = z.infer<typeof VmFinalizeActivateArgsSchema>;
+export type VmFinalizeDeactivateArgs = z.infer<typeof VmFinalizeDeactivateArgsSchema>;
+export type VmInitWithdrawArgs = z.infer<typeof VmInitWithdrawArgsSchema>;
+export type VmInitWithdrawCancelArgs = z.infer<typeof VmInitWithdrawCancelArgsSchema>;
+export type VmInitWithdrawFinalizeArgs = z.infer<typeof VmInitWithdrawFinalizeArgsSchema>;
+export type VmChangeListArgs = z.infer<typeof VmChangeListArgsSchema>;
+export type VmAddWithdrawalAddressArgs = z.infer<typeof VmAddWithdrawalAddressArgsSchema>;
+export type VmRemoveWithdrawalAddressArgs = z.infer<typeof VmRemoveWithdrawalAddressArgsSchema>;
+export type VmDirectWithdrawArgs = z.infer<typeof VmDirectWithdrawArgsSchema>;

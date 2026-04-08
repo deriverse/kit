@@ -42,4 +42,5 @@ export enum AccountType {
   PERP_SHORT_PX_TREE = 49,
   PERP_REBALANCE_TIME_TREE = 50,
   PRIVATE_CLIENTS = 51,
+  CLIENT_VM = 52,
 }

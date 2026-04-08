@@ -37,6 +37,12 @@ export class AutoData {
         return value;
     }
 
+    readU64(): number {
+        const value = Number(this.buffer.readBigUInt64LE(this.offset_));
+        this.offset_ += 8;
+        return value;
+    }
+
     readI64(): number {
         const value = Number(this.buffer.readBigInt64LE(this.offset_));
         this.offset_ += 8;

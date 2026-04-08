@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.50] - 2026-04-08
+
+### Added
+
+- **VM mode instructions**: Added full set of VM mode instruction builders (tags 63-80): activate, deactivate, withdraw, change whitelist, add/remove withdrawal address, direct withdraw
+
 ## [1.0.49] - 2026-03-17
 
 ### Changed

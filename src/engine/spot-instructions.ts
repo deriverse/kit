@@ -46,7 +46,7 @@ import {
   requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext, getSpotOneSidedContext, getSpotCandles } from './context-builders';
+import { getSpotContext, getSpotOneSidedContext } from './context-builders';
 
 /**
  * Context needed for spot instruction builders
@@ -300,7 +300,6 @@ async function buildNewSpotOrderInstruction(
     { address: await findClientPrimaryAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     { address: await findClientCommunityAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: instr.header.assetTokenId == 0 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -353,7 +352,6 @@ async function buildSpotQuotesReplaceInstruction(
     { address: await findClientPrimaryAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     { address: await findClientCommunityAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: instr.header.assetTokenId == 0 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -502,8 +500,6 @@ async function buildSwapInstruction(
     { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
     { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
     ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),
-    ...(await getSpotCandles(ctx, instr.header)),
-    { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
     { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
   ];

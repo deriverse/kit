@@ -116,7 +116,6 @@ import {
 import {
   getSpotContext as getSpotContextFn,
   getPerpContext as getPerpContextFn,
-  getSpotCandles as getSpotCandlesFn,
 } from './context-builders';
 import { tokenDec } from './utils';
 import {
@@ -728,10 +727,6 @@ export class Engine {
 
   async getPerpContext(instrAccountHeaderModel: InstrAccountHeaderModel): Promise<AccountMeta[]> {
     return getPerpContextFn(this.getAccountHelperContext(), instrAccountHeaderModel);
-  }
-
-  async getSpotCandles(instrAccountHeaderModel: InstrAccountHeaderModel): Promise<AccountMeta[]> {
-    return getSpotCandlesFn(this.getAccountHelperContext(), instrAccountHeaderModel);
   }
 
   // ============================================

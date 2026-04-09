@@ -30,7 +30,6 @@ import {
   PerpClientInfo5Model,
   PerpClientInfoModel,
   PerpTradeAccountHeaderModel,
-  SpotClientInfo2Model,
   SpotClientInfoModel,
   SpotTradeAccountHeaderModel,
   TokenStateModel,
@@ -165,27 +164,21 @@ async function getClientSpotOrdersInfo(
     crncyTokenId: instr.header.crncyTokenId,
     tag: AccountType.SPOT_CLIENT_INFOS,
   });
-  const clientInfos2Account = await getInstrAccountByTag(ctx, {
-    assetTokenId: instr.header.assetTokenId,
-    crncyTokenId: instr.header.crncyTokenId,
-    tag: AccountType.SPOT_CLIENT_INFOS2,
-  });
   const infos = await ctx.rpc
-    .getMultipleAccounts([clientInfosAccount, clientInfos2Account], {
+    .getMultipleAccounts([clientInfosAccount], {
       commitment: ctx.commitment,
       encoding: 'base64',
-      dataSlice: { offset: SpotTradeAccountHeaderModel.LENGTH + 32 * args.clientId, length: 32 },
+      dataSlice: { offset: SpotTradeAccountHeaderModel.LENGTH + SpotClientInfoModel.LENGTH * args.clientId, length: SpotClientInfoModel.LENGTH },
     })
     .send();
-  if (infos.value[0] == null || infos.value[1] == null) {
+  if (infos.value[0] == null) {
     throw new Error('Orders Info Not Found');
   }
   const data = Buffer.from(getBase64Encoder().encode(infos.value[0].data[0]));
-  const data1 = Buffer.from(getBase64Encoder().encode(infos.value[1].data[0]));
   return {
     contextSlot: Number(infos.context.slot),
-    bidSlot: data1.readUint32LE(SpotClientInfo2Model.OFFSET_BID_SLOT),
-    askSlot: data1.readUint32LE(SpotClientInfo2Model.OFFSET_ASK_SLOT),
+    bidSlot: data.readUint32LE(SpotClientInfoModel.OFFSET_BID_SLOT),
+    askSlot: data.readUint32LE(SpotClientInfoModel.OFFSET_ASK_SLOT),
     bidsEntry: data.readUint16LE(SpotClientInfoModel.OFFSET_BIDS_ENTRY),
     bidsCount: data.readUint16LE(SpotClientInfoModel.OFFSET_BIDS_ENTRY + 2),
     asksEntry: data.readUint16LE(SpotClientInfoModel.OFFSET_ASKS_ENTRY),
@@ -197,10 +190,10 @@ async function getClientSpotOrdersInfo(
       Number(data.readBigInt64LE(SpotClientInfoModel.OFFSET_AVAIL_CRNCY_TOKENS)) /
       tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers),
     inOrdersAssetTokens:
-      Number(data1.readBigInt64LE(SpotClientInfo2Model.OFFSET_IN_ORDERS_ASSET_TOKENS)) /
+      Number(data.readBigInt64LE(SpotClientInfoModel.OFFSET_IN_ORDERS_ASSET_TOKENS)) /
       tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers),
     inOrdersCrncyTokens:
-      Number(data1.readBigInt64LE(SpotClientInfo2Model.OFFSET_IN_ORDERS_CRNCY_TOKENS)) /
+      Number(data.readBigInt64LE(SpotClientInfoModel.OFFSET_IN_ORDERS_CRNCY_TOKENS)) /
       tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers),
   };
 }

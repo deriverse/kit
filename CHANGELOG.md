@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.51] - 2026-04-09
+
+### Changed
+
+- **Merged `SpotClientInfo2` into `SpotClientInfo`**: Single 64-byte account
+- **Removed `SPOT_CLIENT_INFOS2` and `CANDLES` accounts** everywhere
+- **Removed `COMMUNITY` account** in swap instructions 
+- **`getClientSpotOrdersInfo`**: Now fetches a single account instead of two
+
 ## [1.0.50] - 2026-04-08
 
 ### Added

@@ -64,15 +64,11 @@ export enum AccountType {
   holder = 1,
   root = 2,
   instr = 7,
-  spot15MCandles = 20,
-  spot1MCandles = 19,
   spotAskOrders = 17,
   spotAsksTree = 15,
   spotBidOrders = 16,
   spotBidsTree = 14,
   spotClientInfos = 12,
-  spotClientInfos2 = 13,
-  spotDayCandles = 21,
   spotLines = 18,
   spotMaps = 10,
   token = 4,
@@ -356,7 +352,7 @@ export class HolderAccountHeaderModel {
 }
 
 export class CandleModel {
-  static readonly LENGTH = 2 * 4 + 6 * 8; // 56 bytes
+  static readonly LENGTH = 2 * 2 + 1 * 4 + 6 * 8; // 56 bytes
 
   static readonly OFFSET_OPEN = 0;
   static readonly OFFSET_CLOSE = 8;
@@ -365,7 +361,8 @@ export class CandleModel {
   static readonly OFFSET_ASSET_TOKENS = 32;
   static readonly OFFSET_CRNCY_TOKENS = 40;
   static readonly OFFSET_TIME = 48;
-  static readonly OFFSET_COUNTER = 52;
+  static readonly OFFSET_KIND = 52;
+  static readonly OFFSET_NEXT = 54;
 
   open: number;
   close: number;
@@ -374,7 +371,8 @@ export class CandleModel {
   assetTokens: number;
   crncyTokens: number;
   time: number;
-  counter: number;
+  kind: number;
+  next: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandleModel {
     const result = new CandleModel();
     let autoData = new AutoData(data, offset);
@@ -385,36 +383,55 @@ export class CandleModel {
     result.assetTokens = autoData.readI64();
     result.crncyTokens = autoData.readI64();
     result.time = autoData.readU32();
-    result.counter = autoData.readU32();
+    result.kind = autoData.readU16();
+    result.next = autoData.readU16();
     return result;
   }
 }
 
-export class CandlesAccountHeaderModel {
-  static readonly LENGTH = 6 * 4; // 24 bytes
+export class CandlesHeaderModel {
+  static readonly LENGTH = 12 * 4; // 48 bytes
 
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_VERSION = 4;
-  static readonly OFFSET_ID = 8;
-  static readonly OFFSET_SLOT = 12;
-  static readonly OFFSET_COUNT = 16;
-  static readonly OFFSET_LAST = 20;
+  static readonly OFFSET_TOTAL_COUNT = 0;
+  static readonly OFFSET_USED_COUNT = 4;
+  static readonly OFFSET_COUNT_1M = 8;
+  static readonly OFFSET_COUNT_15M = 12;
+  static readonly OFFSET_COUNT_DAY = 16;
+  static readonly OFFSET_FIRST_1M = 20;
+  static readonly OFFSET_FIRST_15M = 24;
+  static readonly OFFSET_FIRST_DAY = 28;
+  static readonly OFFSET_LAST_1M = 32;
+  static readonly OFFSET_LAST_15M = 36;
+  static readonly OFFSET_LAST_DAY = 40;
+  static readonly OFFSET_PADDING = 44;
 
-  tag: number;
-  version: number;
-  id: number;
-  slot: number;
-  count: number;
-  last: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandlesAccountHeaderModel {
-    const result = new CandlesAccountHeaderModel();
+  totalCount: number;
+  usedCount: number;
+  count1M: number;
+  count15M: number;
+  countDay: number;
+  first1M: number;
+  first15M: number;
+  firstDay: number;
+  last1M: number;
+  last15M: number;
+  lastDay: number;
+  padding: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandlesHeaderModel {
+    const result = new CandlesHeaderModel();
     let autoData = new AutoData(data, offset);
-    result.tag = autoData.readU32();
-    result.version = autoData.readU32();
-    result.id = autoData.readU32();
-    result.slot = autoData.readU32();
-    result.count = autoData.readU32();
-    result.last = autoData.readU32();
+    result.totalCount = autoData.readU32();
+    result.usedCount = autoData.readU32();
+    result.count1M = autoData.readU32();
+    result.count15M = autoData.readU32();
+    result.countDay = autoData.readU32();
+    result.first1M = autoData.readU32();
+    result.first15M = autoData.readU32();
+    result.firstDay = autoData.readU32();
+    result.last1M = autoData.readU32();
+    result.last15M = autoData.readU32();
+    result.lastDay = autoData.readU32();
+    result.padding = autoData.readU32();
     return result;
   }
 }
@@ -1005,7 +1022,7 @@ export class TokenStateModel {
 }
 
 export class SpotClientInfoModel {
-  static readonly LENGTH = 4 * 4 + 2 * 8; // 32 bytes
+  static readonly LENGTH = 6 * 4 + 5 * 8; // 64 bytes
 
   static readonly OFFSET_CLIENT = 0;
   static readonly OFFSET_FILLED_ORDERS = 4;
@@ -1013,6 +1030,11 @@ export class SpotClientInfoModel {
   static readonly OFFSET_ASKS_ENTRY = 12;
   static readonly OFFSET_AVAIL_ASSET_TOKENS = 16;
   static readonly OFFSET_AVAIL_CRNCY_TOKENS = 24;
+  static readonly OFFSET_IN_ORDERS_ASSET_TOKENS = 32;
+  static readonly OFFSET_IN_ORDERS_CRNCY_TOKENS = 40;
+  static readonly OFFSET_BID_SLOT = 48;
+  static readonly OFFSET_ASK_SLOT = 52;
+  static readonly OFFSET_RESERVED = 56;
 
   client: number;
   filledOrders: number;
@@ -1020,6 +1042,11 @@ export class SpotClientInfoModel {
   asksEntry: number;
   availAssetTokens: number;
   availCrncyTokens: number;
+  inOrdersAssetTokens: number;
+  inOrdersCrncyTokens: number;
+  bidSlot: number;
+  askSlot: number;
+  reserved: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SpotClientInfoModel {
     const result = new SpotClientInfoModel();
     let autoData = new AutoData(data, offset);
@@ -1029,27 +1056,6 @@ export class SpotClientInfoModel {
     result.asksEntry = autoData.readU32();
     result.availAssetTokens = autoData.readI64();
     result.availCrncyTokens = autoData.readI64();
-    return result;
-  }
-}
-
-export class SpotClientInfo2Model {
-  static readonly LENGTH = 2 * 4 + 3 * 8; // 32 bytes
-
-  static readonly OFFSET_IN_ORDERS_ASSET_TOKENS = 0;
-  static readonly OFFSET_IN_ORDERS_CRNCY_TOKENS = 8;
-  static readonly OFFSET_BID_SLOT = 16;
-  static readonly OFFSET_ASK_SLOT = 20;
-  static readonly OFFSET_RESERVED = 24;
-
-  inOrdersAssetTokens: number;
-  inOrdersCrncyTokens: number;
-  bidSlot: number;
-  askSlot: number;
-  reserved: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SpotClientInfo2Model {
-    const result = new SpotClientInfo2Model();
-    let autoData = new AutoData(data, offset);
     result.inOrdersAssetTokens = autoData.readI64();
     result.inOrdersCrncyTokens = autoData.readI64();
     result.bidSlot = autoData.readU32();

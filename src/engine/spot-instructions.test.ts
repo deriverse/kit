@@ -50,11 +50,6 @@ vi.mock('./context-builders', () => ({
     { address: 'SpotCtx8888888888888888888888888' as Address, role: AccountRole.WRITABLE },
     { address: 'SpotCtx9999999999999999999999999' as Address, role: AccountRole.WRITABLE },
   ]),
-  getSpotCandles: vi.fn().mockResolvedValue([
-    { address: 'SpotCandles1111111111111111111' as Address, role: AccountRole.WRITABLE },
-    { address: 'SpotCandles2222222222222222222' as Address, role: AccountRole.WRITABLE },
-    { address: 'SpotCandles3333333333333333333' as Address, role: AccountRole.WRITABLE },
-  ]),
   getPerpContext: vi.fn().mockResolvedValue([]),
 }));
 

@@ -649,18 +649,6 @@ async function buildNewInstrumentInstructions(
       }),
       role: AccountRole.WRITABLE,
     },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_1M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_15M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_DAY_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
   ];
 
   const assetDec = tokenDec(ctx.tokens, assetTokenId, ctx.uiNumbers);

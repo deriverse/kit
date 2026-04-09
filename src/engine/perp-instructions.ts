@@ -20,7 +20,7 @@ import {
   PerpMassCancelArgs,
   PerpChangeLeverageArgs,
   PerpStatisticsResetArgs,
-  NewInstrumentArgs,
+  ParsedNewInstrumentArgs,
   Instruction,
 } from '../types';
 import { AccountType, InstrMask } from '../types/enums';
@@ -30,9 +30,11 @@ import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
   DF,
+  STANDARD_MAPS_SIZE,
+  EXTENDED_MAPS_SIZE,
 } from '../constants';
 import { perpSeatReserve, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
-import { TokenStateModel, RootStateModel, QuoteOrderModel } from '../structure_models';
+import { TokenStateModel, RootStateModel, QuoteOrderModel, InstrFlag } from '../structure_models';
 import {
   upgradeToPerpData,
   perpDepositData,
@@ -51,6 +53,8 @@ import {
   getInstrAccountByTag,
   getTokenAccount,
   getTokenId,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
 import { getPerpContext } from './context-builders';
@@ -65,8 +69,8 @@ export interface PerpInstructionContext extends AccountHelperContext {
   uiNumbers: boolean;
   signer: Address;
   rootAccount: Address;
-  clientPrimaryAccount: Address;
-  clientCommunityAccount: Address;
+  clientPrimaryAccount: Address | null;
+  clientCommunityAccount: Address | null;
   refClientPrimaryAccount: Address | null;
   refClientCommunityAccount: Address | null;
 }
@@ -224,10 +228,12 @@ async function buildPerpDepositInstruction(
   args: PerpDepositArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
@@ -251,10 +257,12 @@ async function buildPerpBuySeatInstruction(
   args: PerpBuySeatArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -281,10 +289,12 @@ async function buildPerpSellSeatInstruction(
   args: PerpSellSeatArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -311,11 +321,14 @@ async function buildNewPerpOrderInstruction(
   args: NewPerpOrderArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+  const clientCommunityAccount = requireClientCommunityAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientCommunityAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -354,6 +367,9 @@ async function buildPerpQuotesReplaceInstruction(
   args: PerpQuotesReplaceArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+  const clientCommunityAccount = requireClientCommunityAccount(ctx);
+
   let assetTokenDecFactor = tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers);
 
   if (args.orders.length > 12) {
@@ -362,13 +378,19 @@ async function buildPerpQuotesReplaceInstruction(
 
   let mask = buildQuotesMask(args.orders);
 
-  let headerBuf = perpQuotesReplaceData(42, mask, args.instrId);
+  let headerBuf = perpQuotesReplaceData(42, args.bump ?? 0, args.orderType ?? 0, mask, args.instrId);
 
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {
     const offset = i * QuoteOrderModel.LENGTH;
-    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newPrice * DF)), offset + QuoteOrderModel.OFFSET_NEW_PRICE);
-    ordersBuf.writeBigInt64LE(BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)), offset + QuoteOrderModel.OFFSET_NEW_QTY);
+    ordersBuf.writeBigInt64LE(
+      BigInt(Math.round(args.orders[i].newPrice * DF)),
+      offset + QuoteOrderModel.OFFSET_NEW_PRICE,
+    );
+    ordersBuf.writeBigInt64LE(
+      BigInt(Math.round(args.orders[i].newQty * assetTokenDecFactor)),
+      offset + QuoteOrderModel.OFFSET_NEW_QTY,
+    );
     ordersBuf.writeBigInt64LE(BigInt(Math.floor(args.orders[i].oldId)), offset + QuoteOrderModel.OFFSET_OLD_ID);
   }
 
@@ -377,8 +399,8 @@ async function buildPerpQuotesReplaceInstruction(
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientCommunityAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -403,10 +425,12 @@ async function buildPerpOrderCancelInstruction(
   args: PerpOrderCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -427,10 +451,12 @@ async function buildPerpMassCancelInstruction(
   args: PerpMassCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -451,10 +477,12 @@ async function buildPerpChangeLeverageInstruction(
   args: PerpChangeLeverageArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -475,10 +503,12 @@ async function buildPerpStatisticsResetInstruction(
   args: PerpStatisticsResetArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getPerpContext(ctx, instr.header)),
     { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -495,13 +525,15 @@ async function buildPerpStatisticsResetInstruction(
  * Build new ref link instruction
  */
 async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let buf = Buffer.alloc(1);
   buf.writeUInt8(45, 0);
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.WRITABLE },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
   ];
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };
@@ -512,7 +544,7 @@ async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<
  */
 async function buildNewInstrumentInstructions(
   ctx: PerpInstructionContext,
-  args: NewInstrumentArgs,
+  args: ParsedNewInstrumentArgs,
   rpcGetSlot: () => Promise<bigint>,
   rpcGetAccountInfo: (address: Address) => Promise<SolanaRpcResponse<AccountInfoBase | null>>,
   rpcGetMinBalance: (size: bigint) => Promise<bigint>,
@@ -549,7 +581,7 @@ async function buildNewInstrumentInstructions(
     programAddress: ctx.programId,
     seed: mapsAccountSeed,
   });
-  const mapsAccountSize = 42184;
+  const mapsAccountSize = (args.mask & InstrFlag.similarAssets) !== 0 ? EXTENDED_MAPS_SIZE : STANDARD_MAPS_SIZE;
   const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
   const createMapsAccountIx = getCreateAccountWithSeedInstruction({
     payer: ctx.signer as unknown as TransactionSigner,
@@ -617,31 +649,22 @@ async function buildNewInstrumentInstructions(
       }),
       role: AccountRole.WRITABLE,
     },
-    {
-      address: await getInstrAccountByTag(ctx, {
-        ...tokenArgs,
-        tag: AccountType.SPOT_CLIENT_INFOS2,
-      }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_1M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_15M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_DAY_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
   ];
+
+  const assetDec = tokenDec(ctx.tokens, assetTokenId, ctx.uiNumbers);
 
   const newInstrIx = {
     accounts: keys,
     programAddress: ctx.programId,
-    data: newInstrumentData(9, crncyTokenId, slot, args.initialPrice * DF),
+    data: newInstrumentData(
+      9,
+      args.mask,
+      crncyTokenId,
+      slot,
+      args.initialPrice * DF,
+      args.minQty * assetDec,
+      args.fixedFeeRate,
+    ),
   } as Instruction;
   return [createMapsAccountIx, newInstrIx];
 }

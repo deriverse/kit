@@ -43,6 +43,15 @@ import {
   PerpBuySeatArgs,
   SwapArgs,
   PerpSellSeatArgs,
+  VmInitActivateArgs,
+  VmFinalizeActivateArgs,
+  VmFinalizeDeactivateArgs,
+  VmInitWithdrawArgs,
+  VmInitWithdrawFinalizeArgs,
+  VmChangeListArgs,
+  VmAddWithdrawalAddressArgs,
+  VmRemoveWithdrawalAddressArgs,
+  VmDirectWithdrawArgs,
   LogMessage,
   DepositArgsSchema,
   WithdrawArgsSchema,
@@ -62,6 +71,15 @@ import {
   PerpChangeLeverageArgsSchema,
   PerpStatisticsResetArgsSchema,
   NewInstrumentArgsSchema,
+  VmInitActivateArgsSchema,
+  VmFinalizeActivateArgsSchema,
+  VmFinalizeDeactivateArgsSchema,
+  VmInitWithdrawArgsSchema,
+  VmInitWithdrawFinalizeArgsSchema,
+  VmChangeListArgsSchema,
+  VmAddWithdrawalAddressArgsSchema,
+  VmRemoveWithdrawalAddressArgsSchema,
+  VmDirectWithdrawArgsSchema,
   InstrIdSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
@@ -98,7 +116,6 @@ import {
 import {
   getSpotContext as getSpotContextFn,
   getPerpContext as getPerpContextFn,
-  getSpotCandles as getSpotCandlesFn,
 } from './context-builders';
 import { tokenDec } from './utils';
 import {
@@ -132,6 +149,21 @@ import {
   buildNewRefLinkInstruction,
   buildNewInstrumentInstructions,
 } from './perp-instructions';
+import {
+  buildVmInitActivateInstruction,
+  buildVmInitActivateCancelInstruction,
+  buildVmFinalizeActivateInstruction,
+  buildVmInitDeactivateInstruction,
+  buildVmInitDeactivateCancelInstruction,
+  buildVmFinalizeDeactivateInstruction,
+  buildVmInitWithdrawInstruction,
+  buildVmInitWithdrawCancelInstruction,
+  buildVmInitWithdrawFinalizeInstruction,
+  buildVmChangeListInstruction,
+  buildVmAddWithdrawalAddressInstruction,
+  buildVmRemoveWithdrawalAddressInstruction,
+  buildVmDirectWithdrawInstruction,
+} from './vm-instructions';
 
 type Address = SolanaAddress<string>;
 
@@ -206,12 +238,6 @@ export class Engine {
     if (this.signer === null) {
       throw new Error('Wallet is not connected');
     }
-    if (this.clientPrimaryAccount === null) {
-      throw new Error('Client primary account not found');
-    }
-    if (this.clientCommunityAccount === null) {
-      throw new Error('Client community account not found');
-    }
     return {
       ...this.getAccountHelperContext(),
       instruments: this.instruments,
@@ -231,6 +257,19 @@ export class Engine {
     return {
       ...this.getSpotInstructionContext(),
       rootStateModel: this.rootStateModel,
+    };
+  }
+
+  private getVmInstructionContext() {
+    if (this.signer === null) {
+      throw new Error('Wallet is not connected');
+    }
+    return {
+      ...this.getAccountHelperContext(),
+      tokens: this.tokens,
+      uiNumbers: this.uiNumbers,
+      signer: this.signer,
+      rootAccount: this.rootAccount,
     };
   }
 
@@ -602,6 +641,9 @@ export class Engine {
     header.perpLastPx /= dec;
     header.perpLongSpotPriceForWithdrowal /= dec;
     header.perpShortSpotPriceForWithdrowal /= dec;
+    header.shortEmaPx /= dec;
+    header.midEmaPx /= dec;
+    header.longEmaPx /= dec;
     header.poolFees /= crncyTokenDec;
     header.lastTradeAssetTokens /= assetTokenDec;
     header.lastTradeCrncyTokens /= crncyTokenDec;
@@ -688,10 +730,6 @@ export class Engine {
 
   async getPerpContext(instrAccountHeaderModel: InstrAccountHeaderModel): Promise<AccountMeta[]> {
     return getPerpContextFn(this.getAccountHelperContext(), instrAccountHeaderModel);
-  }
-
-  async getSpotCandles(instrAccountHeaderModel: InstrAccountHeaderModel): Promise<AccountMeta[]> {
-    return getSpotCandlesFn(this.getAccountHelperContext(), instrAccountHeaderModel);
   }
 
   // ============================================
@@ -887,17 +925,92 @@ export class Engine {
   }
 
   // ============================================
+  // VM (VAULT MODE) INSTRUCTIONS
+  // ============================================
+
+  async vmInitActivateInstruction(args: VmInitActivateArgs): Promise<Instruction> {
+    const parsed = VmInitActivateArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmInitActivateInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmInitActivateCancelInstruction(): Promise<Instruction> {
+    await this.requireClient();
+    return buildVmInitActivateCancelInstruction(this.getVmInstructionContext());
+  }
+
+  async vmFinalizeActivateInstruction(args: VmFinalizeActivateArgs): Promise<Instruction> {
+    const parsed = VmFinalizeActivateArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmFinalizeActivateInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmInitDeactivateInstruction(): Promise<Instruction> {
+    await this.requireClient();
+    return buildVmInitDeactivateInstruction(this.getVmInstructionContext());
+  }
+
+  async vmInitDeactivateCancelInstruction(): Promise<Instruction> {
+    await this.requireClient();
+    return buildVmInitDeactivateCancelInstruction(this.getVmInstructionContext());
+  }
+
+  async vmFinalizeDeactivateInstruction(args: VmFinalizeDeactivateArgs): Promise<Instruction> {
+    const parsed = VmFinalizeDeactivateArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmFinalizeDeactivateInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmInitWithdrawInstruction(args: VmInitWithdrawArgs): Promise<Instruction> {
+    const parsed = VmInitWithdrawArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmInitWithdrawInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmInitWithdrawCancelInstruction(): Promise<Instruction> {
+    await this.requireClient();
+    return buildVmInitWithdrawCancelInstruction(this.getVmInstructionContext());
+  }
+
+  async vmInitWithdrawFinalizeInstruction(args: VmInitWithdrawFinalizeArgs): Promise<Instruction> {
+    const parsed = VmInitWithdrawFinalizeArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmInitWithdrawFinalizeInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmChangeListInstruction(args: VmChangeListArgs): Promise<Instruction> {
+    const parsed = VmChangeListArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmChangeListInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmAddWithdrawalAddressInstruction(args: VmAddWithdrawalAddressArgs): Promise<Instruction> {
+    const parsed = VmAddWithdrawalAddressArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmAddWithdrawalAddressInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmRemoveWithdrawalAddressInstruction(args: VmRemoveWithdrawalAddressArgs): Promise<Instruction> {
+    const parsed = VmRemoveWithdrawalAddressArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmRemoveWithdrawalAddressInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmDirectWithdrawInstruction(args: VmDirectWithdrawArgs): Promise<Instruction> {
+    const parsed = VmDirectWithdrawArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmDirectWithdrawInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  // ============================================
   // NEW INSTRUMENT INSTRUCTIONS
   // ============================================
 
   async newInstrumentInstructions(args: NewInstrumentArgs): Promise<Instruction[]> {
-    NewInstrumentArgsSchema.parse(args);
-    if (this.signer == null) {
-      throw new Error('Wallet is not connected');
-    }
+    const parsed = NewInstrumentArgsSchema.parse(args);
     return buildNewInstrumentInstructions(
       this.getPerpInstructionContext(),
-      args,
+      parsed,
       () => this.rpc.getSlot().send(),
       (address) => this.rpc.getAccountInfo(address).send(),
       (size) => this.rpc.getMinimumBalanceForRentExemption(size).send(),

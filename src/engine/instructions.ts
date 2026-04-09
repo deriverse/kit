@@ -16,6 +16,8 @@ import {
   getTokenAccount,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  requireClientCommunityAccount,
+  requireClientPrimaryAccount,
 } from './account-helpers';
 import { depositData, withdrawData } from '../instruction_models';
 import { SpotInstructionContext } from './spot-instructions';
@@ -64,21 +66,12 @@ async function buildDepositInstruction(
         address: await getAccountByTag(ctx, AccountType.COMMUNITY),
         role: AccountRole.WRITABLE,
       });
-      keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+      keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
     }
     return {
       accounts: keys,
       programAddress: ctx.programId,
-      data: depositData(
-        7,
-        0,
-        allFunds,
-        args.tokenId,
-        amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
-        0,
-        0,
-        args.customId ?? 0,
-      ),
+      data: depositData(7, 0, allFunds, args.tokenId, amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), 0, 0, args.customId ?? 0),
     };
   } else {
     const slot = Number(await rpcGetSlot()) - 1;
@@ -139,6 +132,8 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
   const tokenProgramId = (token.mask & 0x80000000) != 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
   const clientTokenAccount = await findAssociatedTokenAddress(ctx.signer, tokenProgramId, token.address);
 
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: clientTokenAccount, role: AccountRole.WRITABLE },
@@ -146,7 +141,7 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
     { address: token.address, role: AccountRole.READONLY },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: await getTokenAccount(ctx, token.address), role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     { address: tokenProgramId, role: AccountRole.READONLY },
     { address: ctx.drvsAuthority, role: AccountRole.READONLY },
@@ -178,19 +173,18 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
   }
 
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: withdrawData(
-      8,
-      args.tokenId,
-      args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers),
-      args.customId ?? 0,
-    ),
+    data: withdrawData(8, args.tokenId, args.amount * tokenDec(ctx.tokens, args.tokenId, ctx.uiNumbers), args.customId ?? 0),
   };
 }
 
 export { buildDepositInstruction, buildWithdrawInstruction };
+
+
+
+

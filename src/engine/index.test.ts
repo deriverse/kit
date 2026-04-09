@@ -14,6 +14,14 @@ vi.mock('./account-helpers', () => ({
   findClientPrimaryAccount: vi.fn().mockResolvedValue('MockClientPrimary1111111111111111' as Address),
   findClientCommunityAccount: vi.fn().mockResolvedValue('MockClientCommunity11111111111111' as Address),
   findAccountsByTag: vi.fn().mockResolvedValue([]),
+  requireClientPrimaryAccount: (ctx: any) => {
+    if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+    return ctx.clientPrimaryAccount;
+  },
+  requireClientCommunityAccount: (ctx: any) => {
+    if (ctx.clientCommunityAccount === null) throw new Error('Client community account not found');
+    return ctx.clientCommunityAccount;
+  },
   AccountHelperContext: {},
 }));
 
@@ -139,7 +147,6 @@ vi.mock('./perp-instructions', () => ({
 vi.mock('./context-builders', () => ({
   getSpotContext: vi.fn().mockResolvedValue([]),
   getPerpContext: vi.fn().mockResolvedValue([]),
-  getSpotCandles: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock logs-decoder
@@ -175,7 +182,7 @@ import {
 
 // Mock RPC for testing
 const createMockRpc = () => ({
-  getAccountInfo: vi.fn().mockReturnValue({ send: vi.fn() }),
+  getAccountInfo: vi.fn().mockReturnValue({ send: vi.fn().mockResolvedValue({ value: null }) }),
   getMultipleAccounts: vi.fn().mockReturnValue({ send: vi.fn() }),
   getProgramAccounts: vi.fn().mockReturnValue({ send: vi.fn() }),
   getSlot: vi.fn().mockReturnValue({ send: vi.fn().mockResolvedValue(BigInt(12345)) }),
@@ -531,6 +538,33 @@ describe('Engine instruction methods', () => {
   });
 
   describe('swapInstruction', () => {
+    it('works without client accounts set', async () => {
+      const mockRpc = createMockRpc();
+      const engine = new Engine(mockRpc as any);
+      engine.tokens = createMockTokensMap();
+      engine.instruments = createMockInstrumentsMap();
+      engine.rootAccount = 'MockRootAccount11111111111111111111' as Address;
+      (engine as any).drvsAuthority = 'MockDrvsAuthority11111111111111111' as Address;
+      (engine as any).rootStateModel = new RootStateModel();
+      (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
+      (engine as any).clientPrimaryAccount = null;
+      (engine as any).clientCommunityAccount = null;
+      vi.spyOn(engine, 'updateInstrData').mockResolvedValue(undefined);
+
+      const result = await engine.swapInstruction({
+        assetMint: 'AssetMint1111111111111111111111111111' as Address,
+        crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+        amount: 100,
+        limitPrice: 100,
+        crncyInput: true,
+        refFeeRate: 0,
+        minAmountOut: 0,
+      });
+
+      expect(result).toBeDefined();
+      expect(buildSwapInstruction).toHaveBeenCalled();
+    });
+
     it('calls buildSwapInstruction', async () => {
       const { engine } = await setupEngineWithClient();
 
@@ -721,6 +755,29 @@ describe('Engine instruction methods', () => {
   });
 
   describe('newInstrumentInstructions', () => {
+    it('works without client accounts set', async () => {
+      const mockRpc = createMockRpc();
+      const engine = new Engine(mockRpc as any);
+      engine.tokens = createMockTokensMap();
+      engine.instruments = createMockInstrumentsMap();
+      engine.rootAccount = 'MockRootAccount11111111111111111111' as Address;
+      (engine as any).drvsAuthority = 'MockDrvsAuthority11111111111111111' as Address;
+      (engine as any).rootStateModel = new RootStateModel();
+      (engine as any).rootStateModel.tokensCount = 3;
+      (engine as any).signer = 'MockSigner1111111111111111111111111111' as Address;
+      (engine as any).clientPrimaryAccount = null;
+      (engine as any).clientCommunityAccount = null;
+
+      const result = await engine.newInstrumentInstructions({
+        assetMint: 'AssetMint1111111111111111111111111111' as Address,
+        crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+        initialPrice: 100,
+      });
+
+      expect(result).toBeDefined();
+      expect(buildNewInstrumentInstructions).toHaveBeenCalled();
+    });
+
     it('throws when wallet not connected', async () => {
       const mockRpc = createMockRpc();
       const engine = new Engine(mockRpc as any);
@@ -730,6 +787,9 @@ describe('Engine instruction methods', () => {
           assetMint: 'AssetMint1111111111111111111111111111' as Address,
           crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
           initialPrice: 100,
+          mask: 0,
+          minQty: 0,
+          fixedFeeRate: 0,
         }),
       ).rejects.toThrow('Wallet is not connected');
     });
@@ -741,9 +801,34 @@ describe('Engine instruction methods', () => {
         assetMint: 'AssetMint1111111111111111111111111111' as Address,
         crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
         initialPrice: 100,
+        mask: 0,
+        minQty: 0,
+        fixedFeeRate: 0,
       });
 
       expect(buildNewInstrumentInstructions).toHaveBeenCalled();
+    });
+
+    it('applies default values for mask, minQty, and fixedFeeRate when omitted', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      await engine.newInstrumentInstructions({
+        assetMint: 'AssetMint1111111111111111111111111111' as Address,
+        crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
+        initialPrice: 100,
+      });
+
+      expect(buildNewInstrumentInstructions).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          mask: 0,
+          minQty: 1,
+          fixedFeeRate: 0,
+        }),
+        expect.any(Function),
+        expect.any(Function),
+        expect.any(Function),
+      );
     });
   });
 

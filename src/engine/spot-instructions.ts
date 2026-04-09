@@ -37,9 +37,11 @@ import {
   getInstrId,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext, getSpotCandles } from './context-builders';
+import { getSpotContext, getSpotOneSidedContext } from './context-builders';
 
 /**
  * Context needed for spot instruction builders
@@ -50,8 +52,8 @@ export interface SpotInstructionContext extends AccountHelperContext {
   uiNumbers: boolean;
   signer: Address;
   rootAccount: Address;
-  clientPrimaryAccount: Address;
-  clientCommunityAccount: Address;
+  clientPrimaryAccount: Address | null;
+  clientCommunityAccount: Address | null;
   refClientPrimaryAccount: Address | null;
   refClientCommunityAccount: Address | null;
   privateMode: boolean;
@@ -65,6 +67,8 @@ async function buildSpotLpInstruction(
   args: SpotLpArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
@@ -76,7 +80,7 @@ async function buildSpotLpInstruction(
       }),
       role: AccountRole.WRITABLE,
     },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -85,7 +89,7 @@ async function buildSpotLpInstruction(
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
-    keys.push({ address: ctx.clientCommunityAccount, role: AccountRole.WRITABLE });
+    keys.push({ address: requireClientCommunityAccount(ctx), role: AccountRole.WRITABLE });
   }
 
   const minPrice = args.minPrice ?? 0;
@@ -130,7 +134,6 @@ async function buildNewSpotOrderInstruction(
     { address: await findClientPrimaryAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     { address: await findClientCommunityAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: instr.header.assetTokenId == 0 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -165,7 +168,7 @@ async function buildSpotQuotesReplaceInstruction(
 
   let mask = buildQuotesMask(args.orders);
 
-  let headerBuf = spotQuotesReplaceData(34, mask, args.instrId);
+  let headerBuf = spotQuotesReplaceData(34, args.bump ?? 0, args.orderType ?? 0, mask, args.instrId);
 
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {
@@ -183,7 +186,6 @@ async function buildSpotQuotesReplaceInstruction(
     { address: await findClientPrimaryAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     { address: await findClientCommunityAccount(ctx, ctx.signer), role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: instr.header.assetTokenId == 0 ? AccountRole.WRITABLE : AccountRole.READONLY,
@@ -210,12 +212,13 @@ async function buildSpotOrderCancelInstruction(
   args: SpotOrderCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -246,12 +249,13 @@ async function buildSpotMassCancelInstruction(
   args: SpotMassCancelArgs,
   instr: Instrument,
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
   const drvs = instr.header.assetTokenId == 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: ctx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     ...(await getSpotContext(ctx, instr.header)),
     {
       address: await getAccountByTag(ctx, AccountType.COMMUNITY),
@@ -316,36 +320,35 @@ async function buildSwapInstruction(
           ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
           : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
     ),
-    args.refFeeRate,
-    args.minAmountOut,
+    args.minAmountOut ?? 0,
   );
+
+  const swapSide = args.crncyInput ? 1 : 0;
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    ...(await getSpotContext(ctx, instr.header)),
-    ...(await getSpotCandles(ctx, instr.header)),
-    { address: await getAccountByTag(ctx, AccountType.COMMUNITY), role: AccountRole.READONLY },
-    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
-    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
     { address: args.assetMint, role: AccountRole.READONLY },
     { address: args.crncyMint, role: AccountRole.READONLY },
-    { address: await getTokenAccount(ctx, args.assetMint), role: AccountRole.READONLY },
-    { address: await getTokenAccount(ctx, args.crncyMint), role: AccountRole.READONLY },
+    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
+    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),
     { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
     { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
-    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: assetTokenProgramId, role: AccountRole.READONLY },
-    { address: crncyTokenProgramId, role: AccountRole.READONLY },
-    { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
-  if (args.feeTakerWallet && args.refFeeRate > 0) {
+  if (args.feeTakerWallet && args.refFeeRate) {
     const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
     keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
-    keys.push({ address: args.feeTakerWallet, role: AccountRole.WRITABLE });
   }
+
+  keys.push({ address: assetTokenProgramId, role: AccountRole.READONLY });
+  if (assetTokenProgramId !== crncyTokenProgramId) {
+    keys.push({ address: crncyTokenProgramId, role: AccountRole.READONLY });
+  }
+  keys.push({ address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY });
+  keys.push({ address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY });
 
   return { accounts: keys, programAddress: ctx.programId, data: buf };
 }

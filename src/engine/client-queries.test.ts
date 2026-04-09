@@ -15,7 +15,6 @@ import {
   ClientPrimaryAccountHeaderModel,
   ClientCommunityAccountHeaderModel,
   SpotClientInfoModel,
-  SpotClientInfo2Model,
   OrderModel,
 } from '../structure_models';
 import { Instrument } from '../types';
@@ -118,22 +117,17 @@ function createClientCommunityBuffer(): Buffer {
 }
 
 function createSpotClientInfoBuffer(): Buffer {
-  const buffer = Buffer.alloc(32);
+  const buffer = Buffer.alloc(SpotClientInfoModel.LENGTH);
   buffer.writeUInt16LE(0, SpotClientInfoModel.OFFSET_BIDS_ENTRY);
   buffer.writeUInt16LE(2, SpotClientInfoModel.OFFSET_BIDS_ENTRY + 2);
   buffer.writeUInt16LE(10, SpotClientInfoModel.OFFSET_ASKS_ENTRY);
   buffer.writeUInt16LE(3, SpotClientInfoModel.OFFSET_ASKS_ENTRY + 2);
   buffer.writeBigInt64LE(BigInt(1000000000), SpotClientInfoModel.OFFSET_AVAIL_ASSET_TOKENS);
   buffer.writeBigInt64LE(BigInt(500000000), SpotClientInfoModel.OFFSET_AVAIL_CRNCY_TOKENS);
-  return buffer;
-}
-
-function createSpotClientInfo2Buffer(): Buffer {
-  const buffer = Buffer.alloc(32);
-  buffer.writeUInt32LE(100, SpotClientInfo2Model.OFFSET_BID_SLOT);
-  buffer.writeUInt32LE(101, SpotClientInfo2Model.OFFSET_ASK_SLOT);
-  buffer.writeBigInt64LE(BigInt(2000000000), SpotClientInfo2Model.OFFSET_IN_ORDERS_ASSET_TOKENS);
-  buffer.writeBigInt64LE(BigInt(1000000000), SpotClientInfo2Model.OFFSET_IN_ORDERS_CRNCY_TOKENS);
+  buffer.writeBigInt64LE(BigInt(2000000000), SpotClientInfoModel.OFFSET_IN_ORDERS_ASSET_TOKENS);
+  buffer.writeBigInt64LE(BigInt(1000000000), SpotClientInfoModel.OFFSET_IN_ORDERS_CRNCY_TOKENS);
+  buffer.writeUInt32LE(100, SpotClientInfoModel.OFFSET_BID_SLOT);
+  buffer.writeUInt32LE(101, SpotClientInfoModel.OFFSET_ASK_SLOT);
   return buffer;
 }
 
@@ -227,11 +221,10 @@ describe('client-queries functions', () => {
   describe('getClientSpotOrdersInfo', () => {
     it('fetches spot orders info for valid instrument', async () => {
       const infoBuffer = createSpotClientInfoBuffer();
-      const info2Buffer = createSpotClientInfo2Buffer();
 
       const mockRpc = createMockRpc({
         getMultipleAccounts: {
-          value: [{ data: [bufferToBase64(infoBuffer), 'base64'] }, { data: [bufferToBase64(info2Buffer), 'base64'] }],
+          value: [{ data: [bufferToBase64(infoBuffer), 'base64'] }],
           context: { slot: BigInt(12345) },
         },
       });

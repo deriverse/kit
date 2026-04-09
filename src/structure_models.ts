@@ -5,6 +5,8 @@ export enum OrderType {
   limit = 0,
   market = 1,
   marginCall = 2,
+  makerOnly = 3,
+  makerPriceDeviation = 4,
 }
 
 export enum AssetType {
@@ -26,6 +28,34 @@ export enum SlotFlag {
   option = 0b100,
 }
 
+export enum VmWhitelistTag {
+  vacant = 0,
+  withdrawAccount = 1,
+  programId = 2,
+  marketId = 3,
+}
+
+export enum InstrFlag {
+  perpActive = 0x40000000,
+  readyToPerpUpgrade = 0x01000000,
+  zeroFees = 0x1,
+  fixedFees = 0x2,
+  similarAssets = 0x4,
+  usdStablecoin = 0x8,
+  forex = 0x10,
+  suspended = 0x20,
+  longMarginCall = 0x40,
+  shortMarginCall = 0x80,
+  expandableCandles = 0x100,
+}
+
+export enum TokenFlag {
+  token2022 = 0x80000000,
+  baseCrncy = 0x40000000,
+  wrappedToken = 0x20000000,
+  sAMCrncy = 0x10000000,
+}
+
 export enum AccountType {
   clientCommunity = 35,
   clientDrv = 32,
@@ -34,15 +64,11 @@ export enum AccountType {
   holder = 1,
   root = 2,
   instr = 7,
-  spot15MCandles = 20,
-  spot1MCandles = 19,
   spotAskOrders = 17,
   spotAsksTree = 15,
   spotBidOrders = 16,
   spotBidsTree = 14,
   spotClientInfos = 12,
-  spotClientInfos2 = 13,
-  spotDayCandles = 21,
   spotLines = 18,
   spotMaps = 10,
   token = 4,
@@ -61,6 +87,7 @@ export enum AccountType {
   perpShortPxTree = 49,
   perpRebalanceTimeTree = 50,
   privateClients = 51,
+  vmClient = 52,
 }
 
 export class ClientCommunityRecordModel {
@@ -325,7 +352,7 @@ export class HolderAccountHeaderModel {
 }
 
 export class CandleModel {
-  static readonly LENGTH = 2 * 4 + 6 * 8; // 56 bytes
+  static readonly LENGTH = 2 * 2 + 1 * 4 + 6 * 8; // 56 bytes
 
   static readonly OFFSET_OPEN = 0;
   static readonly OFFSET_CLOSE = 8;
@@ -334,7 +361,8 @@ export class CandleModel {
   static readonly OFFSET_ASSET_TOKENS = 32;
   static readonly OFFSET_CRNCY_TOKENS = 40;
   static readonly OFFSET_TIME = 48;
-  static readonly OFFSET_COUNTER = 52;
+  static readonly OFFSET_KIND = 52;
+  static readonly OFFSET_NEXT = 54;
 
   open: number;
   close: number;
@@ -343,7 +371,8 @@ export class CandleModel {
   assetTokens: number;
   crncyTokens: number;
   time: number;
-  counter: number;
+  kind: number;
+  next: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandleModel {
     const result = new CandleModel();
     let autoData = new AutoData(data, offset);
@@ -354,36 +383,55 @@ export class CandleModel {
     result.assetTokens = autoData.readI64();
     result.crncyTokens = autoData.readI64();
     result.time = autoData.readU32();
-    result.counter = autoData.readU32();
+    result.kind = autoData.readU16();
+    result.next = autoData.readU16();
     return result;
   }
 }
 
-export class CandlesAccountHeaderModel {
-  static readonly LENGTH = 6 * 4; // 24 bytes
+export class CandlesHeaderModel {
+  static readonly LENGTH = 12 * 4; // 48 bytes
 
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_VERSION = 4;
-  static readonly OFFSET_ID = 8;
-  static readonly OFFSET_SLOT = 12;
-  static readonly OFFSET_COUNT = 16;
-  static readonly OFFSET_LAST = 20;
+  static readonly OFFSET_TOTAL_COUNT = 0;
+  static readonly OFFSET_USED_COUNT = 4;
+  static readonly OFFSET_COUNT_1M = 8;
+  static readonly OFFSET_COUNT_15M = 12;
+  static readonly OFFSET_COUNT_DAY = 16;
+  static readonly OFFSET_FIRST_1M = 20;
+  static readonly OFFSET_FIRST_15M = 24;
+  static readonly OFFSET_FIRST_DAY = 28;
+  static readonly OFFSET_LAST_1M = 32;
+  static readonly OFFSET_LAST_15M = 36;
+  static readonly OFFSET_LAST_DAY = 40;
+  static readonly OFFSET_PADDING = 44;
 
-  tag: number;
-  version: number;
-  id: number;
-  slot: number;
-  count: number;
-  last: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandlesAccountHeaderModel {
-    const result = new CandlesAccountHeaderModel();
+  totalCount: number;
+  usedCount: number;
+  count1M: number;
+  count15M: number;
+  countDay: number;
+  first1M: number;
+  first15M: number;
+  firstDay: number;
+  last1M: number;
+  last15M: number;
+  lastDay: number;
+  padding: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CandlesHeaderModel {
+    const result = new CandlesHeaderModel();
     let autoData = new AutoData(data, offset);
-    result.tag = autoData.readU32();
-    result.version = autoData.readU32();
-    result.id = autoData.readU32();
-    result.slot = autoData.readU32();
-    result.count = autoData.readU32();
-    result.last = autoData.readU32();
+    result.totalCount = autoData.readU32();
+    result.usedCount = autoData.readU32();
+    result.count1M = autoData.readU32();
+    result.count15M = autoData.readU32();
+    result.countDay = autoData.readU32();
+    result.first1M = autoData.readU32();
+    result.first15M = autoData.readU32();
+    result.firstDay = autoData.readU32();
+    result.last1M = autoData.readU32();
+    result.last15M = autoData.readU32();
+    result.lastDay = autoData.readU32();
+    result.padding = autoData.readU32();
     return result;
   }
 }
@@ -411,7 +459,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PREV_DAY_TRADES = 104;
   static readonly OFFSET_PERP_INSURANCE_FUND = 112;
   static readonly OFFSET_PERP_PRICE_DELTA = 120;
-  static readonly OFFSET_EMA_PX = 128;
+  static readonly OFFSET_SHORT_EMA_PX = 128;
   static readonly OFFSET_LP_PREV_DAY_FEES = 136;
   static readonly OFFSET_ASSET_TOKENS = 144;
   static readonly OFFSET_CRNCY_TOKENS = 152;
@@ -531,12 +579,12 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_PERP_ALLTIME_CRNCY_TOKENS = 984;
   static readonly OFFSET_LIQUIDATION_THRESHOLD = 992;
   static readonly OFFSET_SEATS_RESERVE = 1000;
-  static readonly OFFSET_RESERVED_VALUE4 = 1008;
-  static readonly OFFSET_RESERVED_VALUE5 = 1016;
-  static readonly OFFSET_RESERVED_VALUE6 = 1024;
-  static readonly OFFSET_RESERVED_VALUE7 = 1032;
-  static readonly OFFSET_RESERVED_VALUE8 = 1040;
-  static readonly OFFSET_RESERVED_VALUE9 = 1048;
+  static readonly OFFSET_SWAP_FEES = 1008;
+  static readonly OFFSET_SIMILAR_ASSETS_MIN_QTY = 1016;
+  static readonly OFFSET_FIXED_FEE_RATE = 1024;
+  static readonly OFFSET_MID_EMA_PX = 1032;
+  static readonly OFFSET_LONG_EMA_PX = 1040;
+  static readonly OFFSET_LOG_SEQ_NO = 1048;
   static readonly OFFSET_RESERVED_VALUE10 = 1056;
 
   tag: number;
@@ -559,7 +607,7 @@ export class InstrAccountHeaderModel {
   prevDayTrades: number;
   perpInsuranceFund: number;
   perpPriceDelta: number;
-  emaPx: number;
+  shortEmaPx: number;
   lpPrevDayFees: number;
   assetTokens: number;
   crncyTokens: number;
@@ -679,12 +727,12 @@ export class InstrAccountHeaderModel {
   perpAlltimeCrncyTokens: number;
   liquidationThreshold: number;
   seatsReserve: number;
-  reservedValue4: number;
-  reservedValue5: number;
-  reservedValue6: number;
-  reservedValue7: number;
-  reservedValue8: number;
-  reservedValue9: number;
+  swapFees: number;
+  similarAssetsMinQty: number;
+  fixedFeeRate: number;
+  midEmaPx: number;
+  longEmaPx: number;
+  logSeqNo: number;
   reservedValue10: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrAccountHeaderModel {
     const result = new InstrAccountHeaderModel();
@@ -709,7 +757,7 @@ export class InstrAccountHeaderModel {
     result.prevDayTrades = autoData.readI64();
     result.perpInsuranceFund = autoData.readI64();
     result.perpPriceDelta = autoData.readF64();
-    result.emaPx = autoData.readF64();
+    result.shortEmaPx = autoData.readF64();
     result.lpPrevDayFees = autoData.readI64();
     result.assetTokens = autoData.readI64();
     result.crncyTokens = autoData.readI64();
@@ -829,19 +877,19 @@ export class InstrAccountHeaderModel {
     result.perpAlltimeCrncyTokens = autoData.readF64();
     result.liquidationThreshold = autoData.readF64();
     result.seatsReserve = autoData.readI64();
-    result.reservedValue4 = autoData.readI64();
-    result.reservedValue5 = autoData.readI64();
-    result.reservedValue6 = autoData.readI64();
-    result.reservedValue7 = autoData.readI64();
-    result.reservedValue8 = autoData.readI64();
-    result.reservedValue9 = autoData.readI64();
+    result.swapFees = autoData.readI64();
+    result.similarAssetsMinQty = autoData.readI64();
+    result.fixedFeeRate = autoData.readF64();
+    result.midEmaPx = autoData.readF64();
+    result.longEmaPx = autoData.readF64();
+    result.logSeqNo = autoData.readI64();
     result.reservedValue10 = autoData.readI64();
     return result;
   }
 }
 
 export class RootStateModel {
-  static readonly LENGTH = 10 * 4 + 3 * 8 + 6 * 32; // 256 bytes
+  static readonly LENGTH = 16 * 4 + 7 * 8 + 6 * 32; // 312 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -862,6 +910,16 @@ export class RootStateModel {
   static readonly OFFSET_MASK = 240;
   static readonly OFFSET_POINTS_PROGRAM_EXPIRATION = 244;
   static readonly OFFSET_PURCHASING_PERP_SEAT_FEE = 248;
+  static readonly OFFSET_SPOT_FEE_RATE = 256;
+  static readonly OFFSET_PERP_FEE_RATE = 260;
+  static readonly OFFSET_SPOT_POOL_RATIO = 264;
+  static readonly OFFSET_MARGIN_CALL_PENALTY_RATE = 268;
+  static readonly OFFSET_FEES_PREPAYMENT_FOR_MAX_DISCOUNT = 272;
+  static readonly OFFSET_RESERVED_0 = 276;
+  static readonly OFFSET_RESERVED_1 = 280;
+  static readonly OFFSET_RESERVED_2 = 288;
+  static readonly OFFSET_RESERVED_3 = 296;
+  static readonly OFFSET_RESERVED_4 = 304;
 
   tag: number;
   version: number;
@@ -882,6 +940,16 @@ export class RootStateModel {
   mask: number;
   pointsProgramExpiration: number;
   purchasingPerpSeatFee: number;
+  spotFeeRate: number;
+  perpFeeRate: number;
+  spotPoolRatio: number;
+  marginCallPenaltyRate: number;
+  feesPrepaymentForMaxDiscount: number;
+  reserved0: number;
+  reserved1: number;
+  reserved2: number;
+  reserved3: number;
+  reserved4: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): RootStateModel {
     const result = new RootStateModel();
     let autoData = new AutoData(data, offset);
@@ -904,6 +972,16 @@ export class RootStateModel {
     result.mask = autoData.readU32();
     result.pointsProgramExpiration = autoData.readU32();
     result.purchasingPerpSeatFee = autoData.readF64();
+    result.spotFeeRate = autoData.readU32();
+    result.perpFeeRate = autoData.readU32();
+    result.spotPoolRatio = autoData.readU32();
+    result.marginCallPenaltyRate = autoData.readU32();
+    result.feesPrepaymentForMaxDiscount = autoData.readU32();
+    result.reserved0 = autoData.readU32();
+    result.reserved1 = autoData.readU64();
+    result.reserved2 = autoData.readU64();
+    result.reserved3 = autoData.readU64();
+    result.reserved4 = autoData.readU64();
     return result;
   }
 }
@@ -944,7 +1022,7 @@ export class TokenStateModel {
 }
 
 export class SpotClientInfoModel {
-  static readonly LENGTH = 4 * 4 + 2 * 8; // 32 bytes
+  static readonly LENGTH = 6 * 4 + 5 * 8; // 64 bytes
 
   static readonly OFFSET_CLIENT = 0;
   static readonly OFFSET_FILLED_ORDERS = 4;
@@ -952,6 +1030,11 @@ export class SpotClientInfoModel {
   static readonly OFFSET_ASKS_ENTRY = 12;
   static readonly OFFSET_AVAIL_ASSET_TOKENS = 16;
   static readonly OFFSET_AVAIL_CRNCY_TOKENS = 24;
+  static readonly OFFSET_IN_ORDERS_ASSET_TOKENS = 32;
+  static readonly OFFSET_IN_ORDERS_CRNCY_TOKENS = 40;
+  static readonly OFFSET_BID_SLOT = 48;
+  static readonly OFFSET_ASK_SLOT = 52;
+  static readonly OFFSET_RESERVED = 56;
 
   client: number;
   filledOrders: number;
@@ -959,6 +1042,11 @@ export class SpotClientInfoModel {
   asksEntry: number;
   availAssetTokens: number;
   availCrncyTokens: number;
+  inOrdersAssetTokens: number;
+  inOrdersCrncyTokens: number;
+  bidSlot: number;
+  askSlot: number;
+  reserved: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SpotClientInfoModel {
     const result = new SpotClientInfoModel();
     let autoData = new AutoData(data, offset);
@@ -968,27 +1056,6 @@ export class SpotClientInfoModel {
     result.asksEntry = autoData.readU32();
     result.availAssetTokens = autoData.readI64();
     result.availCrncyTokens = autoData.readI64();
-    return result;
-  }
-}
-
-export class SpotClientInfo2Model {
-  static readonly LENGTH = 2 * 4 + 3 * 8; // 32 bytes
-
-  static readonly OFFSET_IN_ORDERS_ASSET_TOKENS = 0;
-  static readonly OFFSET_IN_ORDERS_CRNCY_TOKENS = 8;
-  static readonly OFFSET_BID_SLOT = 16;
-  static readonly OFFSET_ASK_SLOT = 20;
-  static readonly OFFSET_RESERVED = 24;
-
-  inOrdersAssetTokens: number;
-  inOrdersCrncyTokens: number;
-  bidSlot: number;
-  askSlot: number;
-  reserved: number;
-  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): SpotClientInfo2Model {
-    const result = new SpotClientInfo2Model();
-    let autoData = new AutoData(data, offset);
     result.inOrdersAssetTokens = autoData.readI64();
     result.inOrdersCrncyTokens = autoData.readI64();
     result.bidSlot = autoData.readU32();
@@ -1129,7 +1196,7 @@ export class PerpClientInfo5Model {
 }
 
 export class ClientPrimaryAccountHeaderModel {
-  static readonly LENGTH = 28 * 4 + 17 * 8 + 4 * 32; // 376 bytes
+  static readonly LENGTH = 30 * 4 + 16 * 8 + 4 * 32; // 376 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -1165,7 +1232,8 @@ export class ClientPrimaryAccountHeaderModel {
   static readonly OFFSET_ASSETS_COUNT = 300;
   static readonly OFFSET_SPOT_FILLED_ORDERS = 304;
   static readonly OFFSET_PERP_FILLED_ORDERS = 308;
-  static readonly OFFSET_RESERVED_VALUE1 = 312;
+  static readonly OFFSET_LOG_SEQ_NO = 312;
+  static readonly OFFSET_RESERVED_VALUE1 = 316;
   static readonly OFFSET_RESERVED_VALUE2 = 320;
   static readonly OFFSET_RESERVED_VALUE3 = 328;
   static readonly OFFSET_RESERVED_VALUE4 = 336;
@@ -1208,6 +1276,7 @@ export class ClientPrimaryAccountHeaderModel {
   assetsCount: number;
   spotFilledOrders: number;
   perpFilledOrders: number;
+  logSeqNo: number;
   reservedValue1: number;
   reservedValue2: number;
   reservedValue3: number;
@@ -1253,7 +1322,8 @@ export class ClientPrimaryAccountHeaderModel {
     result.assetsCount = autoData.readU32();
     result.spotFilledOrders = autoData.readU32();
     result.perpFilledOrders = autoData.readU32();
-    result.reservedValue1 = autoData.readI64();
+    result.logSeqNo = autoData.readU32();
+    result.reservedValue1 = autoData.readU32();
     result.reservedValue2 = autoData.readI64();
     result.reservedValue3 = autoData.readI64();
     result.reservedValue4 = autoData.readI64();
@@ -1517,6 +1587,111 @@ export class QuoteMaskModel {
     const result = new QuoteMaskModel();
     let autoData = new AutoData(data, offset);
     result.value = autoData.readU16();
+    return result;
+  }
+}
+
+export class ClientVmAccountHeaderModel {
+  static readonly LENGTH = 6 * 4; // 24 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_VERSION = 4;
+  static readonly OFFSET_ID = 8;
+  static readonly OFFSET_COUNT = 12;
+  static readonly OFFSET_SLOT = 16;
+  static readonly OFFSET_RESERVED = 20;
+
+  tag: number;
+  version: number;
+  id: number;
+  count: number;
+  slot: number;
+  reserved: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientVmAccountHeaderModel {
+    const result = new ClientVmAccountHeaderModel();
+    let autoData = new AutoData(data, offset);
+    result.tag = autoData.readU32();
+    result.version = autoData.readU32();
+    result.id = autoData.readU32();
+    result.count = autoData.readU32();
+    result.slot = autoData.readU32();
+    result.reserved = autoData.readU32();
+    return result;
+  }
+}
+
+export class VmWhitelistRecordModel {
+  static readonly LENGTH = 2 * 4 + 1 * 32; // 40 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_REFERENCE = 4;
+  static readonly OFFSET_ADDRESS = 8;
+
+  tag: number;
+  reference: number;
+  address: Address<any>;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): VmWhitelistRecordModel {
+    const result = new VmWhitelistRecordModel();
+    let autoData = new AutoData(data, offset);
+    result.tag = autoData.readU32();
+    result.reference = autoData.readU32();
+    result.address = autoData.readAddress();
+    return result;
+  }
+}
+
+export class CappedI64Model {
+  static readonly LENGTH = 1 * 8; // 8 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): CappedI64Model {
+    const result = new CappedI64Model();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readI64();
+    return result;
+  }
+}
+
+export class InstrMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrMaskModel {
+    const result = new InstrMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
+    return result;
+  }
+}
+
+export class InstrInputMaskModel {
+  static readonly LENGTH = 1 * 1; // 1 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrInputMaskModel {
+    const result = new InstrInputMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU8();
+    return result;
+  }
+}
+
+export class TokenMaskModel {
+  static readonly LENGTH = 1 * 4; // 4 bytes
+
+  static readonly OFFSET_VALUE = 0;
+
+  value: number;
+  static fromBuffer(data: Base64EncodedDataResponse, offset?: number): TokenMaskModel {
+    const result = new TokenMaskModel();
+    let autoData = new AutoData(data, offset);
+    result.value = autoData.readU32();
     return result;
   }
 }

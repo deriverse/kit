@@ -187,6 +187,32 @@ async function findClientCommunityAccount(
   return address;
 }
 
+async function findClientVmAccount(
+  ctx: Pick<AccountHelperContext, 'programId' | 'version'>,
+  signer: Address,
+): Promise<Address> {
+  let tagBuf = Buffer.alloc(8);
+  tagBuf.writeUint32LE(ctx.version, 0);
+  tagBuf.writeUint32LE(AccountType.CLIENT_VM, 4);
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: ctx.programId,
+      seeds: [tagBuf, getAddressEncoder().encode(signer)],
+    })
+  )[0];
+  return address;
+}
+
+function requireClientPrimaryAccount(ctx: { clientPrimaryAccount: Address | null }): Address {
+  if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+  return ctx.clientPrimaryAccount;
+}
+
+function requireClientCommunityAccount(ctx: { clientCommunityAccount: Address | null }): Address {
+  if (ctx.clientCommunityAccount === null) throw new Error('Client community account not found');
+  return ctx.clientCommunityAccount;
+}
+
 export {
   getAccountByTag,
   getInstrAccountByTag,
@@ -196,4 +222,7 @@ export {
   findAccountsByTag,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  findClientVmAccount,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
 };

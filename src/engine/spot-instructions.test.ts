@@ -24,6 +24,14 @@ vi.mock('./account-helpers', () => ({
   getInstrId: vi.fn().mockResolvedValue(1),
   findClientPrimaryAccount: vi.fn().mockResolvedValue('MockClientPrimary11111111111' as Address),
   findClientCommunityAccount: vi.fn().mockResolvedValue('MockClientCommunity111111111' as Address),
+  requireClientPrimaryAccount: (ctx: any) => {
+    if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+    return ctx.clientPrimaryAccount;
+  },
+  requireClientCommunityAccount: (ctx: any) => {
+    if (ctx.clientCommunityAccount === null) throw new Error('Client community account not found');
+    return ctx.clientCommunityAccount;
+  },
 }));
 
 vi.mock('./context-builders', () => ({
@@ -37,11 +45,6 @@ vi.mock('./context-builders', () => ({
     { address: 'SpotCtx7777777777777777777777777' as Address, role: AccountRole.WRITABLE },
     { address: 'SpotCtx8888888888888888888888888' as Address, role: AccountRole.WRITABLE },
     { address: 'SpotCtx9999999999999999999999999' as Address, role: AccountRole.WRITABLE },
-  ]),
-  getSpotCandles: vi.fn().mockResolvedValue([
-    { address: 'SpotCandles1111111111111111111' as Address, role: AccountRole.WRITABLE },
-    { address: 'SpotCandles2222222222222222222' as Address, role: AccountRole.WRITABLE },
-    { address: 'SpotCandles3333333333333333333' as Address, role: AccountRole.WRITABLE },
   ]),
   getPerpContext: vi.fn().mockResolvedValue([]),
 }));

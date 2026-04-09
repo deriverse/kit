@@ -1,6 +1,7 @@
 # Changelog
 
-## [1.0.44] - 2026-02-26
+
+<!-- ## [1.0.44] - 2026-02-26
 
 ### Changed
 
@@ -11,6 +12,81 @@
 ### Added
 
 - **`customId`**: Added optional `customId` field to `DepositArgs` and `WithdrawArgs`, and required `customId` field to `withdrawData` and `depositData` instruction models
+======= -->
+
+## [1.0.51] - 2026-04-09
+
+### Changed
+
+- **Merged `SpotClientInfo2` into `SpotClientInfo`**: Single 64-byte account
+- **Removed `SPOT_CLIENT_INFOS2` and `CANDLES` accounts** everywhere
+- **Removed `COMMUNITY` account** in swap instructions 
+- **`getClientSpotOrdersInfo`**: Now fetches a single account instead of two
+
+## [1.0.50] - 2026-04-08
+
+### Added
+
+- **VM mode instructions**: Added full set of VM mode instruction builders (tags 63-80): activate, deactivate, withdraw, change whitelist, add/remove withdrawal address, direct withdraw
+
+## [1.0.49] - 2026-03-17
+
+### Changed
+
+- **Client accounts now optional**: `clientPrimaryAccount` and `clientCommunityAccount` are nullable (`Address | null`) in `SpotInstructionContext` and `PerpInstructionContext`
+- **`getSpotInstructionContext`**: Removed throws for null client accounts — only signer check remains
+- **Instruction builders**: Each builder that needs client accounts validates at point of use via `requireClientPrimaryAccount` / `requireClientCommunityAccount` (shared from `account-helpers.ts`)
+- **No client accounts required**: `buildSwapInstruction`, `buildUpgradeToPerpInstructions`, `buildNewInstrumentInstructions` work without client accounts set
+- **`buildNewInstrumentInstructions`**: `minQty` is now scaled by the asset token's decimal factor
+- **`NewInstrumentArgsSchema`**: `minQty` default changed from `0` to `1`
+
+## [1.0.48] - 2026-03-17
+
+### Fixed
+
+- **`NewInstrumentArgs`**: Changed from `z.infer` to `z.input` so fields with defaults (`mask`, `minQty`, `fixedFeeRate`) are optional in the input type
+- **`newInstrumentInstructions`**: Removed signer check
+- **`ParsedNewInstrumentArgs`**: Added new type (`z.infer`) for internal use after parsing, ensuring defaults are resolved
+- **`buildNewInstrumentInstructions`**: Maps account size now selected dynamically based on `InstrFlag.similarAssets` mask — standard (42,184) or extended (68,712)
+- **Constants**: Added `STANDARD_MAPS_SIZE` and `EXTENDED_MAPS_SIZE`
+- **Tests**: Updated log decoder test buffer helpers to match regenerated models (new `seqNo` and `customId` fields)
+
+## [1.0.47] - 2026-03-12
+
+### Changed
+
+- **Log models**: Updated log models
+- **Structure models**: Updated structure models
+- **Rename**: `ChangePointsRecordModel` renamed to `ChangePointsReportModel`
+
+## [1.0.46] - 2026-03-09
+
+### Changed
+
+- **`buildSwapInstruction`**: Use `getSpotOneSidedContext` instead of `getSpotContext`, reorder accounts, conditionally include `crncyTokenProgramId`, remove `feeTakerWallet` and token account lookups
+- **`swapData`**: Removed `refFeeRate` parameter
+- **`newInstrumentData`**: Added `mask`, `minQty`, `fixedFeeRate` parameters
+- **`NewInstrumentArgsSchema`**: Added `mask`, `minQty`, `fixedFeeRate` fields
+- **`InstrAccountHeaderModel`**: Renamed `emaPx` to `shortEmaPx`, added `swapFees`, `similarAssetsMinQty`, `fixedFeeRate`, `midEmaPx`, `longEmaPx` fields
+- **New models**: `InstrFlag`, `TokenFlag`, `InstrMaskModel`, `InstrInputMaskModel`, `TokenMaskModel`, `PerpLossCoverageReportModel`
+- **New instructions**: `withdrawSwapFeesData`, `setSAMMinQtyData`, `changeSAMFeesPolicyData`, `suspendInstrumentData`
+- **`LogType`**: Added `perpLossCoverage`
+- **`updateInstrDataFromBuffer`**: Divide `shortEmaPx`, `midEmaPx`, `longEmaPx` by `dec`
+
+## [1.0.45] - 2026-03-09
+
+### Changed
+
+- **`SwapArgsSchema`**: `limitPrice` now accept `0`
+- **`SwapArgsSchema`**: `refFeeRate` and `minAmountOut` are now optional (default to `0`)
+
+## [1.0.44] - 2026-03-05
+
+### Changed
+
+- **`depositData`**: Added `customId` parameter
+- **`withdrawData`**: Added `customId` parameter
+- **`spotQuotesReplaceData`/`perpQuotesReplaceData`**: Added `bump` and `orderType` parameters
 
 ## [1.0.43] - 2026-02-24
 

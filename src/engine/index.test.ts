@@ -37,6 +37,13 @@ vi.mock('./instructions', () => ({
     accounts: [],
     data: new Uint8Array([8]),
   }),
+  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([
+    {
+      programAddress: 'MockProgram1111111111111111111111111' as Address,
+      accounts: [],
+      data: new Uint8Array([31]),
+    },
+  ]),
 }));
 
 // Mock spot-instructions
@@ -133,13 +140,6 @@ vi.mock('./perp-instructions', () => ({
     accounts: [],
     data: new Uint8Array([30]),
   }),
-  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([
-    {
-      programAddress: 'MockProgram1111111111111111111111111' as Address,
-      accounts: [],
-      data: new Uint8Array([31]),
-    },
-  ]),
   PerpInstructionContext: {},
 }));
 
@@ -177,8 +177,8 @@ import {
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
   buildNewRefLinkInstruction,
-  buildNewInstrumentInstructions,
 } from './perp-instructions';
+import { buildNewInstrumentInstructions } from './instructions';
 
 // Mock RPC for testing
 const createMockRpc = () => ({

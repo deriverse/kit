@@ -3,8 +3,6 @@ import {
   AccountRole,
   createAddressWithSeed,
   TransactionSigner,
-  SolanaRpcResponse,
-  AccountInfoBase,
 } from '@solana/kit';
 import { getCreateAccountWithSeedInstruction } from '@solana-program/system';
 
@@ -20,21 +18,16 @@ import {
   PerpMassCancelArgs,
   PerpChangeLeverageArgs,
   PerpStatisticsResetArgs,
-  ParsedNewInstrumentArgs,
   Instruction,
 } from '../types';
 import { AccountType, InstrMask } from '../types/enums';
 import {
   SYSTEM_PROGRAM_ID,
   ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-  TOKEN_2022_PROGRAM_ID,
   DF,
-  STANDARD_MAPS_SIZE,
-  EXTENDED_MAPS_SIZE,
 } from '../constants';
-import { perpSeatReserve, getLookupTableAddress, tokenDec, buildQuotesMask } from './utils';
-import { TokenStateModel, RootStateModel, QuoteOrderModel, InstrFlag } from '../structure_models';
+import { perpSeatReserve, tokenDec, buildQuotesMask } from './utils';
+import { TokenStateModel, RootStateModel, QuoteOrderModel } from '../structure_models';
 import {
   upgradeToPerpData,
   perpDepositData,
@@ -46,13 +39,10 @@ import {
   perpMassCancelData,
   perpChangeLeverageData,
   perpStatisticsResetData,
-  newInstrumentData,
 } from '../instruction_models';
 import {
   getAccountByTag,
   getInstrAccountByTag,
-  getTokenAccount,
-  getTokenId,
   requireClientPrimaryAccount,
   requireClientCommunityAccount,
   AccountHelperContext,
@@ -542,133 +532,6 @@ async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<
 /**
  * Build new instrument instructions
  */
-async function buildNewInstrumentInstructions(
-  ctx: PerpInstructionContext,
-  args: ParsedNewInstrumentArgs,
-  rpcGetSlot: () => Promise<bigint>,
-  rpcGetAccountInfo: (address: Address) => Promise<SolanaRpcResponse<AccountInfoBase | null>>,
-  rpcGetMinBalance: (size: bigint) => Promise<bigint>,
-): Promise<Instruction[]> {
-  if (args.initialPrice <= 0) {
-    throw new Error('Invalid initial price');
-  }
-
-  const assetInfo = await rpcGetAccountInfo(args.assetMint);
-  if (!assetInfo.value) {
-    throw new Error('Asset mint not found');
-  }
-
-  const tokenProgramId = assetInfo.value.owner == TOKEN_2022_PROGRAM_ID ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
-  const crncyTokenId = await getTokenId(ctx, args.crncyMint);
-  const id = await getTokenId(ctx, args.assetMint);
-  const newAssetToken = id == null;
-  const assetTokenId = newAssetToken ? ctx.rootStateModel.tokensCount : id;
-
-  if (!crncyTokenId) {
-    throw new Error('Currency mint not found');
-  }
-
-  const mapsAccountSeed =
-    ctx.version.toString() +
-    '_' +
-    AccountType.SPOT_MAPS.toString() +
-    '_' +
-    assetTokenId.toString() +
-    '_' +
-    crncyTokenId.toString();
-  const mapsAccount = await createAddressWithSeed({
-    baseAddress: ctx.signer,
-    programAddress: ctx.programId,
-    seed: mapsAccountSeed,
-  });
-  const mapsAccountSize = (args.mask & InstrFlag.similarAssets) !== 0 ? EXTENDED_MAPS_SIZE : STANDARD_MAPS_SIZE;
-  const mapsAccountLamports = await rpcGetMinBalance(BigInt(mapsAccountSize));
-  const createMapsAccountIx = getCreateAccountWithSeedInstruction({
-    payer: ctx.signer as unknown as TransactionSigner,
-    baseAccount: ctx.signer as unknown as TransactionSigner,
-    base: ctx.signer,
-    newAccount: mapsAccount,
-    seed: mapsAccountSeed,
-    space: mapsAccountSize,
-    programAddress: ctx.programId,
-    amount: mapsAccountLamports,
-  });
-
-  const slot = Number(await rpcGetSlot()) - 1;
-  const lutAddress = await getLookupTableAddress(ctx.drvsAuthority, slot);
-
-  const tokenArgs = { assetTokenId: assetTokenId, crncyTokenId: crncyTokenId };
-
-  let keys = [
-    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.WRITABLE },
-    {
-      address: await getTokenAccount(ctx, args.assetMint),
-      role: newAssetToken ? AccountRole.WRITABLE : AccountRole.READONLY,
-    },
-    { address: await getTokenAccount(ctx, args.crncyMint), role: AccountRole.READONLY },
-    {
-      address: newAssetToken ? args.newProgramAccountAddress : ctx.tokens.get(assetTokenId)!.programAddress,
-      role: newAssetToken ? AccountRole.WRITABLE_SIGNER : AccountRole.READONLY,
-    },
-    { address: args.assetMint, role: AccountRole.READONLY },
-    { address: lutAddress, role: AccountRole.WRITABLE },
-    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: tokenProgramId, role: AccountRole.READONLY },
-    { address: ADDRESS_LOOKUP_TABLE_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.INSTR }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_BIDS_TREE }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_ASKS_TREE }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_BID_ORDERS }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_ASK_ORDERS }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...tokenArgs, tag: AccountType.SPOT_LINES }),
-      role: AccountRole.WRITABLE,
-    },
-    { address: mapsAccount, role: AccountRole.WRITABLE },
-    {
-      address: await getInstrAccountByTag(ctx, {
-        ...tokenArgs,
-        tag: AccountType.SPOT_CLIENT_INFOS,
-      }),
-      role: AccountRole.WRITABLE,
-    },
-  ];
-
-  const assetDec = tokenDec(ctx.tokens, assetTokenId, ctx.uiNumbers);
-
-  const newInstrIx = {
-    accounts: keys,
-    programAddress: ctx.programId,
-    data: newInstrumentData(
-      9,
-      args.mask,
-      crncyTokenId,
-      slot,
-      args.initialPrice * DF,
-      args.minQty * assetDec,
-      args.fixedFeeRate,
-    ),
-  } as Instruction;
-  return [createMapsAccountIx, newInstrIx];
-}
-
 export {
   buildUpgradeToPerpInstructions,
   buildPerpDepositInstruction,
@@ -681,5 +544,4 @@ export {
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
   buildNewRefLinkInstruction,
-  buildNewInstrumentInstructions,
 };

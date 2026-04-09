@@ -13,6 +13,8 @@ vi.mock('./account-helpers', () => ({
   getInstrId: vi.fn().mockResolvedValue(1),
   findClientPrimaryAccount: vi.fn().mockResolvedValue('MockClientPrimary11111111111' as Address),
   findClientCommunityAccount: vi.fn().mockResolvedValue('MockClientCommunity111111111' as Address),
+  requireClientPrimaryAccount: vi.fn().mockReturnValue('MockClientPrimary11111111111' as Address),
+  requireClientCommunityAccount: vi.fn().mockReturnValue('MockClientCommunity111111111' as Address),
 }));
 
 vi.mock('./utils', () => ({

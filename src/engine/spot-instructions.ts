@@ -32,7 +32,6 @@ import {
 import {
   getAccountByTag,
   getInstrAccountByTag,
-  getTokenAccount,
   getTokenId,
   getInstrId,
   findClientPrimaryAccount,

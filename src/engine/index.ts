@@ -6,7 +6,6 @@ import {
   Rpc,
   getBase64Encoder,
   getProgramDerivedAddress,
-  getAddressEncoder,
   Commitment,
 } from '@solana/kit';
 import { Buffer } from 'buffer';
@@ -126,7 +125,7 @@ import {
   getClientSpotOrders as getClientSpotOrdersFn,
   getClientPerpOrders as getClientPerpOrdersFn,
 } from './client-queries';
-import { buildDepositInstruction, buildWithdrawInstruction } from './instructions';
+import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions } from './instructions';
 import {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
@@ -147,7 +146,6 @@ import {
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
   buildNewRefLinkInstruction,
-  buildNewInstrumentInstructions,
 } from './perp-instructions';
 import {
   buildVmInitActivateInstruction,
@@ -654,7 +652,9 @@ export class Engine {
     header.lpDayFees /= crncyTokenDec;
     header.lpPrevDayFees /= crncyTokenDec;
     header.lpAlltimeFees /= crncyTokenDec;
-    header.emaPx /= dec;
+    header.shortEmaPx /= dec;
+    header.midEmaPx /= dec;
+    header.longEmaPx /= dec;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];
     let perpBids: Array<LineQuotesModel> = [];

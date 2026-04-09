@@ -7,19 +7,15 @@ import {
   SpotQuotesReplaceArgs,
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
-  SwapArgs,
   Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
 import {
   SYSTEM_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-  TOKEN_2022_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   DF,
   lpDec,
 } from '../constants';
-import { findAssociatedTokenAddress, tokenDec, buildQuotesMask } from './utils';
+import { tokenDec, buildQuotesMask } from './utils';
 import { TokenStateModel, QuoteOrderModel } from '../structure_models';
 import {
   spotLpData,
@@ -27,20 +23,17 @@ import {
   spotQuotesReplaceData,
   spotOrderCancelData,
   spotMassCancelData,
-  swapData,
 } from '../instruction_models';
 import {
   getAccountByTag,
   getInstrAccountByTag,
-  getTokenId,
-  getInstrId,
   findClientPrimaryAccount,
   findClientCommunityAccount,
   requireClientPrimaryAccount,
   requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext, getSpotOneSidedContext } from './context-builders';
+import { getSpotContext } from './context-builders';
 
 /**
  * Context needed for spot instruction builders
@@ -277,81 +270,10 @@ async function buildSpotMassCancelInstruction(
   };
 }
 
-/**
- * Build swap instruction
- */
-async function buildSwapInstruction(
-  ctx: SpotInstructionContext,
-  args: SwapArgs,
-  instr: Instrument,
-): Promise<Instruction> {
-  const assetTokenId = await getTokenId(ctx, args.assetMint);
-  const crncyTokenId = await getTokenId(ctx, args.crncyMint);
-  if (assetTokenId == null) {
-    throw new Error(`Asset token not found for mint ${args.assetMint}`);
-  }
-  if (crncyTokenId == null) {
-    throw new Error(`Currency token not found for mint ${args.crncyMint}`);
-  }
-  const assetTokenAccount = ctx.tokens.get(assetTokenId);
-  const crncyTokenAccount = ctx.tokens.get(crncyTokenId);
-  if (!assetTokenAccount || !crncyTokenAccount) {
-    throw new Error('Token account not found');
-  }
-  const assetTokenProgramId = (assetTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
-  const crncyTokenProgramId = (crncyTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
-  let instrId = await getInstrId(ctx, { assetTokenId: assetTokenId, crncyTokenId: crncyTokenId });
-  if (instrId === null) {
-    throw new Error('No instruction ID');
-  }
-
-  const clientAssetTokenAccount = await findAssociatedTokenAddress(ctx.signer, assetTokenProgramId, args.assetMint);
-  const clientCrncyTokenAccount = await findAssociatedTokenAddress(ctx.signer, crncyTokenProgramId, args.crncyMint);
-
-  let buf = swapData(
-    26,
-    args.crncyInput ? 1 : 0,
-    instrId,
-    Math.round(args.limitPrice * DF),
-    Math.round(
-      args.amount *
-        (args.crncyInput
-          ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
-          : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
-    ),
-    args.minAmountOut ?? 0,
-  );
-
-  const swapSide = args.crncyInput ? 1 : 0;
-
-  let keys = [
-    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: args.assetMint, role: AccountRole.READONLY },
-    { address: args.crncyMint, role: AccountRole.READONLY },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
-    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
-    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
-    ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),
-    { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
-    { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
-  ];
-
-  keys.push({ address: assetTokenProgramId, role: AccountRole.READONLY });
-  if (assetTokenProgramId !== crncyTokenProgramId) {
-    keys.push({ address: crncyTokenProgramId, role: AccountRole.READONLY });
-  }
-  keys.push({ address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY });
-  keys.push({ address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY });
-
-  return { accounts: keys, programAddress: ctx.programId, data: buf };
-}
-
 export {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,
   buildSpotOrderCancelInstruction,
   buildSpotMassCancelInstruction,
-  buildSwapInstruction,
 };

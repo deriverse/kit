@@ -1,18 +1,17 @@
 # Changelog
 
 
-<!-- ## [1.0.44] - 2026-02-26
+## Unreleased
 
 ### Changed
 
 - **Deposit/Withdraw builders**: Moved `buildDepositInstruction` and `buildWithdrawInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
-- **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, and `emaPx`
+- **New Instrument builder**: Moved `buildNewInstrumentInstructions` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **Swap builder**: Moved `buildSwapInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+- **Ref Link builder**: Moved `buildNewRefLinkInstruction` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, `shortEmaPx`, `midEmaPx`, `longEmaPx`
 - **`updateInstrDataFromBuffer` / `updateInstrData`**: Cached `getInstrAccountByTagFn` result — reuses the address from `this.instruments` map on subsequent calls instead of re-deriving the PDA every time
 
-### Added
-
-- **`customId`**: Added optional `customId` field to `DepositArgs` and `WithdrawArgs`, and required `customId` field to `withdrawData` and `depositData` instruction models
-======= -->
 
 ## [1.0.51] - 2026-04-09
 

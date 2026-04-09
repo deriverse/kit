@@ -511,27 +511,6 @@ async function buildPerpStatisticsResetInstruction(
   };
 }
 
-/**
- * Build new ref link instruction
- */
-async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<Instruction> {
-  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
-
-  let buf = Buffer.alloc(1);
-  buf.writeUInt8(45, 0);
-
-  let keys = [
-    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.WRITABLE },
-    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
-  ];
-
-  return { accounts: keys, programAddress: ctx.programId, data: buf };
-}
-
-/**
- * Build new instrument instructions
- */
 export {
   buildUpgradeToPerpInstructions,
   buildPerpDepositInstruction,
@@ -543,5 +522,4 @@ export {
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
-  buildNewRefLinkInstruction,
 };

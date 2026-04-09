@@ -7,8 +7,9 @@ import {
   AccountInfoBase,
 } from '@solana/kit';
 import { getCreateAccountWithSeedInstruction } from '@solana-program/system';
+import { Buffer } from 'buffer';
 
-import { DepositArgs, WithdrawArgs, ParsedNewInstrumentArgs, Instruction } from '../types';
+import { DepositArgs, WithdrawArgs, ParsedNewInstrumentArgs, SwapArgs, Instrument, Instruction } from '../types';
 import { AccountType } from '../types/enums';
 import {
   SYSTEM_PROGRAM_ID,
@@ -26,15 +27,17 @@ import {
   getInstrAccountByTag,
   getTokenAccount,
   getTokenId,
+  getInstrId,
   findClientPrimaryAccount,
   findClientCommunityAccount,
   requireClientCommunityAccount,
   requireClientPrimaryAccount,
 } from './account-helpers';
 import { InstrFlag } from '../structure_models';
-import { depositData, withdrawData, newInstrumentData } from '../instruction_models';
+import { depositData, withdrawData, newInstrumentData, swapData } from '../instruction_models';
 import { SpotInstructionContext } from './spot-instructions';
 import { PerpInstructionContext } from './perp-instructions';
+import { getSpotOneSidedContext } from './context-builders';
 
 /**
  * Build deposit instruction
@@ -327,4 +330,98 @@ async function buildNewInstrumentInstructions(
   return [createMapsAccountIx, newInstrIx];
 }
 
-export { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions };
+/**
+ * Build swap instruction
+ */
+async function buildSwapInstruction(
+  ctx: SpotInstructionContext,
+  args: SwapArgs,
+  instr: Instrument,
+): Promise<Instruction> {
+  const assetTokenId = await getTokenId(ctx, args.assetMint);
+  const crncyTokenId = await getTokenId(ctx, args.crncyMint);
+  if (assetTokenId == null) {
+    throw new Error(`Asset token not found for mint ${args.assetMint}`);
+  }
+  if (crncyTokenId == null) {
+    throw new Error(`Currency token not found for mint ${args.crncyMint}`);
+  }
+  const assetTokenAccount = ctx.tokens.get(assetTokenId);
+  const crncyTokenAccount = ctx.tokens.get(crncyTokenId);
+  if (!assetTokenAccount || !crncyTokenAccount) {
+    throw new Error('Token account not found');
+  }
+  const assetTokenProgramId = (assetTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  const crncyTokenProgramId = (crncyTokenAccount.mask & 0x80000000) == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  let instrId = await getInstrId(ctx, { assetTokenId: assetTokenId, crncyTokenId: crncyTokenId });
+  if (instrId === null) {
+    throw new Error('No instruction ID');
+  }
+
+  const clientAssetTokenAccount = await findAssociatedTokenAddress(ctx.signer, assetTokenProgramId, args.assetMint);
+  const clientCrncyTokenAccount = await findAssociatedTokenAddress(ctx.signer, crncyTokenProgramId, args.crncyMint);
+
+  let buf = swapData(
+    26,
+    args.crncyInput ? 1 : 0,
+    instrId,
+    Math.round(args.limitPrice * DF),
+    Math.round(
+      args.amount *
+        (args.crncyInput
+          ? tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers)
+          : tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers)),
+    ),
+    args.minAmountOut ?? 0,
+  );
+
+  const swapSide = args.crncyInput ? 1 : 0;
+
+  let keys = [
+    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
+    { address: ctx.rootAccount, role: AccountRole.READONLY },
+    { address: args.assetMint, role: AccountRole.READONLY },
+    { address: args.crncyMint, role: AccountRole.READONLY },
+    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
+    { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
+    ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),
+    { address: clientAssetTokenAccount, role: AccountRole.WRITABLE },
+    { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
+  ];
+
+  keys.push({ address: assetTokenProgramId, role: AccountRole.READONLY });
+  if (assetTokenProgramId !== crncyTokenProgramId) {
+    keys.push({ address: crncyTokenProgramId, role: AccountRole.READONLY });
+  }
+  keys.push({ address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY });
+  keys.push({ address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY });
+
+  return { accounts: keys, programAddress: ctx.programId, data: buf };
+}
+
+/**
+ * Build new ref link instruction
+ */
+async function buildNewRefLinkInstruction(ctx: PerpInstructionContext): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+
+  let buf = Buffer.alloc(1);
+  buf.writeUInt8(45, 0);
+
+  let keys = [
+    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
+    { address: ctx.rootAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
+  ];
+
+  return { accounts: keys, programAddress: ctx.programId, data: buf };
+}
+
+export {
+  buildDepositInstruction,
+  buildWithdrawInstruction,
+  buildNewInstrumentInstructions,
+  buildSwapInstruction,
+  buildNewRefLinkInstruction,
+};

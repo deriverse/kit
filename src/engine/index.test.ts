@@ -44,6 +44,16 @@ vi.mock('./instructions', () => ({
       data: new Uint8Array([31]),
     },
   ]),
+  buildSwapInstruction: vi.fn().mockResolvedValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([14]),
+  }),
+  buildNewRefLinkInstruction: vi.fn().mockResolvedValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([30]),
+  }),
 }));
 
 // Mock spot-instructions
@@ -72,11 +82,6 @@ vi.mock('./spot-instructions', () => ({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
     data: new Uint8Array([13]),
-  }),
-  buildSwapInstruction: vi.fn().mockResolvedValue({
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([14]),
   }),
   SpotInstructionContext: {},
 }));
@@ -135,11 +140,6 @@ vi.mock('./perp-instructions', () => ({
     accounts: [],
     data: new Uint8Array([29]),
   }),
-  buildNewRefLinkInstruction: vi.fn().mockResolvedValue({
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([30]),
-  }),
   PerpInstructionContext: {},
 }));
 
@@ -155,14 +155,13 @@ vi.mock('./logs-decoder', () => ({
 }));
 
 // Import mocked modules for assertions
-import { buildDepositInstruction, buildWithdrawInstruction } from './instructions';
+import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions, buildSwapInstruction, buildNewRefLinkInstruction } from './instructions';
 import {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,
   buildSpotOrderCancelInstruction,
   buildSpotMassCancelInstruction,
-  buildSwapInstruction,
 } from './spot-instructions';
 
 import {
@@ -176,9 +175,7 @@ import {
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
-  buildNewRefLinkInstruction,
 } from './perp-instructions';
-import { buildNewInstrumentInstructions } from './instructions';
 
 // Mock RPC for testing
 const createMockRpc = () => ({

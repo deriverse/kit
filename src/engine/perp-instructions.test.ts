@@ -7,12 +7,12 @@ import {
   buildPerpOrderCancelInstruction,
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
-  buildNewRefLinkInstruction,
   buildPerpBuySeatInstruction,
   buildPerpSellSeatInstruction,
   buildPerpQuotesReplaceInstruction,
   buildPerpStatisticsResetInstruction,
 } from './perp-instructions';
+import { buildNewRefLinkInstruction } from './instructions';
 import { TokenStateModel, InstrAccountHeaderModel, RootStateModel } from '../structure_models';
 import {
   Instrument,

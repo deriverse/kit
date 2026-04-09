@@ -125,14 +125,13 @@ import {
   getClientSpotOrders as getClientSpotOrdersFn,
   getClientPerpOrders as getClientPerpOrdersFn,
 } from './client-queries';
-import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions } from './instructions';
+import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions, buildSwapInstruction, buildNewRefLinkInstruction } from './instructions';
 import {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,
   buildSpotOrderCancelInstruction,
   buildSpotMassCancelInstruction,
-  buildSwapInstruction,
 } from './spot-instructions';
 import {
   buildUpgradeToPerpInstructions,
@@ -145,7 +144,6 @@ import {
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
-  buildNewRefLinkInstruction,
 } from './perp-instructions';
 import {
   buildVmInitActivateInstruction,

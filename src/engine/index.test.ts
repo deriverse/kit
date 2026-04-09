@@ -554,7 +554,6 @@ describe('Engine instruction methods', () => {
         amount: 100,
         limitPrice: 100,
         crncyInput: true,
-        refFeeRate: 0,
         minAmountOut: 0,
       });
 
@@ -571,27 +570,10 @@ describe('Engine instruction methods', () => {
         amount: 100,
         limitPrice: 100,
         crncyInput: true,
-        refFeeRate: 0,
         minAmountOut: 0,
       });
 
       expect(buildSwapInstruction).toHaveBeenCalled();
-    });
-
-    it('should not call buildSwapInstruction because refFeeRate out of maximum', async () => {
-      const { engine } = await setupEngineWithClient();
-
-      await expect(
-        engine.swapInstruction({
-          assetMint: 'AssetMint1111111111111111111111111111' as Address,
-          crncyMint: 'CrncyMint1111111111111111111111111111' as Address,
-          amount: 100,
-          limitPrice: 100,
-          crncyInput: true,
-          refFeeRate: 0.0003,
-          minAmountOut: 0,
-        }),
-      ).rejects.toThrow();
     });
 
     it('should not call buildSwapInstruction because minAmountOut below 0', async () => {
@@ -604,7 +586,6 @@ describe('Engine instruction methods', () => {
           amount: 100,
           limitPrice: 100,
           crncyInput: true,
-          refFeeRate: 0.0002,
           minAmountOut: -0.005,
         }),
       ).rejects.toThrow();

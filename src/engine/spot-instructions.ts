@@ -504,11 +504,6 @@ async function buildSwapInstruction(
     { address: clientCrncyTokenAccount, role: AccountRole.WRITABLE },
   ];
 
-  if (args.feeTakerWallet && args.refFeeRate) {
-    const feeTakerTokenAccount = await findAssociatedTokenAddress(args.feeTakerWallet, crncyTokenProgramId, args.crncyMint);
-    keys.push({ address: feeTakerTokenAccount, role: AccountRole.WRITABLE });
-  }
-
   keys.push({ address: assetTokenProgramId, role: AccountRole.READONLY });
   if (assetTokenProgramId !== crncyTokenProgramId) {
     keys.push({ address: crncyTokenProgramId, role: AccountRole.READONLY });

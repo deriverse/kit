@@ -143,7 +143,6 @@ vi.mock('./perp-instructions', () => ({
 vi.mock('./context-builders', () => ({
   getSpotContext: vi.fn().mockResolvedValue([]),
   getPerpContext: vi.fn().mockResolvedValue([]),
-  getSpotCandles: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock logs-decoder
@@ -180,7 +179,7 @@ import {
 
 // Mock RPC for testing
 const createMockRpc = () => ({
-  getAccountInfo: vi.fn().mockReturnValue({ send: vi.fn() }),
+  getAccountInfo: vi.fn().mockReturnValue({ send: vi.fn().mockResolvedValue({ value: null }) }),
   getMultipleAccounts: vi.fn().mockReturnValue({ send: vi.fn() }),
   getProgramAccounts: vi.fn().mockReturnValue({ send: vi.fn() }),
   getSlot: vi.fn().mockReturnValue({ send: vi.fn().mockResolvedValue(BigInt(12345)) }),

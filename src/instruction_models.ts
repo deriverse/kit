@@ -407,6 +407,15 @@ export function cleanCandlesData(tag: number, instrId: number): Buffer {
   return buf;
 }
 
+export function extendCandlesData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
 export function vmInitWithdrawData(tag: number, tokenId: number, amount: number): Buffer {
   let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);

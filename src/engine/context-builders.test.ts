@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Address, AccountRole } from '@solana/kit';
-import { getSpotContext, getPerpContext, getSpotCandles } from './context-builders';
+import { getSpotContext, getPerpContext } from './context-builders';
 import { AccountHelperContext } from './account-helpers';
 import { InstrAccountHeaderModel } from '../structure_models';
 
@@ -35,7 +35,7 @@ describe('context-builders', () => {
       const accounts = await getSpotContext(ctx, header);
 
       expect(Array.isArray(accounts)).toBe(true);
-      expect(accounts.length).toBe(9); // INSTR + BIDS_TREE + ASKS_TREE + BID_ORDERS + ASK_ORDERS + LINES + MAPS + CLIENT_INFOS + CLIENT_INFOS2
+      expect(accounts.length).toBe(8); // INSTR + BIDS_TREE + ASKS_TREE + BID_ORDERS + ASK_ORDERS + LINES + MAPS + CLIENT_INFOS
     });
 
     it('all accounts are writable', async () => {
@@ -123,52 +123,6 @@ describe('context-builders', () => {
       const perpAccounts = await getPerpContext(ctx, header);
 
       expect(perpAccounts.length).toBeGreaterThan(spotAccounts.length);
-    });
-  });
-
-  describe('getSpotCandles', () => {
-    it('returns array of 3 candle accounts', async () => {
-      const ctx = createMockContext();
-      const header = createMockInstrHeader();
-      const accounts = await getSpotCandles(ctx, header);
-
-      expect(Array.isArray(accounts)).toBe(true);
-      expect(accounts.length).toBe(3); // 1M, 15M, DAY candles
-    });
-
-    it('all candle accounts are writable', async () => {
-      const ctx = createMockContext();
-      const header = createMockInstrHeader();
-      const accounts = await getSpotCandles(ctx, header);
-
-      accounts.forEach((account) => {
-        expect(account.role).toBe(AccountRole.WRITABLE);
-      });
-    });
-
-    it('returns consistent accounts for same inputs', async () => {
-      const ctx = createMockContext();
-      const header = createMockInstrHeader();
-      const accounts1 = await getSpotCandles(ctx, header);
-      const accounts2 = await getSpotCandles(ctx, header);
-
-      expect(accounts1.length).toBe(accounts2.length);
-      for (let i = 0; i < accounts1.length; i++) {
-        expect(accounts1[i].address).toBe(accounts2[i].address);
-      }
-    });
-
-    it('returns different accounts for different token pairs', async () => {
-      const ctx = createMockContext();
-      const header1 = createMockInstrHeader({ assetTokenId: 1, crncyTokenId: 0 });
-      const header2 = createMockInstrHeader({ assetTokenId: 2, crncyTokenId: 0 });
-      const accounts1 = await getSpotCandles(ctx, header1);
-      const accounts2 = await getSpotCandles(ctx, header2);
-
-      // All candle addresses should be different
-      expect(accounts1[0].address).not.toBe(accounts2[0].address);
-      expect(accounts1[1].address).not.toBe(accounts2[1].address);
-      expect(accounts1[2].address).not.toBe(accounts2[2].address);
     });
   });
 });

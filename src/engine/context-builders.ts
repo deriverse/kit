@@ -46,10 +46,6 @@ async function getSpotContext(
       address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_CLIENT_INFOS }),
       role: AccountRole.WRITABLE,
     },
-    {
-      address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_CLIENT_INFOS2 }),
-      role: AccountRole.WRITABLE,
-    },
   ];
 }
 
@@ -129,33 +125,6 @@ async function getPerpContext(
 }
 
 /**
- * Build spot candles accounts
- */
-async function getSpotCandles(
-  ctx: AccountHelperContext,
-  instrAccountHeaderModel: InstrAccountHeaderModel,
-): Promise<AccountMeta[]> {
-  const args = {
-    assetTokenId: instrAccountHeaderModel.assetTokenId,
-    crncyTokenId: instrAccountHeaderModel.crncyTokenId,
-  };
-  return [
-    {
-      address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_1M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_15M_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-    {
-      address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_DAY_CANDLES }),
-      role: AccountRole.WRITABLE,
-    },
-  ];
-}
-
-/**
  * Build one-sided spot trading context accounts
  * side: 0 = bid, 1 = ask
  */
@@ -192,11 +161,7 @@ async function getSpotOneSidedContext(
       address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_CLIENT_INFOS }),
       role: AccountRole.WRITABLE,
     },
-    {
-      address: await getInstrAccountByTag(ctx, { ...args, tag: AccountType.SPOT_CLIENT_INFOS2 }),
-      role: AccountRole.WRITABLE,
-    },
   ];
 }
 
-export { getSpotContext, getSpotOneSidedContext, getPerpContext, getSpotCandles };
+export { getSpotContext, getSpotOneSidedContext, getPerpContext };

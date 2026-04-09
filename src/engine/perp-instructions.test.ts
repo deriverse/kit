@@ -47,7 +47,6 @@ vi.mock('./account-helpers', () => ({
 
 vi.mock('./context-builders', () => ({
   getSpotContext: vi.fn().mockResolvedValue([]),
-  getSpotCandles: vi.fn().mockResolvedValue([]),
   getPerpContext: vi.fn().mockResolvedValue([
     { address: 'PerpCtx1111111111111111111111111' as Address, role: AccountRole.WRITABLE },
     { address: 'PerpCtx2222222222222222222222222' as Address, role: AccountRole.WRITABLE },

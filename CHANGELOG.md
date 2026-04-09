@@ -6,7 +6,10 @@
 
 - **Merged `SpotClientInfo2` into `SpotClientInfo`**: Single 64-byte account
 - **Removed `SPOT_CLIENT_INFOS2` and `CANDLES` accounts** everywhere
+- **Removed from `AccountType` enum**: `SPOT_CLIENT_INFOS2`, `SPOT_1M_CANDLES`, `SPOT_15M_CANDLES`, `SPOT_DAY_CANDLES`
 - **Removed `COMMUNITY` account** in swap instructions 
+- **Removed `feeTakerWallet` and `refFeeRate`** from swap instruction args
+- **`STANDARD_MAPS_SIZE` and `EXTENDED_MAPS_SIZE`**: Increased by `CandlesHeaderModel.LENGTH`
 - **`getClientSpotOrdersInfo`**: Now fetches a single account instead of two
 
 ## [1.0.50] - 2026-04-08

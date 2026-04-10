@@ -437,7 +437,7 @@ export class CandlesHeaderModel {
 }
 
 export class InstrAccountHeaderModel {
-  static readonly LENGTH = 64 * 4 + 77 * 8 + 6 * 32; // 1064 bytes
+  static readonly LENGTH = 4 * 1 + 65 * 4 + 76 * 8 + 6 * 32; // 1064 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -585,7 +585,11 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_MID_EMA_PX = 1032;
   static readonly OFFSET_LONG_EMA_PX = 1040;
   static readonly OFFSET_LOG_SEQ_NO = 1048;
-  static readonly OFFSET_RESERVED_VALUE10 = 1056;
+  static readonly OFFSET_ASSET_BUMP_SEED = 1056;
+  static readonly OFFSET_CRNCY_BUMP_SEED = 1057;
+  static readonly OFFSET_SPOT_FEE_RATE = 1058;
+  static readonly OFFSET_SPOT_POOL_RATIO = 1059;
+  static readonly OFFSET_RESERVED_VALUE10 = 1060;
 
   tag: number;
   version: number;
@@ -733,6 +737,10 @@ export class InstrAccountHeaderModel {
   midEmaPx: number;
   longEmaPx: number;
   logSeqNo: number;
+  assetBumpSeed: number;
+  crncyBumpSeed: number;
+  spotFeeRate: number;
+  spotPoolRatio: number;
   reservedValue10: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): InstrAccountHeaderModel {
     const result = new InstrAccountHeaderModel();
@@ -883,7 +891,11 @@ export class InstrAccountHeaderModel {
     result.midEmaPx = autoData.readF64();
     result.longEmaPx = autoData.readF64();
     result.logSeqNo = autoData.readI64();
-    result.reservedValue10 = autoData.readI64();
+    result.assetBumpSeed = autoData.readU8();
+    result.crncyBumpSeed = autoData.readU8();
+    result.spotFeeRate = autoData.readU8();
+    result.spotPoolRatio = autoData.readU8();
+    result.reservedValue10 = autoData.readU32();
     return result;
   }
 }

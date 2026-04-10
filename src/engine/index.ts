@@ -89,7 +89,7 @@ import {
   Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
-import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, setDecimals } from '../constants';
+import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, feeRateStep, poolRatioStep, setDecimals } from '../constants';
 import {
   BaseCrncyRecordModel,
   ClientPrimaryAccountHeaderModel,
@@ -112,10 +112,7 @@ import {
   findClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import {
-  getSpotContext as getSpotContextFn,
-  getPerpContext as getPerpContextFn,
-} from './context-builders';
+import { getSpotContext as getSpotContextFn, getPerpContext as getPerpContextFn } from './context-builders';
 import { tokenDec } from './utils';
 import {
   ClientQueryContext,
@@ -125,7 +122,13 @@ import {
   getClientSpotOrders as getClientSpotOrdersFn,
   getClientPerpOrders as getClientPerpOrdersFn,
 } from './client-queries';
-import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions, buildSwapInstruction, buildNewRefLinkInstruction } from './instructions';
+import {
+  buildDepositInstruction,
+  buildWithdrawInstruction,
+  buildNewInstrumentInstructions,
+  buildSwapInstruction,
+  buildNewRefLinkInstruction,
+} from './instructions';
 import {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
@@ -184,12 +187,12 @@ export class Engine {
   originalClientId: number | null = null;
   clientLutAddress: Address | null = null;
   privateMode: boolean = false;
+  drvsAuthority: Address;
+  clientPrimaryAccount: Address | null = null;
+  clientCommunityAccount: Address | null = null;
 
   private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
-  private drvsAuthority: Address;
   private signer: Address | null = null;
-  private clientPrimaryAccount: Address | null = null;
-  private clientCommunityAccount: Address | null = null;
   private refClientPrimaryAccount: Address | null = null;
   private refClientCommunityAccount: Address | null = null;
   private uiNumbers: boolean;
@@ -650,9 +653,8 @@ export class Engine {
     header.lpDayFees /= crncyTokenDec;
     header.lpPrevDayFees /= crncyTokenDec;
     header.lpAlltimeFees /= crncyTokenDec;
-    header.shortEmaPx /= dec;
-    header.midEmaPx /= dec;
-    header.longEmaPx /= dec;
+    header.spotFeeRate *= feeRateStep;
+    header.spotPoolRatio *= poolRatioStep;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];
     let perpBids: Array<LineQuotesModel> = [];
@@ -699,7 +701,7 @@ export class Engine {
     }
 
     const existingInstr = this.instruments.get(header.instrId);
-    
+
     const instrAddress = existingInstr
       ? existingInstr.address
       : await getInstrAccountByTagFn(this.getAccountHelperContext(), {

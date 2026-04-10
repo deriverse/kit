@@ -484,12 +484,31 @@ export function vmDirectWithdrawData(tag: number, tokenId: number, amount: numbe
   return buf;
 }
 
-export function vmRemoveWithdrawalAddressData(tag: number, withdrawalAddress: Uint8Array): Buffer {
-  let buf = Buffer.alloc(36);
+export function moveFundsData(tag: number, tokenId: number, amount: number): Buffer {
+  let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
-  buf.set(withdrawalAddress, 4);
+  buf.writeUint32LE(tokenId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
+  return buf;
+}
+
+export function migrateTokenData(tag: number, tokenId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(tokenId, 4);
+  return buf;
+}
+
+export function migrateInstrData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
   return buf;
 }
 

@@ -14,16 +14,20 @@ export const STANDARD_MAPS_SIZE = 42184 + CandlesHeaderModel.LENGTH; // spot::me
 export const EXTENDED_MAPS_SIZE = 68712 + CandlesHeaderModel.LENGTH; // extended_spot::memory_maps::MAPS_SIZE + CandlesHeader
 export const DF = 1000000000;
 
-export let dec = 1000000000;
-export let lpDec = 10000;
+const LP_DEC_UI = 10000;
+const FEE_RATE_STEP_UI = 0.0005;
+const POOL_RATIO_STEP_UI = 0.025;
+
+export let dec = DF;
+export let lpDec = LP_DEC_UI;
+export let feeRateStep = FEE_RATE_STEP_UI;
+export let poolRatioStep = POOL_RATIO_STEP_UI;
+
 export const nullOrder = 0xffff;
 
 export function setDecimals(uiNumbers: boolean): void {
-  if (!uiNumbers) {
-    dec = 1;
-    lpDec = 1;
-  } else {
-    dec = 1000000000;
-    lpDec = 10000;
-  }
+  dec = uiNumbers ? DF : 1;
+  lpDec = uiNumbers ? LP_DEC_UI : 1;
+  feeRateStep = uiNumbers ? FEE_RATE_STEP_UI : 1;
+  poolRatioStep = uiNumbers ? POOL_RATIO_STEP_UI : 1;
 }

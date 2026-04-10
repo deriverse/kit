@@ -26,6 +26,7 @@ import {
   getAccountByTag,
   getInstrAccountByTag,
   getTokenAccount,
+  getProgramTokenAccount,
   getTokenId,
   getInstrId,
   findClientPrimaryAccount,
@@ -268,8 +269,10 @@ async function buildNewInstrumentInstructions(
     },
     { address: await getTokenAccount(ctx, args.crncyMint), role: AccountRole.READONLY },
     {
-      address: newAssetToken ? args.newProgramAccountAddress : ctx.tokens.get(assetTokenId)!.programAddress,
-      role: newAssetToken ? AccountRole.WRITABLE_SIGNER : AccountRole.READONLY,
+      address: newAssetToken
+        ? await getProgramTokenAccount(ctx, args.assetMint)
+        : ctx.tokens.get(assetTokenId)!.programAddress,
+      role: newAssetToken ? AccountRole.WRITABLE : AccountRole.READONLY,
     },
     { address: args.assetMint, role: AccountRole.READONLY },
     { address: lutAddress, role: AccountRole.WRITABLE },

@@ -161,7 +161,6 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
     { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     { address: tokenProgramId, role: AccountRole.READONLY },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
     { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.WRITABLE },
   ];
 
@@ -379,10 +378,8 @@ async function buildSwapInstruction(
 
   let keys = [
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: args.assetMint, role: AccountRole.READONLY },
     { address: args.crncyMint, role: AccountRole.READONLY },
-    { address: ctx.drvsAuthority, role: AccountRole.READONLY },
     { address: assetTokenAccount.programAddress, role: AccountRole.WRITABLE },
     { address: crncyTokenAccount.programAddress, role: AccountRole.WRITABLE },
     ...(await getSpotOneSidedContext(ctx, instr.header, swapSide)),

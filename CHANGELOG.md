@@ -1,7 +1,7 @@
 # Changelog
 
 
-## Unreleased
+## [1.0.52] - 2026-04-10
 
 ### Changed
 
@@ -11,7 +11,8 @@
 - **Ref Link builder**: Moved `buildNewRefLinkInstruction` from `engine/perp-instructions.ts` to `engine/instructions.ts`
 - **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, `shortEmaPx`, `midEmaPx`, `longEmaPx`
 - **`updateInstrDataFromBuffer` / `updateInstrData`**: Cached `getInstrAccountByTagFn` result — reuses the address from `this.instruments` map on subsequent calls instead of re-deriving the PDA every time
-
+- **Withdraw/Swap instructions**: Removed `drvsAuthority` from swap and withdraw and `rootAccount` from swap
+- **Upgraded npm packages**: @eslint/js, @types/node, @vitest/coverage-v8, eslint, prettier, typescript-eslint, vitest
 
 ## [1.0.51] - 2026-04-09
 

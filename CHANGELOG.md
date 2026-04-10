@@ -1,5 +1,25 @@
 # Changelog
 
+
+## [1.0.52] - 2026-04-10
+
+### Changed
+
+- **Deposit/Withdraw builders**: Moved `buildDepositInstruction` and `buildWithdrawInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+- **New Instrument builder**: Moved `buildNewInstrumentInstructions` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **Swap builder**: Moved `buildSwapInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+- **Ref Link builder**: Moved `buildNewRefLinkInstruction` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, `shortEmaPx`, `midEmaPx`, `longEmaPx`
+- **`updateInstrDataFromBuffer`**: Added scaling for new `spotFeeRate` (× `feeRateStep`) and `spotPoolRatio` (× `poolRatioStep`) fields
+- **`updateInstrDataFromBuffer` / `updateInstrData`**: Cached `getInstrAccountByTagFn` result — reuses the address from `this.instruments` map on subsequent calls instead of re-deriving the PDA every time
+- **Withdraw/Swap instructions**: Removed `drvsAuthority` from swap and withdraw and `rootAccount` from swap
+- **`buildNewInstrumentInstructions`**: Asset program token account use now `getProgramTokenAccount` instead of keypair; account role changed from `WRITABLE_SIGNER` to `WRITABLE`
+- **`NewInstrumentArgsSchema`**: Removed `newProgramAccountAddress` field
+- **`buildVmRemoveWithdrawalAddressInstruction`**: removed `vmRemoveWithdrawalAddressData`
+- **Constants**: Added `feeRateStep` (`0.0005`) and `poolRatioStep` (`0.025`);
+- **`account-helpers.ts`**: Added `getProgramTokenAccount(ctx, mint)` helper
+- **Upgraded npm packages**: @eslint/js, @types/node, @vitest/coverage-v8, eslint, prettier, typescript-eslint, vitest
+
 ## [1.0.51] - 2026-04-09
 
 ### Changed

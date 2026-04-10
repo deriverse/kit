@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Address, AccountRole } from '@solana/kit';
 import {
   SpotInstructionContext,
-  buildDepositInstruction,
-  buildWithdrawInstruction,
   buildNewSpotOrderInstruction,
   buildSpotLpInstruction,
   buildSpotOrderCancelInstruction,
@@ -12,8 +10,6 @@ import {
 import { TokenStateModel, InstrAccountHeaderModel } from '../structure_models';
 import {
   Instrument,
-  DepositArgs,
-  WithdrawArgs,
   NewSpotOrderArgs,
   SpotLpArgs,
   SpotOrderCancelArgs,
@@ -120,86 +116,6 @@ function createMockSpotContext(overrides: Partial<SpotInstructionContext> = {}):
 describe('spot instruction builders', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('buildDepositInstruction', () => {
-    it('builds deposit instruction for existing account', async () => {
-      const ctx = createMockSpotContext();
-      const args: DepositArgs = { tokenId: 1, amount: 100 };
-      const rpcGetSlot = vi.fn().mockResolvedValue(BigInt(12345));
-
-      const instruction = await buildDepositInstruction(ctx, args, true, rpcGetSlot);
-
-      expect(instruction).toBeDefined();
-      expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.accounts).toBeDefined();
-      expect(instruction.accounts!.length).toBeGreaterThan(0);
-      expect(instruction.data).toBeInstanceOf(Uint8Array);
-      expect(instruction.data![0]).toBe(7); // deposit instruction tag
-    });
-
-    it('builds deposit instruction for new account', async () => {
-      const ctx = createMockSpotContext();
-      const args: DepositArgs = { tokenId: 1, amount: 50 };
-      const rpcGetSlot = vi.fn().mockResolvedValue(BigInt(12345));
-
-      const instruction = await buildDepositInstruction(ctx, args, false, rpcGetSlot);
-
-      expect(instruction).toBeDefined();
-      expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.accounts!.length).toBeGreaterThan(0);
-      expect(rpcGetSlot).toHaveBeenCalled();
-    });
-
-    it('includes private mode account when enabled', async () => {
-      const ctx = createMockSpotContext({ privateMode: true });
-      const args: DepositArgs = { tokenId: 1, amount: 100 };
-      const rpcGetSlot = vi.fn().mockResolvedValue(BigInt(12345));
-
-      const instruction = await buildDepositInstruction(ctx, args, true, rpcGetSlot);
-
-      expect(instruction.accounts!.length).toBeGreaterThan(9);
-    });
-
-    it('handles all_funds flag', async () => {
-      const ctx = createMockSpotContext();
-      const args: DepositArgs = { tokenId: 1, amount: 0, all_funds: true };
-      const rpcGetSlot = vi.fn().mockResolvedValue(BigInt(12345));
-
-      const instruction = await buildDepositInstruction(ctx, args, true, rpcGetSlot);
-
-      expect(instruction).toBeDefined();
-      expect(instruction.data![2]).toBe(1); // all_funds flag position
-    });
-  });
-
-  describe('buildWithdrawInstruction', () => {
-    it('builds withdraw instruction', async () => {
-      const ctx = createMockSpotContext();
-      const args: WithdrawArgs = { tokenId: 1, amount: 50 };
-
-      const instruction = await buildWithdrawInstruction(ctx, args);
-
-      expect(instruction).toBeDefined();
-      expect(instruction.programAddress).toBe(ctx.programId);
-      expect(instruction.accounts).toBeDefined();
-      expect(instruction.accounts!.length).toBeGreaterThan(0);
-      expect(instruction.data).toBeInstanceOf(Uint8Array);
-      expect(instruction.data![0]).toBe(8); // withdraw instruction tag
-    });
-
-    it('includes spot instruments when provided', async () => {
-      const ctx = createMockSpotContext();
-      const args: WithdrawArgs = {
-        tokenId: 1,
-        amount: 50,
-        spot: [{ instrId: 1 }],
-      };
-
-      const instruction = await buildWithdrawInstruction(ctx, args);
-
-      expect(instruction.accounts!.length).toBeGreaterThan(11);
-    });
   });
 
   describe('buildSpotLpInstruction', () => {

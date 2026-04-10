@@ -168,7 +168,6 @@ const PerpForcedCloseArgsSchema = z.object({
 const NewInstrumentArgsSchema = z.object({
   assetMint: solanaAddress.meta({ description: 'Asset Token Mint' }),
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
-  newProgramAccountAddress: solanaAddress.optional(),
   initialPrice: positiveNumber,
   mask: nonNegativeInt.default(0),
   minQty: z.number().default(1),

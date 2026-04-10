@@ -78,6 +78,21 @@ async function getTokenAccount(ctx: AccountHelperContext, mint: Address): Promis
 }
 
 /**
+ * Get program token account PDA for a mint.
+ */
+async function getProgramTokenAccount(ctx: Pick<AccountHelperContext, 'programId' | 'version'>, mint: Address): Promise<Address> {
+  let versionBuf = Buffer.alloc(4);
+  versionBuf.writeUInt32LE(ctx.version, 0);
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: ctx.programId,
+      seeds: [getAddressEncoder().encode(mint), versionBuf],
+    })
+  )[0];
+  return address;
+}
+
+/**
  * Get Token ID from mint public key if this token registered on Deriverse
  */
 async function getTokenId(ctx: AccountHelperContext, mint: Address): Promise<number | null> {
@@ -193,7 +208,7 @@ async function findClientVmAccount(
 ): Promise<Address> {
   let tagBuf = Buffer.alloc(8);
   tagBuf.writeUint32LE(ctx.version, 0);
-  tagBuf.writeUint32LE(AccountType.CLIENT_VM, 4);
+  tagBuf.writeUint32LE(AccountType.VM_CLIENT, 4);
   const address = (
     await getProgramDerivedAddress({
       programAddress: ctx.programId,
@@ -217,6 +232,7 @@ export {
   getAccountByTag,
   getInstrAccountByTag,
   getTokenAccount,
+  getProgramTokenAccount,
   getTokenId,
   getInstrId,
   findAccountsByTag,

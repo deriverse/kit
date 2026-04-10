@@ -25,8 +25,8 @@ vi.mock('./account-helpers', () => ({
   AccountHelperContext: {},
 }));
 
-// Mock spot-instructions
-vi.mock('./spot-instructions', () => ({
+// Mock instructions (deposit/withdraw)
+vi.mock('./instructions', () => ({
   buildDepositInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -37,6 +37,27 @@ vi.mock('./spot-instructions', () => ({
     accounts: [],
     data: new Uint8Array([8]),
   }),
+  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([
+    {
+      programAddress: 'MockProgram1111111111111111111111111' as Address,
+      accounts: [],
+      data: new Uint8Array([31]),
+    },
+  ]),
+  buildSwapInstruction: vi.fn().mockResolvedValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([14]),
+  }),
+  buildNewRefLinkInstruction: vi.fn().mockResolvedValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([30]),
+  }),
+}));
+
+// Mock spot-instructions
+vi.mock('./spot-instructions', () => ({
   buildSpotLpInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -61,11 +82,6 @@ vi.mock('./spot-instructions', () => ({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
     data: new Uint8Array([13]),
-  }),
-  buildSwapInstruction: vi.fn().mockResolvedValue({
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([14]),
   }),
   SpotInstructionContext: {},
 }));
@@ -124,18 +140,6 @@ vi.mock('./perp-instructions', () => ({
     accounts: [],
     data: new Uint8Array([29]),
   }),
-  buildNewRefLinkInstruction: vi.fn().mockResolvedValue({
-    programAddress: 'MockProgram1111111111111111111111111' as Address,
-    accounts: [],
-    data: new Uint8Array([30]),
-  }),
-  buildNewInstrumentInstructions: vi.fn().mockResolvedValue([
-    {
-      programAddress: 'MockProgram1111111111111111111111111' as Address,
-      accounts: [],
-      data: new Uint8Array([31]),
-    },
-  ]),
   PerpInstructionContext: {},
 }));
 
@@ -151,15 +155,13 @@ vi.mock('./logs-decoder', () => ({
 }));
 
 // Import mocked modules for assertions
+import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions, buildSwapInstruction, buildNewRefLinkInstruction } from './instructions';
 import {
-  buildDepositInstruction,
-  buildWithdrawInstruction,
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,
   buildSpotOrderCancelInstruction,
   buildSpotMassCancelInstruction,
-  buildSwapInstruction,
 } from './spot-instructions';
 
 import {
@@ -173,8 +175,6 @@ import {
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
-  buildNewRefLinkInstruction,
-  buildNewInstrumentInstructions,
 } from './perp-instructions';
 
 // Mock RPC for testing

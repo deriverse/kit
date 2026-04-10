@@ -1,4 +1,4 @@
-import { Address, AccountRole, getAddressEncoder } from '@solana/kit';
+import { Address, AccountRole } from '@solana/kit';
 
 import {
   VmInitActivateArgs,
@@ -21,12 +21,7 @@ import {
 } from '../constants';
 import { findAssociatedTokenAddress, tokenDec } from './utils';
 import { TokenStateModel } from '../structure_models';
-import {
-  vmInitWithdrawData,
-  vmChangeWhitelistData,
-  vmDirectWithdrawData,
-  vmRemoveWithdrawalAddressData,
-} from '../instruction_models';
+import { vmInitWithdrawData, vmChangeWhitelistData, vmDirectWithdrawData } from '../instruction_models';
 import {
   getAccountByTag,
   getTokenAccount,
@@ -314,9 +309,10 @@ async function buildVmRemoveWithdrawalAddressInstruction(
       { address: ctx.rootAccount, role: AccountRole.READONLY },
       { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
       { address: clientVmAccount, role: AccountRole.WRITABLE },
+      { address: args.withdrawalAddress, role: AccountRole.READONLY },
     ],
     programAddress: ctx.programId,
-    data: vmRemoveWithdrawalAddressData(79, new Uint8Array(getAddressEncoder().encode(args.withdrawalAddress))),
+    data: Buffer.from([79]),
   };
 }
 

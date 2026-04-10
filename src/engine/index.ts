@@ -6,7 +6,6 @@ import {
   Rpc,
   getBase64Encoder,
   getProgramDerivedAddress,
-  getAddressEncoder,
   Commitment,
 } from '@solana/kit';
 import { Buffer } from 'buffer';
@@ -90,7 +89,7 @@ import {
   Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
-import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, setDecimals } from '../constants';
+import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, feeRateStep, poolRatioStep, setDecimals } from '../constants';
 import {
   BaseCrncyRecordModel,
   ClientPrimaryAccountHeaderModel,
@@ -113,10 +112,7 @@ import {
   findClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import {
-  getSpotContext as getSpotContextFn,
-  getPerpContext as getPerpContextFn,
-} from './context-builders';
+import { getSpotContext as getSpotContextFn, getPerpContext as getPerpContextFn } from './context-builders';
 import { tokenDec } from './utils';
 import {
   ClientQueryContext,
@@ -129,12 +125,16 @@ import {
 import {
   buildDepositInstruction,
   buildWithdrawInstruction,
+  buildNewInstrumentInstructions,
+  buildSwapInstruction,
+  buildNewRefLinkInstruction,
+} from './instructions';
+import {
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
   buildSpotQuotesReplaceInstruction,
   buildSpotOrderCancelInstruction,
   buildSpotMassCancelInstruction,
-  buildSwapInstruction,
 } from './spot-instructions';
 import {
   buildUpgradeToPerpInstructions,
@@ -147,8 +147,6 @@ import {
   buildPerpMassCancelInstruction,
   buildPerpChangeLeverageInstruction,
   buildPerpStatisticsResetInstruction,
-  buildNewRefLinkInstruction,
-  buildNewInstrumentInstructions,
 } from './perp-instructions';
 import {
   buildVmInitActivateInstruction,
@@ -189,12 +187,12 @@ export class Engine {
   originalClientId: number | null = null;
   clientLutAddress: Address | null = null;
   privateMode: boolean = false;
+  drvsAuthority: Address;
+  clientPrimaryAccount: Address | null = null;
+  clientCommunityAccount: Address | null = null;
 
   private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
-  private drvsAuthority: Address;
   private signer: Address | null = null;
-  private clientPrimaryAccount: Address | null = null;
-  private clientCommunityAccount: Address | null = null;
   private refClientPrimaryAccount: Address | null = null;
   private refClientCommunityAccount: Address | null = null;
   private uiNumbers: boolean;
@@ -590,14 +588,8 @@ export class Engine {
     if (!instr) {
       throw new Error('Instrument not found!');
     }
-    const ctx = this.getAccountHelperContext();
-    let instrAccount = await getInstrAccountByTagFn(ctx, {
-      assetTokenId: instr.header.assetTokenId,
-      crncyTokenId: instr.header.crncyTokenId,
-      tag: AccountType.INSTR,
-    });
     const info = await this.rpc
-      .getAccountInfo(instrAccount, { commitment: this.commitment, encoding: 'base64' })
+      .getAccountInfo(instr.address, { commitment: this.commitment, encoding: 'base64' })
       .send();
 
     if (info.value == null) {
@@ -652,6 +644,17 @@ export class Engine {
     header.midEmaPx /= dec;
     header.longEmaPx /= dec;
     header.poolFees /= crncyTokenDec;
+    header.lastTradeAssetTokens /= assetTokenDec;
+    header.lastTradeCrncyTokens /= crncyTokenDec;
+    header.alltimeAssetTokens /= assetTokenDec;
+    header.alltimeCrncyTokens /= crncyTokenDec;
+    header.perpAlltimeAssetTokens /= assetTokenDec;
+    header.perpAlltimeCrncyTokens /= crncyTokenDec;
+    header.lpDayFees /= crncyTokenDec;
+    header.lpPrevDayFees /= crncyTokenDec;
+    header.lpAlltimeFees /= crncyTokenDec;
+    header.spotFeeRate *= feeRateStep;
+    header.spotPoolRatio *= poolRatioStep;
     let spotBids: Array<LineQuotesModel> = [];
     let spotAsks: Array<LineQuotesModel> = [];
     let perpBids: Array<LineQuotesModel> = [];
@@ -696,17 +699,17 @@ export class Engine {
       line.qty /= assetTokenDec;
       perpAsks.push(line);
     }
-    let pattern = Buffer.alloc(16);
-    pattern.writeInt32LE(this.version, 0);
-    pattern.writeInt32LE(AccountType.INSTR, 4);
-    pattern.writeInt32LE(header.assetTokenId, 8);
-    pattern.writeInt32LE(header.crncyTokenId, 12);
-    const instrAddress = (
-      await getProgramDerivedAddress({
-        programAddress: this.programId,
-        seeds: [pattern, getAddressEncoder().encode(this.drvsAuthority)],
-      })
-    )[0];
+
+    const existingInstr = this.instruments.get(header.instrId);
+
+    const instrAddress = existingInstr
+      ? existingInstr.address
+      : await getInstrAccountByTagFn(this.getAccountHelperContext(), {
+          assetTokenId: header.assetTokenId,
+          crncyTokenId: header.crncyTokenId,
+          tag: AccountType.INSTR,
+        });
+
     this.instruments.set(header.instrId, {
       address: instrAddress,
       header: header,

@@ -7,7 +7,7 @@ import { TokenStateModel } from '../structure_models';
 import { tokenDec } from './utils';
 import {
   BuyMarketSeatReportModel,
-  ChangePointsRecordModel,
+  ChangePointsReportModel,
   DepositReportModel,
   DrvsAirdropReportModel,
   EarningsReportModel,
@@ -482,8 +482,8 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
         break;
       }
       case LogType.changedPoints: {
-        if (buffer.length == ChangePointsRecordModel.LENGTH) {
-          let report = ChangePointsRecordModel.fromBuffer(buffer);
+        if (buffer.length == ChangePointsReportModel.LENGTH) {
+          let report = ChangePointsReportModel.fromBuffer(buffer);
           logs.push(report);
         }
         break;

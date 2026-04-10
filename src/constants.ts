@@ -1,4 +1,5 @@
 import { address } from '@solana/kit';
+import { CandlesHeaderModel } from './structure_models';
 
 export const VERSION = 1;
 export const PROGRAM_ID = address('DRVSpZ2YUYYKgZP8XtLhAGtT1zYSCKzeHfb4DgRnrgqD');
@@ -9,19 +10,24 @@ export const SYSTEM_PROGRAM_ID = address('11111111111111111111111111111111');
 export const TOKEN_PROGRAM_ID = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
 export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-export const MAX_SWAP_FEE_RATE = 0.0002;
-export const DF = 1e9;
+export const STANDARD_MAPS_SIZE = 42184 + CandlesHeaderModel.LENGTH; // spot::memory_maps::MAPS_SIZE + CandlesHeader
+export const EXTENDED_MAPS_SIZE = 68712 + CandlesHeaderModel.LENGTH; // extended_spot::memory_maps::MAPS_SIZE + CandlesHeader
+export const DF = 1000000000;
 
-export let dec = 1000000000;
-export let lpDec = 10000;
+const LP_DEC_UI = 10000;
+const FEE_RATE_STEP_UI = 0.0005;
+const POOL_RATIO_STEP_UI = 0.025;
+
+export let dec = DF;
+export let lpDec = LP_DEC_UI;
+export let feeRateStep = FEE_RATE_STEP_UI;
+export let poolRatioStep = POOL_RATIO_STEP_UI;
+
 export const nullOrder = 0xffff;
 
 export function setDecimals(uiNumbers: boolean): void {
-  if (!uiNumbers) {
-    dec = 1;
-    lpDec = 1;
-  } else {
-    dec = 1000000000;
-    lpDec = 10000;
-  }
+  dec = uiNumbers ? DF : 1;
+  lpDec = uiNumbers ? LP_DEC_UI : 1;
+  feeRateStep = uiNumbers ? FEE_RATE_STEP_UI : 1;
+  poolRatioStep = uiNumbers ? POOL_RATIO_STEP_UI : 1;
 }

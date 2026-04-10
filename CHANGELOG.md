@@ -1,10 +1,108 @@
 # Changelog
 
-## [1.0.44] - 2025-02-25
+
+## Unreleased - 2026-04-10
 
 ### Added
 
 - **Estimate**: `Engine.estimate()` — simulates order execution against AMM pool and orderbook, returns fill price, cost, and remaining quantity
+=======
+
+## [1.0.52] - 2026-04-10
+
+### Changed
+
+- **Deposit/Withdraw builders**: Moved `buildDepositInstruction` and `buildWithdrawInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+- **New Instrument builder**: Moved `buildNewInstrumentInstructions` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **Swap builder**: Moved `buildSwapInstruction` from `engine/spot-instructions.ts` to `engine/instructions.ts`
+- **Ref Link builder**: Moved `buildNewRefLinkInstruction` from `engine/perp-instructions.ts` to `engine/instructions.ts`
+- **`updateInstrDataFromBuffer`**: Added token decimal normalization for `lastTradeAssetTokens`, `lastTradeCrncyTokens`, `alltimeAssetTokens`, `alltimeCrncyTokens`, `perpAlltimeAssetTokens`, `perpAlltimeCrncyTokens`, `lpDayFees`, `lpPrevDayFees`, `lpAlltimeFees`, `shortEmaPx`, `midEmaPx`, `longEmaPx`
+- **`updateInstrDataFromBuffer`**: Added scaling for new `spotFeeRate` (× `feeRateStep`) and `spotPoolRatio` (× `poolRatioStep`) fields
+- **`updateInstrDataFromBuffer` / `updateInstrData`**: Cached `getInstrAccountByTagFn` result — reuses the address from `this.instruments` map on subsequent calls instead of re-deriving the PDA every time
+- **Withdraw/Swap instructions**: Removed `drvsAuthority` from swap and withdraw and `rootAccount` from swap
+- **`buildNewInstrumentInstructions`**: Asset program token account use now `getProgramTokenAccount` instead of keypair; account role changed from `WRITABLE_SIGNER` to `WRITABLE`
+- **`NewInstrumentArgsSchema`**: Removed `newProgramAccountAddress` field
+- **`buildVmRemoveWithdrawalAddressInstruction`**: removed `vmRemoveWithdrawalAddressData`
+- **Constants**: Added `feeRateStep` (`0.0005`) and `poolRatioStep` (`0.025`);
+- **`account-helpers.ts`**: Added `getProgramTokenAccount(ctx, mint)` helper
+- **Upgraded npm packages**: @eslint/js, @types/node, @vitest/coverage-v8, eslint, prettier, typescript-eslint, vitest
+
+## [1.0.51] - 2026-04-09
+
+### Changed
+
+- **Merged `SpotClientInfo2` into `SpotClientInfo`**: Single 64-byte account
+- **Removed `SPOT_CLIENT_INFOS2` and `CANDLES` accounts** everywhere
+- **Removed from `AccountType` enum**: `SPOT_CLIENT_INFOS2`, `SPOT_1M_CANDLES`, `SPOT_15M_CANDLES`, `SPOT_DAY_CANDLES`
+- **Removed `COMMUNITY` account** in swap instructions 
+- **Removed `feeTakerWallet` and `refFeeRate`** from swap instruction args
+- **`STANDARD_MAPS_SIZE` and `EXTENDED_MAPS_SIZE`**: Increased by `CandlesHeaderModel.LENGTH`
+- **`getClientSpotOrdersInfo`**: Now fetches a single account instead of two
+
+## [1.0.50] - 2026-04-08
+
+### Added
+
+- **VM mode instructions**: Added full set of VM mode instruction builders (tags 63-80): activate, deactivate, withdraw, change whitelist, add/remove withdrawal address, direct withdraw
+
+## [1.0.49] - 2026-03-17
+
+### Changed
+
+- **Client accounts now optional**: `clientPrimaryAccount` and `clientCommunityAccount` are nullable (`Address | null`) in `SpotInstructionContext` and `PerpInstructionContext`
+- **`getSpotInstructionContext`**: Removed throws for null client accounts — only signer check remains
+- **Instruction builders**: Each builder that needs client accounts validates at point of use via `requireClientPrimaryAccount` / `requireClientCommunityAccount` (shared from `account-helpers.ts`)
+- **No client accounts required**: `buildSwapInstruction`, `buildUpgradeToPerpInstructions`, `buildNewInstrumentInstructions` work without client accounts set
+- **`buildNewInstrumentInstructions`**: `minQty` is now scaled by the asset token's decimal factor
+- **`NewInstrumentArgsSchema`**: `minQty` default changed from `0` to `1`
+
+## [1.0.48] - 2026-03-17
+
+### Fixed
+
+- **`NewInstrumentArgs`**: Changed from `z.infer` to `z.input` so fields with defaults (`mask`, `minQty`, `fixedFeeRate`) are optional in the input type
+- **`newInstrumentInstructions`**: Removed signer check
+- **`ParsedNewInstrumentArgs`**: Added new type (`z.infer`) for internal use after parsing, ensuring defaults are resolved
+- **`buildNewInstrumentInstructions`**: Maps account size now selected dynamically based on `InstrFlag.similarAssets` mask — standard (42,184) or extended (68,712)
+- **Constants**: Added `STANDARD_MAPS_SIZE` and `EXTENDED_MAPS_SIZE`
+- **Tests**: Updated log decoder test buffer helpers to match regenerated models (new `seqNo` and `customId` fields)
+
+## [1.0.47] - 2026-03-12
+
+### Changed
+
+- **Log models**: Updated log models
+- **Structure models**: Updated structure models
+- **Rename**: `ChangePointsRecordModel` renamed to `ChangePointsReportModel`
+
+## [1.0.46] - 2026-03-09
+
+### Changed
+
+- **`buildSwapInstruction`**: Use `getSpotOneSidedContext` instead of `getSpotContext`, reorder accounts, conditionally include `crncyTokenProgramId`, remove `feeTakerWallet` and token account lookups
+- **`swapData`**: Removed `refFeeRate` parameter
+- **`newInstrumentData`**: Added `mask`, `minQty`, `fixedFeeRate` parameters
+- **`NewInstrumentArgsSchema`**: Added `mask`, `minQty`, `fixedFeeRate` fields
+- **`InstrAccountHeaderModel`**: Renamed `emaPx` to `shortEmaPx`, added `swapFees`, `similarAssetsMinQty`, `fixedFeeRate`, `midEmaPx`, `longEmaPx` fields
+- **New models**: `InstrFlag`, `TokenFlag`, `InstrMaskModel`, `InstrInputMaskModel`, `TokenMaskModel`, `PerpLossCoverageReportModel`
+- **New instructions**: `withdrawSwapFeesData`, `setSAMMinQtyData`, `changeSAMFeesPolicyData`, `suspendInstrumentData`
+- **`LogType`**: Added `perpLossCoverage`
+- **`updateInstrDataFromBuffer`**: Divide `shortEmaPx`, `midEmaPx`, `longEmaPx` by `dec`
+
+## [1.0.45] - 2026-03-09
+
+### Changed
+
+- **`SwapArgsSchema`**: `limitPrice` now accept `0`
+- **`SwapArgsSchema`**: `refFeeRate` and `minAmountOut` are now optional (default to `0`)
+
+## [1.0.44] - 2026-03-05
+
+### Changed
+
+- **`depositData`**: Added `customId` parameter
+- **`withdrawData`**: Added `customId` parameter
+- **`spotQuotesReplaceData`/`perpQuotesReplaceData`**: Added `bump` and `orderType` parameters
 
 ## [1.0.43] - 2026-02-24
 

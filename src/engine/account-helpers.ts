@@ -78,6 +78,21 @@ async function getTokenAccount(ctx: AccountHelperContext, mint: Address): Promis
 }
 
 /**
+ * Get program token account PDA for a mint.
+ */
+async function getProgramTokenAccount(ctx: Pick<AccountHelperContext, 'programId' | 'version'>, mint: Address): Promise<Address> {
+  let versionBuf = Buffer.alloc(4);
+  versionBuf.writeUInt32LE(ctx.version, 0);
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: ctx.programId,
+      seeds: [getAddressEncoder().encode(mint), versionBuf],
+    })
+  )[0];
+  return address;
+}
+
+/**
  * Get Token ID from mint public key if this token registered on Deriverse
  */
 async function getTokenId(ctx: AccountHelperContext, mint: Address): Promise<number | null> {
@@ -187,13 +202,43 @@ async function findClientCommunityAccount(
   return address;
 }
 
+async function findClientVmAccount(
+  ctx: Pick<AccountHelperContext, 'programId' | 'version'>,
+  signer: Address,
+): Promise<Address> {
+  let tagBuf = Buffer.alloc(8);
+  tagBuf.writeUint32LE(ctx.version, 0);
+  tagBuf.writeUint32LE(AccountType.VM_CLIENT, 4);
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: ctx.programId,
+      seeds: [tagBuf, getAddressEncoder().encode(signer)],
+    })
+  )[0];
+  return address;
+}
+
+function requireClientPrimaryAccount(ctx: { clientPrimaryAccount: Address | null }): Address {
+  if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+  return ctx.clientPrimaryAccount;
+}
+
+function requireClientCommunityAccount(ctx: { clientCommunityAccount: Address | null }): Address {
+  if (ctx.clientCommunityAccount === null) throw new Error('Client community account not found');
+  return ctx.clientCommunityAccount;
+}
+
 export {
   getAccountByTag,
   getInstrAccountByTag,
   getTokenAccount,
+  getProgramTokenAccount,
   getTokenId,
   getInstrId,
   findAccountsByTag,
   findClientPrimaryAccount,
   findClientCommunityAccount,
+  findClientVmAccount,
+  requireClientPrimaryAccount,
+  requireClientCommunityAccount,
 };

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { Address, Commitment } from '@solana/kit';
-import { MAX_SWAP_FEE_RATE } from '../constants';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
@@ -29,6 +28,7 @@ const DepositArgsSchema = z.object({
   refId: nonNegativeInt.optional().meta({ description: 'Referal Link ID for new account. Zero means no ref link' }),
   refWallet: solanaAddress.optional().meta({ description: 'Referal Wallet' }),
   all_funds: z.boolean().optional(),
+  customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
 });
 
 const WithdrawArgsSchema = z.object({
@@ -38,6 +38,7 @@ const WithdrawArgsSchema = z.object({
     .array(InstrIdSchema)
     .optional()
     .meta({ description: 'List of instruments ID to withdraw from client temporary instrument accounts' }),
+  customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
 });
 
 const NewSpotOrderArgsSchema = z.object({
@@ -53,10 +54,7 @@ const NewSpotOrderArgsSchema = z.object({
 });
 
 const QuoteOrderSchema = z.object({
-  newPrice: z
-    .number()
-    .nonnegative({ error: 'Price must be non-negative' })
-    .meta({ description: 'New order price' }),
+  newPrice: z.number().nonnegative({ error: 'Price must be non-negative' }).meta({ description: 'New order price' }),
   newQty: z
     .number()
     .nonnegative({ error: 'Quantity must be non-negative' })
@@ -67,21 +65,22 @@ const QuoteOrderSchema = z.object({
 
 const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
+  bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
+  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  orders: z
+    .array(QuoteOrderSchema)
+    .min(1)
+    .max(12, { error: 'Exceeded orders limit of 12' })
+    .meta({ description: 'Quote orders to place/replace' }),
 });
 
 const SwapArgsSchema = z.object({
   assetMint: solanaAddress.meta({ description: 'Asset Token Mint' }),
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
   amount: positiveNumber.meta({ description: 'Amount to swap' }),
-  limitPrice: positiveNumber.meta({ description: 'Limit price' }),
+  limitPrice: z.number().min(0, { error: 'Limit price must be at least 0' }).meta({ description: 'Limit price' }),
   crncyInput: z.boolean().meta({ description: 'Currency token as input token' }),
-  refFeeRate: z
-    .number()
-    .min(0)
-    .max(MAX_SWAP_FEE_RATE, { error: `Ref fee rate must be between 0 and ${MAX_SWAP_FEE_RATE}` }),
-  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }),
-  feeTakerWallet: solanaAddress.optional().meta({ description: 'Fee taker wallet address' }),
+  minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }).optional(),
 });
 
 const SpotOrderCancelArgsSchema = z.object({
@@ -133,7 +132,13 @@ const NewPerpOrderArgsSchema = z.object({
 
 const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  orders: z.array(QuoteOrderSchema).min(1).max(12, { error: 'Exceeded orders limit of 12' }).meta({ description: 'Quote orders to place/replace' }),
+  bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
+  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  orders: z
+    .array(QuoteOrderSchema)
+    .min(1)
+    .max(12, { error: 'Exceeded orders limit of 12' })
+    .meta({ description: 'Quote orders to place/replace' }),
 });
 
 const PerpOrderCancelArgsSchema = z.object({
@@ -163,8 +168,10 @@ const PerpForcedCloseArgsSchema = z.object({
 const NewInstrumentArgsSchema = z.object({
   assetMint: solanaAddress.meta({ description: 'Asset Token Mint' }),
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
-  newProgramAccountAddress: solanaAddress.optional(),
   initialPrice: positiveNumber,
+  mask: nonNegativeInt.default(0),
+  minQty: z.number().default(1),
+  fixedFeeRate: z.number().default(0),
 });
 
 const GetInstrIdArgsSchema = z.object({
@@ -246,6 +253,54 @@ const GetClientPerpOrdersArgsSchema = z.object({
   }),
 });
 
+const VmInitActivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmFinalizeActivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmFinalizeDeactivateArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+});
+
+const VmInitWithdrawArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+  amount: positiveNumber.meta({ description: 'Amount to withdraw' }),
+});
+
+const VmInitWithdrawCancelArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID of pending withdrawal' }),
+});
+
+const VmInitWithdrawFinalizeArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+});
+
+const VmChangeListArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  mask: nonNegativeInt.meta({ description: 'VM whitelist mask' }),
+  whitelist: z.array(z.number()).optional().meta({ description: 'Instrument whitelist array' }),
+});
+
+const VmAddWithdrawalAddressArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
+});
+
+const VmRemoveWithdrawalAddressArgsSchema = z.object({
+  vmAuthority: solanaAddress.meta({ description: 'VM mode authority address' }),
+  withdrawalAddress: solanaAddress.meta({ description: 'Withdrawal address to remove from whitelist' }),
+});
+
+const VmDirectWithdrawArgsSchema = z.object({
+  tokenId: nonNegativeInt.meta({ description: 'Deriverse token registered ID' }),
+  amount: positiveNumber.meta({ description: 'Amount to withdraw' }),
+  withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
+});
+
 export {
   EngineArgsSchema,
   InstrIdSchema,
@@ -277,4 +332,14 @@ export {
   GetClientPerpOrdersInfoArgsSchema,
   GetClientSpotOrdersArgsSchema,
   GetClientPerpOrdersArgsSchema,
+  VmInitActivateArgsSchema,
+  VmFinalizeActivateArgsSchema,
+  VmFinalizeDeactivateArgsSchema,
+  VmInitWithdrawArgsSchema,
+  VmInitWithdrawCancelArgsSchema,
+  VmInitWithdrawFinalizeArgsSchema,
+  VmChangeListArgsSchema,
+  VmAddWithdrawalAddressArgsSchema,
+  VmRemoveWithdrawalAddressArgsSchema,
+  VmDirectWithdrawArgsSchema,
 };

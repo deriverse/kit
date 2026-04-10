@@ -30,10 +30,21 @@ export {
   PerpSellSeatArgs,
   NewPerpOrderArgs,
   NewInstrumentArgs,
+  ParsedNewInstrumentArgs,
   GetClientSpotOrdersInfoArgs,
   GetClientPerpOrdersInfoArgs,
   GetClientSpotOrdersArgs,
   GetClientPerpOrdersArgs,
+  VmInitActivateArgs,
+  VmFinalizeActivateArgs,
+  VmFinalizeDeactivateArgs,
+  VmInitWithdrawArgs,
+  VmInitWithdrawCancelArgs,
+  VmInitWithdrawFinalizeArgs,
+  VmChangeListArgs,
+  VmAddWithdrawalAddressArgs,
+  VmRemoveWithdrawalAddressArgs,
+  VmDirectWithdrawArgs,
 } from './engine-args';
 
 export {
@@ -90,6 +101,16 @@ export {
   GetSpotContextArgsSchema,
   GetInstrAccountByTagArgsSchema,
   UpdateInstrDataArgsSchema,
+  VmInitActivateArgsSchema,
+  VmFinalizeActivateArgsSchema,
+  VmFinalizeDeactivateArgsSchema,
+  VmInitWithdrawArgsSchema,
+  VmInitWithdrawCancelArgsSchema,
+  VmInitWithdrawFinalizeArgsSchema,
+  VmChangeListArgsSchema,
+  VmAddWithdrawalAddressArgsSchema,
+  VmRemoveWithdrawalAddressArgsSchema,
+  VmDirectWithdrawArgsSchema,
 } from './schemas';
 
 export type Instruction = IInstruction;

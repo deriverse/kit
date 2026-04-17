@@ -1,65 +1,72 @@
 import { describe, it, expect } from 'vitest';
-import { getSpotPriceStep, getPerpPriceStep, buildQuotesMask } from './utils';
+import { getSpotPriceStep, getPerpPriceStep, buildQuotesMask, SAM_PRICE_STEP } from './utils';
 
 describe('getSpotPriceStep', () => {
   // All threshold boundaries from the implementation
   const spotTestCases: [number, number][] = [
     // price <= threshold → expected step
-    [0.00001, 0.000000001],
-    [0.00002, 0.000000002],
-    [0.00005, 0.000000005],
-    [0.0001, 0.00000001],
-    [0.0002, 0.00000002],
-    [0.0005, 0.00000005],
-    [0.001, 0.0000001],
-    [0.002, 0.0000002],
-    [0.005, 0.0000005],
-    [0.01, 0.000001],
-    [0.02, 0.000002],
-    [0.05, 0.000005],
-    [0.1, 0.00001],
-    [0.2, 0.00002],
-    [0.5, 0.00005],
-    [1, 0.0001],
-    [2, 0.0002],
-    [5, 0.0005],
-    [10, 0.001],
-    [20, 0.002],
-    [50, 0.005],
-    [100, 0.01],
-    [200, 0.02],
-    [500, 0.05],
-    [1000, 0.1],
-    [2000, 0.2],
-    [5000, 0.5],
-    [10000, 1],
-    [20000, 2],
-    [50000, 5],
-    [100000, 10],
-    [200000, 20],
-    [500000, 50],
-    [1000000, 100],
-    [2000000, 200],
-    [5000000, 500],
+    [0.00002, 0.000000001],
+    [0.00005, 0.000000002],
+    [0.0001, 0.000000005],
+    [0.0002, 0.00000001],
+    [0.0005, 0.00000002],
+    [0.001, 0.00000005],
+    [0.002, 0.0000001],
+    [0.005, 0.0000002],
+    [0.01, 0.0000005],
+    [0.02, 0.000001],
+    [0.05, 0.000002],
+    [0.1, 0.000005],
+    [0.2, 0.00001],
+    [0.5, 0.00002],
+    [1, 0.00005],
+    [2, 0.0001],
+    [5, 0.0002],
+    [10, 0.0005],
+    [20, 0.001],
+    [50, 0.002],
+    [100, 0.005],
+    [200, 0.01],
+    [500, 0.02],
+    [1000, 0.05],
+    [2000, 0.1],
+    [5000, 0.2],
+    [10000, 0.5],
+    [20000, 1],
+    [50000, 2],
+    [100000, 5],
+    [200000, 10],
+    [500000, 20],
+    [1000000, 50],
+    [2000000, 100],
+    [5000000, 200],
   ];
 
   it.each(spotTestCases)('price %d → step %d', (price, expectedStep) => {
     expect(getSpotPriceStep(price)).toBe(expectedStep);
   });
 
-  it('returns 1000 for prices above 5000000', () => {
-    expect(getSpotPriceStep(5000001)).toBe(1000);
-    expect(getSpotPriceStep(10000000)).toBe(1000);
-    expect(getSpotPriceStep(100000000)).toBe(1000);
+  it('returns 500 for prices above 5000000', () => {
+    expect(getSpotPriceStep(5000001)).toBe(500);
+    expect(getSpotPriceStep(10000000)).toBe(500);
+    expect(getSpotPriceStep(100000000)).toBe(500);
   });
 
   it('handles boundary values correctly', () => {
     // Values between thresholds fall into the next bucket (price <= threshold)
-    expect(getSpotPriceStep(0.000009)).toBe(0.000000001); // <= 0.00001
-    expect(getSpotPriceStep(0.000019)).toBe(0.000000002); // <= 0.00002
-    expect(getSpotPriceStep(0.9)).toBe(0.0001);           // <= 1
-    expect(getSpotPriceStep(1.5)).toBe(0.0002);           // <= 2
-    expect(getSpotPriceStep(99)).toBe(0.01);              // <= 100
+    expect(getSpotPriceStep(0.000019)).toBe(0.000000001); // <= 0.00002
+    expect(getSpotPriceStep(0.000049)).toBe(0.000000002); // <= 0.00005
+    expect(getSpotPriceStep(0.9)).toBe(0.00005);          // <= 1
+    expect(getSpotPriceStep(1.5)).toBe(0.0001);           // <= 2
+    expect(getSpotPriceStep(87)).toBe(0.005);             // <= 100
+    expect(getSpotPriceStep(99)).toBe(0.005);             // <= 100
+  });
+
+  it('returns flat SAM step when isSimilarAssets=true', () => {
+    expect(getSpotPriceStep(0.001, true)).toBe(SAM_PRICE_STEP);
+    expect(getSpotPriceStep(1, true)).toBe(SAM_PRICE_STEP);
+    expect(getSpotPriceStep(87, true)).toBe(SAM_PRICE_STEP);
+    expect(getSpotPriceStep(1_000_000, true)).toBe(SAM_PRICE_STEP);
   });
 });
 

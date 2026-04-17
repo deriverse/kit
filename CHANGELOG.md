@@ -1,6 +1,12 @@
 # Changelog
 
 
+## [1.0.53] - 2026-04-17
+
+### Changed
+
+- **`getSpotPriceStep`**: Updated spot price step table, added optional `isSimilarAssets` parameter. When `true`, returns the flat SAM step (`0.00001`).
+
 ## [1.0.52] - 2026-04-10
 
 ### Changed

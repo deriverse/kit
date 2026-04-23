@@ -33,7 +33,7 @@ import {
   requireClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext } from './context-builders';
+import { getSpotContext, getSpotOneSidedContext } from './context-builders';
 
 /**
  * Context needed for spot instruction builders
@@ -211,11 +211,7 @@ async function buildSpotOrderCancelInstruction(
     { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
     { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
-    ...(await getSpotContext(ctx, instr.header)),
-    {
-      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
-      role: drvs ? AccountRole.WRITABLE : AccountRole.READONLY,
-    },
+    ...(await getSpotOneSidedContext(ctx, instr.header, args.side)),
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   ];
 
@@ -223,6 +219,10 @@ async function buildSpotOrderCancelInstruction(
     keys.push({
       address: await findClientCommunityAccount(ctx, ctx.signer),
       role: AccountRole.WRITABLE,
+    });
+    keys.push({
+      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
+      role: AccountRole.WRITABLE
     });
   }
 

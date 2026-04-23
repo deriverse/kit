@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.54] - 2026-04-23
+
+### Changed
+
+- **`buildSpotOrderCancelInstruction`**: OneSideContext
 
 ## [1.0.53] - 2026-04-17
 

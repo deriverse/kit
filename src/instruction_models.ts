@@ -195,12 +195,12 @@ export function swapData(tag: number, inputCrncy: number, instrId: number, price
   return buf;
 }
 
-export function spotQuotesReplaceData(tag: number, bump: number, orderType: number, mask: number, instrId: number): Buffer {
+export function spotQuotesReplaceData(tag: number, bump: number, orderType: number, bailOnOrderNotFound: number, mask: number, instrId: number): Buffer {
   let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(bump, 1);
   buf.writeUint8(orderType, 2);
-  buf.writeUint8(0, 3);
+  buf.writeUint8(bailOnOrderNotFound, 3);
   buf.writeUint16LE(mask, 4);
   buf.writeUint16LE(0, 6);
   buf.writeUint32LE(instrId, 8);
@@ -208,12 +208,12 @@ export function spotQuotesReplaceData(tag: number, bump: number, orderType: numb
   return buf;
 }
 
-export function perpQuotesReplaceData(tag: number, bump: number, orderType: number, mask: number, instrId: number): Buffer {
+export function perpQuotesReplaceData(tag: number, bump: number, orderType: number, bailOnOrderNotFound: number, mask: number, instrId: number): Buffer {
   let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);
   buf.writeUint8(bump, 1);
   buf.writeUint8(orderType, 2);
-  buf.writeUint8(0, 3);
+  buf.writeUint8(bailOnOrderNotFound, 3);
   buf.writeUint16LE(mask, 4);
   buf.writeUint16LE(0, 6);
   buf.writeUint32LE(instrId, 8);
@@ -484,31 +484,10 @@ export function vmDirectWithdrawData(tag: number, tokenId: number, amount: numbe
   return buf;
 }
 
-export function moveFundsData(tag: number, tokenId: number, amount: number): Buffer {
-  let buf = Buffer.alloc(16);
+export function vmInitActivateData(tag: number, multisig: number): Buffer {
+  let buf = Buffer.alloc(2);
   buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(tokenId, 4);
-  buf.writeBigInt64LE(BigInt(Math.floor(amount)), 8);
-  return buf;
-}
-
-export function migrateTokenData(tag: number, tokenId: number): Buffer {
-  let buf = Buffer.alloc(8);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(tokenId, 4);
-  return buf;
-}
-
-export function migrateInstrData(tag: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(instrId, 4);
+  buf.writeUint8(multisig, 1);
   return buf;
 }
 

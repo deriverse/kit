@@ -1180,29 +1180,6 @@ export class ChangePointsReportModel {
   }
 }
 
-export class SwapRefFeesReportModel {
-  static readonly LENGTH = 2 * 1 + 1 * 2 + 1 * 4 + 2 * 8; // 24 bytes
-
-  static readonly OFFSET_TAG = 0;
-  static readonly OFFSET_FEES = 8;
-  static readonly OFFSET_SEQ_NO = 16;
-
-  tag: number;
-  fees: number;
-  seqNo: number;
-  static fromBuffer(buffer: Buffer, offset?: number): SwapRefFeesReportModel {
-    const result = new SwapRefFeesReportModel();
-    let autoBuffer = new AutoBuffer(buffer, offset);
-    result.tag = autoBuffer.readU8();
-    autoBuffer.readU8();
-    autoBuffer.readU16();
-    autoBuffer.readU32();
-    result.fees = autoBuffer.readI64();
-    result.seqNo = autoBuffer.readI64();
-    return result;
-  }
-}
-
 export class VmInitActivateReportModel {
   static readonly LENGTH = 2 * 1 + 1 * 2 + 3 * 4; // 16 bytes
 

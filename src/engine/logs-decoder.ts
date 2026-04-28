@@ -39,7 +39,6 @@ import {
   SpotOrderRevokeReportModel,
   SpotPlaceMassCancelReportModel,
   SpotPlaceOrderReportModel,
-  SwapRefFeesReportModel,
   VmChangeListReportModel,
   VmFinalizeActivateReportModel,
   VmFinalizeDeactivateReportModel,
@@ -484,16 +483,6 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
       case LogType.changedPoints: {
         if (buffer.length == ChangePointsReportModel.LENGTH) {
           let report = ChangePointsReportModel.fromBuffer(buffer);
-          logs.push(report);
-        }
-        break;
-      }
-      case LogType.swapFees: {
-        if (buffer.length == SwapRefFeesReportModel.LENGTH) {
-          let report = SwapRefFeesReportModel.fromBuffer(buffer);
-          if (uiNumbers) {
-            report.fees /= crncyTokenDec;
-          }
           logs.push(report);
         }
         break;

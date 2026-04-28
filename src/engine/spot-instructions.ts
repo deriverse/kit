@@ -160,7 +160,7 @@ async function buildSpotQuotesReplaceInstruction(
 
   let mask = buildQuotesMask(args.orders);
 
-  let headerBuf = spotQuotesReplaceData(34, args.bump ?? 0, args.orderType ?? 0, mask, args.instrId);
+  let headerBuf = spotQuotesReplaceData(34, args.bump ?? 0, args.orderType ?? 0, args.bailOnOrderNotFound ? 1 : 0, mask, args.instrId);
 
   let ordersBuf = Buffer.alloc(args.orders.length * QuoteOrderModel.LENGTH);
   for (let i = 0; i < args.orders.length; i++) {
@@ -217,12 +217,12 @@ async function buildSpotOrderCancelInstruction(
 
   if (drvs) {
     keys.push({
-      address: await findClientCommunityAccount(ctx, ctx.signer),
+      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
       role: AccountRole.WRITABLE,
     });
     keys.push({
-      address: await getAccountByTag(ctx, AccountType.COMMUNITY),
-      role: AccountRole.WRITABLE
+      address: await findClientCommunityAccount(ctx, ctx.signer),
+      role: AccountRole.WRITABLE,
     });
   }
 

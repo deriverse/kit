@@ -46,6 +46,14 @@ vi.mock('./context-builders', () => ({
     { address: 'SpotCtx8888888888888888888888888' as Address, role: AccountRole.WRITABLE },
     { address: 'SpotCtx9999999999999999999999999' as Address, role: AccountRole.WRITABLE },
   ]),
+  getSpotOneSidedContext: vi.fn().mockResolvedValue([
+    { address: 'OneSided111111111111111111111111' as Address, role: AccountRole.WRITABLE },
+    { address: 'OneSided222222222222222222222222' as Address, role: AccountRole.WRITABLE },
+    { address: 'OneSided333333333333333333333333' as Address, role: AccountRole.WRITABLE },
+    { address: 'OneSided444444444444444444444444' as Address, role: AccountRole.WRITABLE },
+    { address: 'OneSided555555555555555555555555' as Address, role: AccountRole.WRITABLE },
+    { address: 'OneSided666666666666666666666666' as Address, role: AccountRole.WRITABLE },
+  ]),
   getPerpContext: vi.fn().mockResolvedValue([]),
 }));
 

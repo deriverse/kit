@@ -31,7 +31,6 @@ import {
   SpotOrderRevokeReportModel,
   SpotPlaceMassCancelReportModel,
   SpotPlaceOrderReportModel,
-  SwapRefFeesReportModel,
   VmChangeListReportModel,
   VmFinalizeActivateReportModel,
   VmFinalizeDeactivateReportModel,
@@ -79,7 +78,6 @@ export type LogMessage =
   | PlaceSwapOrderReportModel
   | MoveSpotAvailFundsReportModel
   | ChangePointsReportModel
-  | SwapRefFeesReportModel
   | VmInitActivateReportModel
   | VmInitActivateCancelReportModel
   | VmFinalizeActivateReportModel

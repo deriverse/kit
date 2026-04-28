@@ -67,6 +67,9 @@ const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
   orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  bailOnOrderNotFound: z.boolean().optional().meta({
+    description: 'If true, fail the instruction when an order to cancel is not found',
+  }),
   orders: z
     .array(QuoteOrderSchema)
     .min(1)
@@ -134,6 +137,9 @@ const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
   orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  bailOnOrderNotFound: z.boolean().optional().meta({
+    description: 'If true, fail the instruction when an order to cancel is not found',
+  }),
   orders: z
     .array(QuoteOrderSchema)
     .min(1)

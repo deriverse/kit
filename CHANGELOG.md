@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.55] - 2026-04-27
+
+### Fixed
+
+- **`buildSpotOrderCancelInstruction`**: Fixed account order
+
+### Added
+
+- **`bailOnOrderNotFound`**: New optional flag on `SpotQuotesReplaceArgs` and `PerpQuotesReplaceArgs`
+
+### Removed
+
+- **`SwapRefFeesReportModel`**: Dropped from `LogMessage` union and `LogsDecoder`
+
 ## [1.0.54] - 2026-04-23
 
 ### Changed

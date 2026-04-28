@@ -1208,7 +1208,7 @@ export class PerpClientInfo5Model {
 }
 
 export class ClientPrimaryAccountHeaderModel {
-  static readonly LENGTH = 30 * 4 + 16 * 8 + 4 * 32; // 376 bytes
+  static readonly LENGTH = 30 * 4 + 12 * 8 + 5 * 32; // 376 bytes
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_VERSION = 4;
@@ -1246,13 +1246,10 @@ export class ClientPrimaryAccountHeaderModel {
   static readonly OFFSET_PERP_FILLED_ORDERS = 308;
   static readonly OFFSET_LOG_SEQ_NO = 312;
   static readonly OFFSET_RESERVED_VALUE1 = 316;
-  static readonly OFFSET_RESERVED_VALUE2 = 320;
-  static readonly OFFSET_RESERVED_VALUE3 = 328;
-  static readonly OFFSET_RESERVED_VALUE4 = 336;
-  static readonly OFFSET_RESERVED_VALUE5 = 344;
-  static readonly OFFSET_RESERVED_VALUE6 = 352;
-  static readonly OFFSET_RESERVED_VALUE7 = 360;
-  static readonly OFFSET_RESERVED_VALUE8 = 368;
+  static readonly OFFSET_MULTISIG_ADDRESS = 320;
+  static readonly OFFSET_RESERVED_VALUE2 = 352;
+  static readonly OFFSET_RESERVED_VALUE3 = 360;
+  static readonly OFFSET_RESERVED_VALUE4 = 368;
 
   tag: number;
   version: number;
@@ -1290,13 +1287,10 @@ export class ClientPrimaryAccountHeaderModel {
   perpFilledOrders: number;
   logSeqNo: number;
   reservedValue1: number;
+  multisigAddress: Address<any>;
   reservedValue2: number;
   reservedValue3: number;
   reservedValue4: number;
-  reservedValue5: number;
-  reservedValue6: number;
-  reservedValue7: number;
-  reservedValue8: number;
   static fromBuffer(data: Base64EncodedDataResponse, offset?: number): ClientPrimaryAccountHeaderModel {
     const result = new ClientPrimaryAccountHeaderModel();
     let autoData = new AutoData(data, offset);
@@ -1336,13 +1330,10 @@ export class ClientPrimaryAccountHeaderModel {
     result.perpFilledOrders = autoData.readU32();
     result.logSeqNo = autoData.readU32();
     result.reservedValue1 = autoData.readU32();
+    result.multisigAddress = autoData.readAddress();
     result.reservedValue2 = autoData.readI64();
     result.reservedValue3 = autoData.readI64();
     result.reservedValue4 = autoData.readI64();
-    result.reservedValue5 = autoData.readI64();
-    result.reservedValue6 = autoData.readI64();
-    result.reservedValue7 = autoData.readI64();
-    result.reservedValue8 = autoData.readI64();
     return result;
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@deriverse/kit",
-  "version": "1.0.54",
+  "version": "1.0.55",
   "description": "",
   "type": "commonjs",
   "main": "dist/index.js",

@@ -26,6 +26,13 @@
 
 - **`getSpotPriceStep`**: Updated spot price step table, added optional `isSimilarAssets` parameter. When `true`, returns the flat SAM step (`0.00001`).
 
+## Unreleased - 2026-04-10
+
+### Added
+
+- **Estimate**: `Engine.estimate()` — simulates order execution against AMM pool and orderbook, returns fill price, cost, and remaining quantity
+=======
+
 ## [1.0.52] - 2026-04-10
 
 ### Changed

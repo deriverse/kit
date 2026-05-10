@@ -1,35 +1,25 @@
 # Deriverse SDK
 
-TypeScript SDK for interacting with the Deriverse decentralized exchange (DEX) on Solana. This SDK provides a comprehensive interface for trading spot and perpetual futures, managing liquidity, and interacting with the Deriverse smart contract.
-
-Based on [`@solana/kit`](https://www.npmjs.com/package/@solana/kit)
+TypeScript SDK for Deriverse on Solana. Built on [`@solana/kit`](https://www.npmjs.com/package/@solana/kit), `@deriverse/kit` helps load Deriverse account, market, and client state, build Deriverse instructions, and decode account and log data.
 
 ## Features
 
-- **Spot Trading**
-  - Place and cancel spot orders
-  - Manage spot liquidity positions
-  - Query spot order book and market data
-  - Handle spot deposits and withdrawals
+- **Spot and Swap**
+  - Build spot order, cancel, mass-cancel, quote-replace, LP, and swap instructions
+  - Query spot order books, market metadata, and client spot orders
 
-- **Perpetual Futures Trading**
-  - Trade perpetual futures with leverage
-  - Manage perpetual positions
-  - Place and cancel perpetual orders
-  - Handle perpetual deposits and withdrawals
-  - Adjust leverage on positions
+- **Perpetuals**
+  - Build perpetual deposit, withdrawal, order, cancel, mass-cancel, quote-replace, seat buy/sell, leverage-change, statistics-reset, and upgrade-to-perp instructions
+  - Query perpetual order books, market metadata, client orders, and positions
 
-- **Account Management**
-  - Create and manage trading accounts
-  - Handle token deposits and withdrawals
-  - Manage associated token accounts
-  - Query account balances and positions
+- **Accounts and Data**
+  - Discover Deriverse token, instrument, client, root, and community accounts
+  - Query client balances, open orders, and account state
+  - Decode Deriverse account models and transaction logs
+  - Use exported Zod schemas for runtime argument validation
 
-- **Market Data**
-  - Access order book data
-  - Query market depth
-  - Get price steps and market information
-  - Access historical trade data
+- **VM / Vault Mode**
+  - Build activation, deactivation, whitelist, withdrawal, and direct-withdraw instructions
 
 ## Installation
 
@@ -37,34 +27,61 @@ Based on [`@solana/kit`](https://www.npmjs.com/package/@solana/kit)
 npm install @deriverse/kit
 ```
 
+## Solana Mainnet and Devnet Program IDs and Versions
+
+### Mainnet
+
+```bash
+PROGRAM_ID=DRVSpZ2YUYYKgZP8XtLhAGtT1zYSCKzeHfb4DgRnrgqD
+VERSION=1
+```
+
+### Devnet
+
+```bash
+PROGRAM_ID=CDESjex4EDBKLwx9ZPzVbjiHEHatasb5fhSJZMzNfvw2
+VERSION=7
+```
+
 ## Examples
 
-We prepared a comprehensive example that is available here: https://github.com/deriverse/kit-example
+A comprehensive example is available at [deriverse/kit-example](https://github.com/deriverse/kit-example).
 
 ## Development
 
 ### Prerequisites
 
-- Node.js (v20 or higher)
-- npm or yarn
-- TypeScript (v5.4.3 or higher)
+- Node.js >=20.19.0, or a current Node.js 22+ release
+- npm
+- TypeScript is installed from dev dependencies
 
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/deriverse/kit.git
 cd kit
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Build the project:
+
 ```bash
 npm run build
+```
+
+4. Run checks:
+
+```bash
+npm test
+npm run lint
+npm run format:check
 ```
 
 ## License

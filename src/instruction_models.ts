@@ -106,6 +106,7 @@ export function newInstrumentData(tag: number, mask: number, crncyTokenId: numbe
   buf.writeUint32LE(lutSlot, 12);
   buf.writeBigInt64LE(BigInt(Math.floor(price)), 16);
   buf.writeBigInt64LE(BigInt(Math.floor(minQty)), 24);
+  buf.writeDoubleLE(fixedFeeRate, 32);
   return buf;
 }
 
@@ -236,6 +237,7 @@ export function airdropData(tag: number, ratio: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(0, 4);
+  buf.writeDoubleLE(ratio, 8);
   return buf;
 }
 
@@ -284,6 +286,8 @@ export function changeRefProgramData(tag: number, refProgramDuration: number, re
   buf.writeUint32LE(0, 4);
   buf.writeUint32LE(refProgramDuration, 8);
   buf.writeUint32LE(refLinkDuration, 12);
+  buf.writeDoubleLE(refDiscount, 16);
+  buf.writeDoubleLE(refRatio, 24);
   return buf;
 }
 
@@ -332,6 +336,7 @@ export function setVarianceData(tag: number, instrId: number, variance: number):
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
+  buf.writeDoubleLE(variance, 8);
   return buf;
 }
 
@@ -341,6 +346,7 @@ export function changeDenominatorData(tag: number, baseCrncyId: number, denomina
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(baseCrncyId, 4);
+  buf.writeDoubleLE(denominator, 8);
   return buf;
 }
 
@@ -350,6 +356,7 @@ export function newBaseCrncyData(tag: number, denominator: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(0, 4);
+  buf.writeDoubleLE(denominator, 8);
   return buf;
 }
 
@@ -368,6 +375,7 @@ export function setSeatPurchasingFeeData(tag: number, fee: number): Buffer {
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(0, 4);
+  buf.writeDoubleLE(fee, 8);
   return buf;
 }
 
@@ -462,6 +470,7 @@ export function changeSAMFeesPolicyData(tag: number, samFeeType: number, instrId
   buf.writeUint8(samFeeType, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
+  buf.writeDoubleLE(feeRate, 8);
   return buf;
 }
 
@@ -488,6 +497,13 @@ export function vmInitActivateData(tag: number, multisig: number): Buffer {
   let buf = Buffer.alloc(2);
   buf.writeUint8(tag, 0);
   buf.writeUint8(multisig, 1);
+  return buf;
+}
+
+export function setForeignDepositData(tag: number, foreignDeposit: number): Buffer {
+  let buf = Buffer.alloc(2);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(foreignDeposit, 1);
   return buf;
 }
 

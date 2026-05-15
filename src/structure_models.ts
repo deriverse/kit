@@ -465,7 +465,7 @@ export class InstrAccountHeaderModel {
   static readonly OFFSET_CRNCY_TOKENS = 152;
   static readonly OFFSET_PS = 160;
   static readonly OFFSET_POOL_FEES = 168;
-  static readonly OFFSET_RESERVED_VALUE1 = 176;
+  static readonly OFFSET_PROTOCOL_FEES_ALLOC = 176;
   static readonly OFFSET_RESERVED_VALUE2 = 184;
   static readonly OFFSET_RESERVED_VALUE3 = 192;
   static readonly OFFSET_LAST_TRADE_ASSET_TOKENS = 200;
@@ -617,7 +617,7 @@ export class InstrAccountHeaderModel {
   crncyTokens: number;
   ps: number;
   poolFees: number;
-  reservedValue1: number;
+  protocolFeesAlloc: number;
   reservedValue2: number;
   reservedValue3: number;
   lastTradeAssetTokens: number;
@@ -771,7 +771,7 @@ export class InstrAccountHeaderModel {
     result.crncyTokens = autoData.readI64();
     result.ps = autoData.readI64();
     result.poolFees = autoData.readI64();
-    result.reservedValue1 = autoData.readI64();
+    result.protocolFeesAlloc = autoData.readF64();
     result.reservedValue2 = autoData.readI64();
     result.reservedValue3 = autoData.readI64();
     result.lastTradeAssetTokens = autoData.readI64();

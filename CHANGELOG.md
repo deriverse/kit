@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.57] - 2026-04-27
+
+### Added
+- **`New models`**: instruction_models && structure_models
+
+
 ## [1.0.55] - 2026-04-27
 
 ### Fixed

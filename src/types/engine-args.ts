@@ -40,6 +40,12 @@ import {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  VmAddKaminoArgsSchema,
+  VmRemoveKaminoArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  KaminoChangePositionArgsSchema,
 } from './schemas';
 
 export type EngineArgs = z.infer<typeof EngineArgsSchema>;
@@ -83,3 +89,9 @@ export type VmChangeListArgs = z.infer<typeof VmChangeListArgsSchema>;
 export type VmAddWithdrawalAddressArgs = z.infer<typeof VmAddWithdrawalAddressArgsSchema>;
 export type VmRemoveWithdrawalAddressArgs = z.infer<typeof VmRemoveWithdrawalAddressArgsSchema>;
 export type VmDirectWithdrawArgs = z.infer<typeof VmDirectWithdrawArgsSchema>;
+export type VmAddKaminoArgs = z.infer<typeof VmAddKaminoArgsSchema>;
+export type VmRemoveKaminoArgs = z.infer<typeof VmRemoveKaminoArgsSchema>;
+export type KaminoInitObligationArgs = z.infer<typeof KaminoInitObligationArgsSchema>;
+export type KaminoInitTokenAccountsArgs = z.infer<typeof KaminoInitTokenAccountsArgsSchema>;
+export type KaminoInitObligationFarmsArgs = z.infer<typeof KaminoInitObligationFarmsArgsSchema>;
+export type KaminoChangePositionArgs = z.infer<typeof KaminoChangePositionArgsSchema>;

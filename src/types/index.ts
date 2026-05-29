@@ -44,6 +44,12 @@ export {
   VmAddWithdrawalAddressArgs,
   VmRemoveWithdrawalAddressArgs,
   VmDirectWithdrawArgs,
+  VmAddKaminoArgs,
+  VmRemoveKaminoArgs,
+  KaminoInitObligationArgs,
+  KaminoInitTokenAccountsArgs,
+  KaminoInitObligationFarmsArgs,
+  KaminoChangePositionArgs,
 } from './engine-args';
 
 export {
@@ -108,6 +114,12 @@ export {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  VmAddKaminoArgsSchema,
+  VmRemoveKaminoArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  KaminoChangePositionArgsSchema,
 } from './schemas';
 
 export type Instruction = IInstruction;

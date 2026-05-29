@@ -62,6 +62,7 @@ export const AccountType = {
   PERP_REBALANCE_TIME_TREE: GeneratedAccountType.perpRebalanceTimeTree,
   PRIVATE_CLIENTS: GeneratedAccountType.privateClients,
   VM_CLIENT: GeneratedAccountType.vmClient,
+  KAMINO_CLIENT: GeneratedAccountType.kaminoClient,
 } as const satisfies AccountTypeShape;
 
 export type AccountType = (typeof AccountType)[keyof typeof AccountType];

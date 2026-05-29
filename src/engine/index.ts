@@ -51,6 +51,12 @@ import {
   VmAddWithdrawalAddressArgs,
   VmRemoveWithdrawalAddressArgs,
   VmDirectWithdrawArgs,
+  VmAddKaminoArgs,
+  VmRemoveKaminoArgs,
+  KaminoInitObligationArgs,
+  KaminoInitTokenAccountsArgs,
+  KaminoInitObligationFarmsArgs,
+  KaminoChangePositionArgs,
   LogMessage,
   DepositArgsSchema,
   WithdrawArgsSchema,
@@ -79,6 +85,12 @@ import {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  VmAddKaminoArgsSchema,
+  VmRemoveKaminoArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  KaminoChangePositionArgsSchema,
   InstrIdSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
@@ -163,6 +175,17 @@ import {
   buildVmRemoveWithdrawalAddressInstruction,
   buildVmDirectWithdrawInstruction,
 } from './vm-instructions';
+import {
+  buildVmAddKaminoInstruction,
+  buildVmRemoveKaminoInstruction,
+  buildKaminoInitObligationInstruction,
+  buildKaminoInitTokenAccountsInstruction,
+  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoChangePositionInstruction,
+  snapshotObligation,
+  SnapshotObligationArgs,
+  ObligationSnapshot,
+} from './kamino';
 
 type Address = SolanaAddress<string>;
 
@@ -190,6 +213,7 @@ export class Engine {
   drvsAuthority: Address;
   clientPrimaryAccount: Address | null = null;
   clientCommunityAccount: Address | null = null;
+  clientVmMask: number = 0;
 
   private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
   private signer: Address | null = null;
@@ -269,6 +293,7 @@ export class Engine {
       uiNumbers: this.uiNumbers,
       signer: this.signer,
       rootAccount: this.rootAccount,
+      vmMask: this.clientVmMask,
     };
   }
 
@@ -341,6 +366,7 @@ export class Engine {
         this.signer,
       );
       this.originalClientId = clientPrimaryAccountHeaderModel.id;
+      this.clientVmMask = clientPrimaryAccountHeaderModel.vmMask;
       return true;
     } catch (err) {
       console.error(err);
@@ -479,6 +505,7 @@ export class Engine {
             signer,
           );
           this.originalClientId = clientPrimaryAccountHeaderModel.id;
+          this.clientVmMask = clientPrimaryAccountHeaderModel.vmMask;
           this.clientLutAddress = clientPrimaryAccountHeaderModel.lutAddress;
           let date = Math.floor(new Date().valueOf() / 1000);
           if (date < clientPrimaryAccountHeaderModel.refProgramExpiration) {
@@ -507,6 +534,7 @@ export class Engine {
     if (!exists) {
       this.clientPrimaryAccount = null;
       this.originalClientId = null;
+      this.clientVmMask = 0;
     }
   }
 
@@ -1014,6 +1042,63 @@ export class Engine {
       () => this.rpc.getSlot().send(),
       (address) => this.rpc.getAccountInfo(address).send(),
       (size) => this.rpc.getMinimumBalanceForRentExemption(size).send(),
+    );
+  }
+
+  // ============================================
+  // KAMINO INSTRUCTIONS
+  // ============================================
+
+  async vmAddKaminoInstruction(args: VmAddKaminoArgs): Promise<Instruction> {
+    const parsed = VmAddKaminoArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmAddKaminoInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async vmRemoveKaminoInstruction(args: VmRemoveKaminoArgs): Promise<Instruction> {
+    const parsed = VmRemoveKaminoArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmRemoveKaminoInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  async kaminoInitObligationInstruction(args: KaminoInitObligationArgs): Promise<Instruction> {
+    const parsed = KaminoInitObligationArgsSchema.parse(args);
+    await this.requireClient();
+    const instr = this.requireInstrument(parsed.instrId);
+    return buildKaminoInitObligationInstruction(this.getVmInstructionContext(), parsed, instr.address);
+  }
+
+  async kaminoInitTokenAccountsInstruction(args: KaminoInitTokenAccountsArgs): Promise<Instruction> {
+    const parsed = KaminoInitTokenAccountsArgsSchema.parse(args);
+    await this.requireClient();
+    const instr = this.requireInstrument(parsed.instrId);
+    return buildKaminoInitTokenAccountsInstruction(this.getVmInstructionContext(), parsed, instr);
+  }
+
+  async kaminoInitObligationFarmsInstruction(args: KaminoInitObligationFarmsArgs): Promise<Instruction> {
+    const parsed = KaminoInitObligationFarmsArgsSchema.parse(args);
+    await this.requireClient();
+    const instr = this.requireInstrument(parsed.instrId);
+    return buildKaminoInitObligationFarmsInstruction(this.getVmInstructionContext(), parsed, instr.address);
+  }
+
+  async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {
+    const parsed = KaminoChangePositionArgsSchema.parse(args);
+    await this.requireClient();
+    const instr = this.requireInstrument(parsed.instrId);
+    return buildKaminoChangePositionInstruction(this.getVmInstructionContext(), parsed, instr.address);
+  }
+
+  async snapshotKaminoObligation(args: SnapshotObligationArgs): Promise<ObligationSnapshot> {
+    return snapshotObligation(
+      {
+        rpc: this.rpc,
+        commitment: this.commitment,
+        tokens: this.tokens,
+        instruments: this.instruments,
+        updateInstrData: (instrId) => this.updateInstrData({ instrId }),
+      },
+      args,
     );
   }
 }

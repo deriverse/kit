@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.58] - 2026-05-29
+
+### Added
+
+- **Kamino instructions**: `vmAddKaminoInstruction`, `vmRemoveKaminoInstruction`, `kaminoInitObligationInstruction`, `kaminoInitTokenAccountsInstruction`, `kaminoInitObligationFarmsInstruction`, `kaminoChangePositionInstruction`
+- **`engine.snapshotKaminoObligation`**: fetches a Kamino obligation + its reserves
+
 ## [1.0.57] - 2026-04-27
 
 ### Added

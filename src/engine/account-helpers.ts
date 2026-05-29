@@ -16,6 +16,13 @@ import { Buffer } from 'buffer';
 import { getInstrAccountByTagArgs } from '../types';
 import { AccountType } from '../types/enums';
 import { InstrAccountHeaderModel, TokenStateModel } from '../structure_models';
+import {
+  FARMS_PROGRAM_ID,
+  KLEND_PROGRAM_ID,
+  SEED_FARM_USER_STATE,
+  SEED_LENDING_MARKET_AUTH,
+  SEED_USER_METADATA,
+} from '../constants';
 
 /**
  * Context needed for account helper functions
@@ -218,6 +225,43 @@ async function findClientVmAccount(
   return address;
 }
 
+async function findKaminoUserMetadata(owner: Address): Promise<Address> {
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: KLEND_PROGRAM_ID,
+      seeds: [Buffer.from(SEED_USER_METADATA), getAddressEncoder().encode(owner)],
+    })
+  )[0];
+  return address;
+}
+
+async function findKaminoLendingMarketAuthority(lendingMarket: Address): Promise<Address> {
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: KLEND_PROGRAM_ID,
+      seeds: [Buffer.from(SEED_LENDING_MARKET_AUTH), getAddressEncoder().encode(lendingMarket)],
+    })
+  )[0];
+  return address;
+}
+
+async function findKaminoObligationFarmUserState(
+  reserveFarmState: Address,
+  obligation: Address,
+): Promise<Address> {
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: FARMS_PROGRAM_ID,
+      seeds: [
+        Buffer.from(SEED_FARM_USER_STATE),
+        getAddressEncoder().encode(reserveFarmState),
+        getAddressEncoder().encode(obligation),
+      ],
+    })
+  )[0];
+  return address;
+}
+
 function requireClientPrimaryAccount(ctx: { clientPrimaryAccount: Address | null }): Address {
   if (ctx.clientPrimaryAccount === null) throw new Error('Client primary account not found');
   return ctx.clientPrimaryAccount;
@@ -239,6 +283,9 @@ export {
   findClientPrimaryAccount,
   findClientCommunityAccount,
   findClientVmAccount,
+  findKaminoUserMetadata,
+  findKaminoLendingMarketAuthority,
+  findKaminoObligationFarmUserState,
   requireClientPrimaryAccount,
   requireClientCommunityAccount,
 };

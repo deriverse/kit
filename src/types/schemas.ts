@@ -305,12 +305,12 @@ const KaminoReserveByMintArgsSchema = z.object({
   lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
 });
 
-const GetKaminoContextArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-  collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
-  debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
-});
+const GetKaminoContextArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
 
 const KaminoInitTokenAccountsArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
@@ -322,12 +322,13 @@ const KaminoInitObligationArgsSchema = z.object({
   referrerUserMetadata: solanaAddress.optional().meta({ description: 'Kamino referrer user metadata account' }),
 });
 
-const KaminoInitObligationFarmsArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  side: side.meta({ description: '0 - collateral farm, 1 - debt farm' }),
-  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-  reserve: solanaAddress.optional().meta({ description: 'Kamino reserve override for the selected side' }),
-});
+const KaminoInitObligationFarmsArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    side: side.meta({ description: '0 - collateral farm, 1 - debt farm' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
 
 const KaminoChangePositionArgsSchema = z
   .object({
@@ -339,10 +340,8 @@ const KaminoChangePositionArgsSchema = z
     withdrawAll: z.boolean().optional(),
     keepObligationAlive: z.boolean().optional(),
     lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-    collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
-    debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
-    extraReserves: z.array(solanaAddress).optional().meta({ description: 'Additional reserves to refresh' }),
   })
+  .strict()
   .superRefine((args, ctx) => {
     if (args.repayAll && args.borrowDelta !== 0) {
       ctx.addIssue({
@@ -395,13 +394,13 @@ const KaminoInstrumentAtasExistArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
 });
 
-const GetKaminoClientStateArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-  collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
-  debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
-  obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
-});
+const GetKaminoClientStateArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+  })
+  .strict();
 
 export {
   EngineArgsSchema,

@@ -124,6 +124,7 @@ export interface KaminoInstructionContext extends AccountHelperContext {
   clientPrimaryAccount: Address | null;
   clientLutAddress: Address | null;
   clientVmActive: boolean;
+  getKaminoReserveInfoByMint?: (args: KaminoReserveByMintArgs) => Promise<KaminoReserveInfo>;
 }
 
 function dataToBuffer(data: Base64EncodedDataResponse): Buffer {
@@ -195,7 +196,10 @@ function instrumentMints(ctx: KaminoInstructionContext, instr: Instrument): { as
   };
 }
 
-function reserveMemcmp(offset: number, bytes: Buffer): {
+function reserveMemcmp(
+  offset: number,
+  bytes: Buffer,
+): {
   memcmp: { offset: bigint; encoding: 'base58'; bytes: Base58EncodedBytes };
 } {
   return {
@@ -340,10 +344,11 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
   };
 }
 
-async function loadReserve(ctx: KaminoInstructionContext, reserve: Address): Promise<KaminoReserveInfo> {
-  const info = await ctx.rpc
-    .getAccountInfo(reserve, { commitment: ctx.commitment, encoding: 'base64' })
-    .send();
+export async function loadKaminoReserve(
+  ctx: Pick<KaminoInstructionContext, 'rpc' | 'commitment'>,
+  reserve: Address,
+): Promise<KaminoReserveInfo> {
+  const info = await ctx.rpc.getAccountInfo(reserve, { commitment: ctx.commitment, encoding: 'base64' }).send();
   if (info.value == null) {
     throw new Error(`Kamino reserve not found: ${reserve}`);
   }
@@ -391,6 +396,15 @@ export async function findKaminoReserveByMint(
   }
 
   return decodeReserve(accounts[0].pubkey, dataToBuffer(accounts[0].account.data));
+}
+
+async function resolveKaminoReserveByMint(
+  ctx: KaminoInstructionContext,
+  args: KaminoReserveByMintArgs,
+): Promise<KaminoReserveInfo> {
+  return ctx.getKaminoReserveInfoByMint != null
+    ? ctx.getKaminoReserveInfoByMint(args)
+    : findKaminoReserveByMint(ctx, args);
 }
 
 async function farmContext(args: {
@@ -454,7 +468,7 @@ function appendOptionalVmAccount(accounts: { address: Address; role: AccountRole
 
 export async function buildKaminoContext(
   ctx: KaminoInstructionContext,
-  args: GetKaminoContextArgs & { extraReserves?: Address[] },
+  args: GetKaminoContextArgs,
 ): Promise<KaminoContext> {
   const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
   const instr = requireInstrument(ctx, args.instrId);
@@ -464,22 +478,11 @@ export async function buildKaminoContext(
   const obligation = await vanillaObligationPda({ owner: clientPrimaryAccount, lendingMarket });
   const userMetadata = await userMetadataPda(clientPrimaryAccount);
 
-  const collateralReserveInfo =
-    args.collateralReserve == null
-      ? await findKaminoReserveByMint(ctx, { mint: assetMint, lendingMarket })
-      : await loadReserve(ctx, args.collateralReserve);
+  const collateralReserveInfo = await resolveKaminoReserveByMint(ctx, { mint: assetMint, lendingMarket });
   validateReserveForMint(collateralReserveInfo, assetMint, lendingMarket, 'Collateral');
 
-  const debtReserveInfo =
-    args.debtReserve == null
-      ? await findKaminoReserveByMint(ctx, { mint: crncyMint, lendingMarket })
-      : await loadReserve(ctx, args.debtReserve);
+  const debtReserveInfo = await resolveKaminoReserveByMint(ctx, { mint: crncyMint, lendingMarket });
   validateReserveForMint(debtReserveInfo, crncyMint, lendingMarket, 'Debt');
-
-  const uniqueExtra = [...new Set(args.extraReserves ?? [])].filter(
-    (reserve) => reserve !== collateralReserveInfo.address && reserve !== debtReserveInfo.address,
-  );
-  const extraReserves = await Promise.all(uniqueExtra.map((reserve) => loadReserve(ctx, reserve)));
 
   const [lendingMarketAuthority, collateralReserve, debtReserve] = await Promise.all([
     lendingMarketAuthPda(lendingMarket),
@@ -510,7 +513,7 @@ export async function buildKaminoContext(
     obligation,
     collateralReserve,
     debtReserve,
-    extraReserves,
+    extraReserves: [],
   };
 }
 
@@ -616,18 +619,7 @@ export async function buildKaminoInitObligationFarmsInstruction(
   kaminoCtx: KaminoContext,
 ): Promise<Instruction> {
   const sideName = args.side === 0 ? 'collateral' : 'debt';
-  const selectedReserve =
-    args.reserve == null
-      ? sideName === 'collateral'
-        ? kaminoCtx.collateralReserve
-        : kaminoCtx.debtReserve
-      : await reserveContext({
-          ctx,
-          reserve: await loadReserve(ctx, args.reserve),
-          obligation: kaminoCtx.obligation,
-          clientPrimaryAccount: kaminoCtx.clientPrimaryAccount,
-          side: sideName,
-        });
+  const selectedReserve = sideName === 'collateral' ? kaminoCtx.collateralReserve : kaminoCtx.debtReserve;
 
   const instr = requireInstrument(ctx, args.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
@@ -796,14 +788,15 @@ export async function getKaminoUserLookupTable(
   ctx: KaminoInstructionContext,
   userMetadata: Address,
 ): Promise<Address | null> {
-  const info = await ctx.rpc
-    .getAccountInfo(userMetadata, { commitment: ctx.commitment, encoding: 'base64' })
-    .send();
+  const info = await ctx.rpc.getAccountInfo(userMetadata, { commitment: ctx.commitment, encoding: 'base64' }).send();
   if (info.value == null || accountOwner(info.value) !== KLEND_PROGRAM_ID) {
     return null;
   }
   const buffer = dataToBuffer(info.value.data);
-  if (buffer.length < USER_METADATA_LOOKUP_TABLE_OFFSET + 32 || !buffer.subarray(0, 8).equals(USER_METADATA_DISCRIMINATOR)) {
+  if (
+    buffer.length < USER_METADATA_LOOKUP_TABLE_OFFSET + 32 ||
+    !buffer.subarray(0, 8).equals(USER_METADATA_DISCRIMINATOR)
+  ) {
     return null;
   }
   const lut = readAddress(buffer, USER_METADATA_LOOKUP_TABLE_OFFSET);
@@ -867,7 +860,11 @@ function registeredTokenProgram(ctx: KaminoInstructionContext, mint: Address): A
   return null;
 }
 
-async function resolveTokenProgram(ctx: KaminoInstructionContext, mint: Address, explicit?: Address): Promise<Address | null> {
+async function resolveTokenProgram(
+  ctx: KaminoInstructionContext,
+  mint: Address,
+  explicit?: Address,
+): Promise<Address | null> {
   if (explicit != null) {
     return explicit;
   }
@@ -875,9 +872,7 @@ async function resolveTokenProgram(ctx: KaminoInstructionContext, mint: Address,
   if (registered != null) {
     return registered;
   }
-  const info = await ctx.rpc
-    .getAccountInfo(mint, { commitment: ctx.commitment, encoding: 'base64' })
-    .send();
+  const info = await ctx.rpc.getAccountInfo(mint, { commitment: ctx.commitment, encoding: 'base64' }).send();
   if (info.value == null) {
     return null;
   }
@@ -895,9 +890,7 @@ export async function kaminoAtaExists(ctx: KaminoInstructionContext, args: Kamin
     mint: args.mint,
     tokenProgram,
   });
-  const info = await ctx.rpc
-    .getAccountInfo(ata, { commitment: ctx.commitment, encoding: 'base64' })
-    .send();
+  const info = await ctx.rpc.getAccountInfo(ata, { commitment: ctx.commitment, encoding: 'base64' }).send();
   return info.value != null && accountOwner(info.value) === tokenProgram;
 }
 
@@ -1062,9 +1055,7 @@ export async function getKaminoClientState(
   context: KaminoContext,
 ): Promise<KaminoClientStateResponse> {
   const obligation = args.obligation ?? context.obligation;
-  const info = await ctx.rpc
-    .getAccountInfo(obligation, { commitment: ctx.commitment, encoding: 'base64' })
-    .send();
+  const info = await ctx.rpc.getAccountInfo(obligation, { commitment: ctx.commitment, encoding: 'base64' }).send();
   if (info.value == null || accountOwner(info.value) !== KLEND_PROGRAM_ID) {
     return {
       obligation,
@@ -1088,7 +1079,10 @@ export async function getKaminoClientState(
     };
   }
   const buffer = dataToBuffer(info.value.data);
-  if (buffer.length < OBLIGATION_UNHEALTHY_BORROW_VALUE_SF_OFFSET + 16 || !buffer.subarray(0, 8).equals(OBLIGATION_DISCRIMINATOR)) {
+  if (
+    buffer.length < OBLIGATION_UNHEALTHY_BORROW_VALUE_SF_OFFSET + 16 ||
+    !buffer.subarray(0, 8).equals(OBLIGATION_DISCRIMINATOR)
+  ) {
     throw new Error(`Invalid Kamino obligation layout: ${obligation}`);
   }
   return decodeKaminoClientState(obligation, buffer, context);

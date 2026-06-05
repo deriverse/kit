@@ -5,7 +5,13 @@ import {
   PerpChangeLeverageArgsSchema,
   PerpBuySeatArgsSchema,
   SpotQuotesReplaceArgsSchema,
+  GetKaminoContextArgsSchema,
+  KaminoChangePositionArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  GetKaminoClientStateArgsSchema,
 } from './schemas';
+
+const ADDRESS = 'So11111111111111111111111111111111111111112';
 
 describe('Zod Schemas', () => {
   describe('common validators', () => {
@@ -102,6 +108,28 @@ describe('Zod Schemas', () => {
         orderType: 1,
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('Kamino strict reserve inputs', () => {
+    it('rejects removed manual reserve fields', () => {
+      expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
+      expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, debtReserve: ADDRESS }).success).toBe(false);
+      expect(KaminoInitObligationFarmsArgsSchema.safeParse({ instrId: 1, side: 0, reserve: ADDRESS }).success).toBe(
+        false,
+      );
+      expect(GetKaminoClientStateArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
+    });
+
+    it('rejects extraReserves in change-position args', () => {
+      const result = KaminoChangePositionArgsSchema.safeParse({
+        instrId: 1,
+        collateralDelta: 0,
+        borrowDelta: 0,
+        extraReserves: [ADDRESS],
+      });
+
+      expect(result.success).toBe(false);
     });
   });
 });

@@ -69,7 +69,7 @@ function writeU128(buffer: Buffer, offset: number, value: bigint): void {
 }
 
 function sf(value: number): bigint {
-  return BigInt(Math.floor(value * 1_000_000)) * (BigInt(1) << BigInt(60)) / BigInt(1_000_000);
+  return (BigInt(Math.floor(value * 1_000_000)) * (BigInt(1) << BigInt(60))) / BigInt(1_000_000);
 }
 
 function reserveBuffer(args: {
@@ -85,8 +85,8 @@ function reserveBuffer(args: {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
   writeAddress(buffer, 32, args.lendingMarket ?? MAIN_KAMINO_MARKET);
-  writeAddress(buffer, 64, args.farmCollateral ?? '11111111111111111111111111111111' as Address);
-  writeAddress(buffer, 96, args.farmDebt ?? '11111111111111111111111111111111' as Address);
+  writeAddress(buffer, 64, args.farmCollateral ?? ('11111111111111111111111111111111' as Address));
+  writeAddress(buffer, 96, args.farmDebt ?? ('11111111111111111111111111111111' as Address));
   writeAddress(buffer, 128, args.liquidityMint);
   writeAddress(buffer, 160, 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address);
   writeAddress(buffer, 192, 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address);
@@ -155,10 +155,12 @@ function instrument(): Instrument {
   };
 }
 
-function mockRpc(args: {
-  programAccounts?: Array<{ pubkey: Address; account: { data: [string, 'base64'] } }[]>;
-  accountInfo?: Map<Address, { value: any }>;
-} = {}) {
+function mockRpc(
+  args: {
+    programAccounts?: Array<{ pubkey: Address; account: { data: [string, 'base64'] } }[]>;
+    accountInfo?: Map<Address, { value: any }>;
+  } = {},
+) {
   const programAccounts = [...(args.programAccounts ?? [])];
   return {
     getProgramAccounts: vi.fn().mockReturnValue({
@@ -279,24 +281,14 @@ describe('Kamino context and services', () => {
     expect(result.debtReserve.address).toBe(DEBT_RESERVE);
   });
 
-  it('validates explicit reserve override mints', async () => {
+  it('validates autoderived reserve mints', async () => {
     const rpc = mockRpc({
-      accountInfo: new Map([
-        [
-          COLL_RESERVE,
-          {
-            value: {
-              owner: KLEND_PROGRAM_ID,
-              data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
-            },
-          },
-        ],
-      ]),
+      programAccounts: [
+        [{ pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } }],
+      ],
     });
 
-    await expect(
-      buildKaminoContext(context(rpc), { instrId: 1, collateralReserve: COLL_RESERVE, debtReserve: DEBT_RESERVE }),
-    ).rejects.toThrow(/Collateral reserve liquidity mint/);
+    await expect(buildKaminoContext(context(rpc), { instrId: 1 })).rejects.toThrow(/Collateral reserve liquidity mint/);
   });
 
   it('checks obligation existence by owner and discriminator', async () => {
@@ -314,7 +306,9 @@ describe('Kamino context and services', () => {
     const ctx = context();
     const ataResult = await kaminoInstrumentAtasExist(ctx, { instrId: 1 });
     const rpc = mockRpc({
-      accountInfo: new Map([[ataResult.assetAta, { value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } }]]),
+      accountInfo: new Map([
+        [ataResult.assetAta, { value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } }],
+      ]),
     });
 
     await expect(kaminoAtaExists(context(rpc), { mint: ASSET_MINT })).resolves.toBe(true);
@@ -437,6 +431,10 @@ describe('Kamino account order', () => {
       noVm.lendingMarketAuthority,
       COLL_RESERVE,
     ]);
+
+    const debtFarmsIx = await buildKaminoInitObligationFarmsInstruction(ctx, { instrId: 1, side: 1 }, noVm);
+    expect(debtFarmsIx.accounts!.map((account) => account.address)[6]).toBe(noVm.lendingMarketAuthority);
+    expect(debtFarmsIx.accounts!.map((account) => account.address)[7]).toBe(DEBT_RESERVE);
   });
 
   it('builds VM add/remove Kamino account order', async () => {

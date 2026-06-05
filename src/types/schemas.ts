@@ -3,6 +3,7 @@ import { Address, Commitment } from '@solana/kit';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
+const signedAmount = z.number().finite({ error: 'Must be a finite number' });
 const side = z.int().min(0).max(1, { error: 'Side must be 0 (Bid) or 1 (Ask)' });
 const orderType = z.int().min(0).max(1, { error: 'Order type must be 0 (Limit) or 1 (Market)' });
 const iocFlag = z.int().min(0).max(1, { error: 'IOC flag must be 0 (No) or 1 (Yes)' });
@@ -299,6 +300,109 @@ const VmDirectWithdrawArgsSchema = z.object({
   withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
 });
 
+const KaminoReserveByMintArgsSchema = z.object({
+  mint: solanaAddress.meta({ description: 'Reserve liquidity mint' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+});
+
+const GetKaminoContextArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
+  debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
+});
+
+const KaminoInitTokenAccountsArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+});
+
+const KaminoInitObligationArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  referrerUserMetadata: solanaAddress.optional().meta({ description: 'Kamino referrer user metadata account' }),
+});
+
+const KaminoInitObligationFarmsArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  side: side.meta({ description: '0 - collateral farm, 1 - debt farm' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  reserve: solanaAddress.optional().meta({ description: 'Kamino reserve override for the selected side' }),
+});
+
+const KaminoChangePositionArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    collateralDelta: signedAmount.meta({ description: 'Signed collateral change' }),
+    borrowDelta: signedAmount.meta({ description: 'Signed borrow change' }),
+    customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
+    repayAll: z.boolean().optional(),
+    withdrawAll: z.boolean().optional(),
+    keepObligationAlive: z.boolean().optional(),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
+    debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
+    extraReserves: z.array(solanaAddress).optional().meta({ description: 'Additional reserves to refresh' }),
+  })
+  .superRefine((args, ctx) => {
+    if (args.repayAll && args.borrowDelta !== 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['borrowDelta'],
+        message: 'repayAll requires borrowDelta to be 0',
+      });
+    }
+    if (args.withdrawAll && args.collateralDelta !== 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['collateralDelta'],
+        message: 'withdrawAll requires collateralDelta to be 0',
+      });
+    }
+    if (args.keepObligationAlive && args.withdrawAll) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['keepObligationAlive'],
+        message: 'keepObligationAlive cannot be used together with withdrawAll',
+      });
+    }
+    if (args.keepObligationAlive && args.collateralDelta === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['collateralDelta'],
+        message: 'keepObligationAlive requires collateralDelta to be non-zero',
+      });
+    }
+  });
+
+const KaminoLookupTableAddressesArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+});
+
+const KaminoObligationExistsArgsSchema = z.object({
+  instrId: nonNegativeInt.optional().meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+});
+
+const KaminoAtaExistsArgsSchema = z.object({
+  mint: solanaAddress.meta({ description: 'Token mint' }),
+  owner: solanaAddress.optional().meta({ description: 'ATA owner' }),
+  tokenProgram: solanaAddress.optional().meta({ description: 'Token program' }),
+});
+
+const KaminoInstrumentAtasExistArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+});
+
+const GetKaminoClientStateArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  collateralReserve: solanaAddress.optional().meta({ description: 'Collateral reserve override' }),
+  debtReserve: solanaAddress.optional().meta({ description: 'Debt reserve override' }),
+  obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+});
+
 export {
   EngineArgsSchema,
   InstrIdSchema,
@@ -340,4 +444,15 @@ export {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  KaminoReserveByMintArgsSchema,
+  GetKaminoContextArgsSchema,
+  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  KaminoChangePositionArgsSchema,
+  KaminoLookupTableAddressesArgsSchema,
+  KaminoObligationExistsArgsSchema,
+  KaminoAtaExistsArgsSchema,
+  KaminoInstrumentAtasExistArgsSchema,
+  GetKaminoClientStateArgsSchema,
 };

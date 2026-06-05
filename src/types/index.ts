@@ -1,6 +1,6 @@
 import { IAccountMeta, IInstruction } from '@solana/kit';
 
-export { InstrMask, AccountType, LogType } from './enums';
+export { InstrMask, AccountType, VmWhitelistTag, LogType } from './enums';
 
 export {
   EngineArgs,
@@ -44,6 +44,17 @@ export {
   VmAddWithdrawalAddressArgs,
   VmRemoveWithdrawalAddressArgs,
   VmDirectWithdrawArgs,
+  KaminoReserveByMintArgs,
+  GetKaminoContextArgs,
+  KaminoInitTokenAccountsArgs,
+  KaminoInitObligationArgs,
+  KaminoInitObligationFarmsArgs,
+  KaminoChangePositionArgs,
+  KaminoLookupTableAddressesArgs,
+  KaminoObligationExistsArgs,
+  KaminoAtaExistsArgs,
+  KaminoInstrumentAtasExistArgs,
+  GetKaminoClientStateArgs,
 } from './engine-args';
 
 export {
@@ -63,6 +74,14 @@ export {
   ClientCommunityData,
   ClientRefProgramData,
   GetClientDataResponse,
+  KaminoOracleAccounts,
+  KaminoReserveInfo,
+  KaminoReserveContext,
+  KaminoContext,
+  KaminoLookupTableAddressesResponse,
+  KaminoInstrumentAtasExistResponse,
+  KaminoClientReservePosition,
+  KaminoClientStateResponse,
 } from './responses';
 
 export { LogMessage } from './log-message';
@@ -108,6 +127,17 @@ export {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  KaminoReserveByMintArgsSchema,
+  GetKaminoContextArgsSchema,
+  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitObligationFarmsArgsSchema,
+  KaminoChangePositionArgsSchema,
+  KaminoLookupTableAddressesArgsSchema,
+  KaminoObligationExistsArgsSchema,
+  KaminoAtaExistsArgsSchema,
+  KaminoInstrumentAtasExistArgsSchema,
+  GetKaminoClientStateArgsSchema,
 } from './schemas';
 
 export type Instruction = IInstruction;

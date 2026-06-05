@@ -33,6 +33,7 @@ export enum VmWhitelistTag {
   withdrawAccount = 1,
   programId = 2,
   marketId = 3,
+  kamino = 4,
 }
 
 export enum InstrFlag {
@@ -88,6 +89,7 @@ export enum AccountType {
   perpRebalanceTimeTree = 50,
   privateClients = 51,
   vmClient = 52,
+  kaminoClient = 53,
 }
 
 export class ClientCommunityRecordModel {
@@ -1735,4 +1737,3 @@ export class PrivateClientModel {
     return result;
   }
 }
-

@@ -493,6 +493,52 @@ export function vmDirectWithdrawData(tag: number, tokenId: number, amount: numbe
   return buf;
 }
 
+export function kaminoInitObligationData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function kaminoInitTokenAccountsData(tag: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(0, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function kaminoInitObligationFarmsData(tag: number, side: number, instrId: number): Buffer {
+  let buf = Buffer.alloc(8);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(side, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  return buf;
+}
+
+export function kaminoChangePositionData(
+  tag: number,
+  flags: number,
+  instrId: number,
+  borrowDelta: number,
+  collateralDelta: number,
+  customId: number,
+): Buffer {
+  let buf = Buffer.alloc(32);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(flags, 1);
+  buf.writeUint16LE(0, 2);
+  buf.writeUint32LE(instrId, 4);
+  buf.writeBigInt64LE(BigInt(Math.floor(borrowDelta)), 8);
+  buf.writeBigInt64LE(BigInt(Math.floor(collateralDelta)), 16);
+  buf.writeBigInt64LE(BigInt(Math.floor(customId)), 24);
+  return buf;
+}
+
 export function vmInitActivateData(tag: number, multisig: number): Buffer {
   let buf = Buffer.alloc(2);
   buf.writeUint8(tag, 0);
@@ -506,4 +552,3 @@ export function setForeignDepositData(tag: number, foreignDeposit: number): Buff
   buf.writeUint8(foreignDeposit, 1);
   return buf;
 }
-

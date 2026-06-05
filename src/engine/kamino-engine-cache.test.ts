@@ -20,6 +20,8 @@ const CRNCY_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' as Address;
 const COLL_RESERVE = '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E' as Address;
 const DEBT_RESERVE = 'Es9vMFrzaCERmJfrF4H2FYD4KCoZTqtfQxXGCfCM8GgD' as Address;
 const ALT_MARKET = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
+const OTHER_CLIENT_PRIMARY = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
+const OBLIGATION = 'SysvarRent111111111111111111111111111111111' as Address;
 
 function dataResponse(buffer: Buffer): [string, 'base64'] {
   return [buffer.toString('base64'), 'base64'];
@@ -68,6 +70,24 @@ function reserveAccount(pubkey: Address, liquidityMint: Address, lendingMarket?:
     pubkey,
     account: { data: dataResponse(reserveBuffer({ liquidityMint, lendingMarket })) },
   };
+}
+
+function obligationBuffer(): Buffer {
+  const buffer = Buffer.alloc(2400);
+  Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]).copy(buffer, 0);
+  writeAddress(buffer, 64, CLIENT_PRIMARY);
+  writeAddress(buffer, 96, COLL_RESERVE);
+  buffer.writeBigUInt64LE(BigInt(100_000_000), 96 + 32);
+  writeU128(buffer, 96 + 40, sf(150));
+  writeAddress(buffer, 1208, DEBT_RESERVE);
+  writeU128(buffer, 1208 + 88, BigInt(40_000_000) << BigInt(60));
+  writeU128(buffer, 1208 + 104, sf(50));
+  writeU128(buffer, 1192, sf(150));
+  writeU128(buffer, 2208, sf(50));
+  writeU128(buffer, 2224, sf(50));
+  writeU128(buffer, 2240, sf(105));
+  writeU128(buffer, 2256, sf(120));
+  return buffer;
 }
 
 function token(id: number, mint: Address, decimals = 9): TokenStateModel {
@@ -132,7 +152,35 @@ function setupEngine(rpc: any): Engine {
   return engine;
 }
 
-describe('Engine Kamino reserve cache', () => {
+function reserveReads(rpc: ReturnType<typeof mockRpc>): number {
+  return rpc.getAccountInfo.mock.calls.filter(([address]) => address === COLL_RESERVE || address === DEBT_RESERVE)
+    .length;
+}
+
+function reserveAccountInfo(lendingMarket?: Address): Map<Address, { value: any }> {
+  return new Map([
+    [
+      COLL_RESERVE,
+      {
+        value: {
+          owner: KLEND_PROGRAM_ID,
+          data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, lendingMarket })),
+        },
+      },
+    ],
+    [
+      DEBT_RESERVE,
+      {
+        value: {
+          owner: KLEND_PROGRAM_ID,
+          data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT, lendingMarket })),
+        },
+      },
+    ],
+  ]);
+}
+
+describe('Engine Kamino reserve and context cache', () => {
   it('caches getKaminoReserveByMint by default market and mint', async () => {
     const rpc = mockRpc({
       programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)]],
@@ -178,27 +226,137 @@ describe('Engine Kamino reserve cache', () => {
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
   });
 
-  it('reuses cached reserve addresses in repeated change-position builds', async () => {
+  it('renames getKaminoContext to refreshKaminoContext', async () => {
     const rpc = mockRpc({
       programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
-      accountInfo: new Map([
-        [
-          COLL_RESERVE,
-          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } },
-        ],
-        [
-          DEBT_RESERVE,
-          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } },
-        ],
-      ]),
     });
     const engine = setupEngine(rpc);
 
+    expect(typeof engine.refreshKaminoContext).toBe('function');
+    expect('getKaminoContext' in engine).toBe(false);
+    await expect(engine.refreshKaminoContext({ instrId: 1 })).resolves.toMatchObject({
+      instrId: 1,
+      clientPrimaryAccount: CLIENT_PRIMARY,
+    });
+  });
+
+  it('uses refreshed context for repeated change-position builds without rebuilding context', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
     await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
     await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
-    expect(rpc.getAccountInfo).toHaveBeenCalledTimes(2);
+    expect(reserveReads(rpc)).toBe(0);
+  });
+
+  it('builds context once on instruction cache miss and reuses it', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoInitTokenAccountsInstruction({ instrId: 1 });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(reserveReads(rpc)).toBe(0);
+  });
+
+  it('refreshes context during getKaminoClientState even when context is cached', async () => {
+    const accountInfo = reserveAccountInfo();
+    accountInfo.set(OBLIGATION, {
+      value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligationBuffer()) },
+    });
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+      accountInfo,
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.getKaminoClientState({ instrId: 1, obligation: OBLIGATION });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(reserveReads(rpc)).toBe(2);
+  });
+
+  it('uses separate context cache entries for different clients', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+      accountInfo: reserveAccountInfo(),
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    engine.clientPrimaryAccount = OTHER_CLIENT_PRIMARY;
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(reserveReads(rpc)).toBe(2);
+  });
+
+  it('uses separate context cache entries for different lending markets', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [reserveAccount(COLL_RESERVE, ASSET_MINT)],
+        [reserveAccount(DEBT_RESERVE, CRNCY_MINT)],
+        [reserveAccount(COLL_RESERVE, ASSET_MINT, ALT_MARKET)],
+        [reserveAccount(DEBT_RESERVE, CRNCY_MINT, ALT_MARKET)],
+      ],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction({
+      instrId: 1,
+      collateralDelta: 1,
+      borrowDelta: 0,
+      lendingMarket: ALT_MARKET,
+    });
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(4);
+    expect(reserveReads(rpc)).toBe(0);
+  });
+
+  it('clears context cache when initialize starts', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [reserveAccount(COLL_RESERVE, ASSET_MINT)],
+        [reserveAccount(DEBT_RESERVE, CRNCY_MINT)],
+        [reserveAccount(COLL_RESERVE, ASSET_MINT)],
+        [reserveAccount(DEBT_RESERVE, CRNCY_MINT)],
+      ],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.initialize();
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(4);
+  });
+
+  it('clears context cache when setSigner starts', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+      accountInfo: reserveAccountInfo(),
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.setSigner(SIGNER);
+    engine.clientPrimaryAccount = CLIENT_PRIMARY;
+    engine.clientLutAddress = CLIENT_LUT;
+    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
+    expect(reserveReads(rpc)).toBe(2);
   });
 
   it('validates reserve layout loaded from cached addresses', async () => {

@@ -319,14 +319,6 @@ const KaminoInitTokenAccountsArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID — provides asset & crncy mints' }),
 });
 
-const KaminoInitObligationFarmsArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  collateralToken: z.enum(['asset', 'crncy']).meta({
-    description: 'Which instrument token is the collateral side;',
-  }),
-  lendingMarket: solanaAddress.default(KAMINO_MAIN_MARKET).meta({ description: 'Kamino lending market address' }),
-});
-
 const KaminoChangePositionArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   borrowDelta: signedInt.meta({
@@ -388,6 +380,5 @@ export {
   VmRemoveKaminoArgsSchema,
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
 };

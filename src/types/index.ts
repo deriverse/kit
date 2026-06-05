@@ -49,8 +49,6 @@ export {
   KaminoInitObligationArgs,
   ParsedKaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
-  KaminoInitObligationFarmsArgs,
-  ParsedKaminoInitObligationFarmsArgs,
   KaminoChangePositionArgs,
   ParsedKaminoChangePositionArgs,
 } from './engine-args';
@@ -121,7 +119,6 @@ export {
   VmRemoveKaminoArgsSchema,
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
 } from './schemas';
 

@@ -5,7 +5,6 @@ import { readAddress, readU128LE } from './bin';
 import { DecodedReserve } from '../../types/kamino';
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
-const DISCRIMINATOR_LEN = RESERVE_DISCRIMINATOR.length;
 
 const RESERVE_OFF = {
   lastUpdateSlot: 8,
@@ -36,8 +35,6 @@ const RESERVE_OFF = {
   pythPrice: 5216,
 } as const;
 
-const RESERVE_LENDING_MARKET_OFFSET = BigInt(DISCRIMINATOR_LEN + RESERVE_OFF.lendingMarket);
-const RESERVE_LIQ_MINT_OFFSET = BigInt(DISCRIMINATOR_LEN + RESERVE_OFF.liqMintPubkey);
 
 function decodeReserve(reserveAddress: Address, raw: Buffer): DecodedReserve {
   if (raw.length < 8 + RESERVE_OFF.pythPrice + 32) {
@@ -85,7 +82,4 @@ function decodeReserve(reserveAddress: Address, raw: Buffer): DecodedReserve {
 
 export {
   decodeReserve,
-  RESERVE_DISCRIMINATOR,
-  RESERVE_LENDING_MARKET_OFFSET,
-  RESERVE_LIQ_MINT_OFFSET,
 };

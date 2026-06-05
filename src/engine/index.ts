@@ -55,7 +55,6 @@ import {
   VmRemoveKaminoArgs,
   KaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
-  KaminoInitObligationFarmsArgs,
   KaminoChangePositionArgs,
   LogMessage,
   DepositArgsSchema,
@@ -89,7 +88,6 @@ import {
   VmRemoveKaminoArgsSchema,
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
   InstrIdSchema,
   GetClientSpotOrdersInfoArgsSchema,
@@ -180,7 +178,6 @@ import {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
   snapshotObligation,
 } from './kamino';
@@ -1072,13 +1069,6 @@ export class Engine {
     await this.requireClient();
     const instr = this.requireInstrument(parsed.instrId);
     return buildKaminoInitTokenAccountsInstruction(this.getVmInstructionContext(), parsed, instr);
-  }
-
-  async kaminoInitObligationFarmsInstructions(args: KaminoInitObligationFarmsArgs): Promise<Instruction[]> {
-    const parsed = KaminoInitObligationFarmsArgsSchema.parse(args);
-    await this.requireClient();
-    const instr = this.requireInstrument(parsed.instrId);
-    return buildKaminoInitObligationFarmsInstructions(this.getVmInstructionContext(), parsed, instr);
   }
 
   async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {

@@ -10,7 +10,6 @@ import {
   VmRemoveKaminoArgs,
   ParsedKaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
-  ParsedKaminoInitObligationFarmsArgs,
   ParsedKaminoChangePositionArgs,
 } from '../../types';
 
@@ -19,7 +18,6 @@ import {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
   KaminoInstructionContext,
 } from './instructions';
@@ -52,8 +50,6 @@ vi.mock('./obligation', () => ({
 vi.mock('./reserve', () => ({
   decodeReserve: vi.fn(),
   RESERVE_DISCRIMINATOR: Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]),
-  RESERVE_LENDING_MARKET_OFFSET: BigInt(8 + 24),
-  RESERVE_LIQ_MINT_OFFSET: BigInt(8 + 120),
 }));
 
 function mockAddr(label: string): Address {
@@ -235,7 +231,7 @@ describe('kamino instruction builders', () => {
       const ix = await buildKaminoInitObligationInstruction(ctx, args, mockAddr('instr'));
 
       expect(ix.accounts!.length).toBe(11);
-      expect((ix.data as Buffer)[0]).toBe(83);
+      expect((ix.data as Buffer)).toBe(undefined);
     });
 
     it('inserts the VM account when VmFlag.active is set (12 accounts)', async () => {
@@ -267,55 +263,6 @@ describe('kamino instruction builders', () => {
       const ix = await buildKaminoInitTokenAccountsInstruction(ctx, args, instr);
 
       expect(ix.accounts!.length).toBe(13);
-    });
-  });
-
-  describe('buildKaminoInitObligationFarmsInstructions', () => {
-    const args: ParsedKaminoInitObligationFarmsArgs = {
-      instrId: 1,
-      collateralToken: 'asset',
-      lendingMarket: mockAddr('lm'),
-    };
-
-    beforeEach(() => {
-      decodeReserveMock.mockImplementation((addr: Address) => ({
-        ...makeReserve(addr, MINT_ASSET),
-        farmCollateral: mockAddr('cfarm'),
-        farmDebt: mockAddr('dfarm'),
-      }));
-    });
-
-    it('emits one tag-86 instruction per side, 14 accounts each when VM is inactive', async () => {
-      const ctx = createMockContext({ vmMask: 0 });
-
-      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
-
-      expect(ixs).toHaveLength(2);
-      expect(ixs.every((ix) => ix.accounts!.length === 14)).toBe(true);
-      expect(ixs.every((ix) => (ix.data as Buffer)[0] === 86)).toBe(true);
-    });
-
-    it('emits collateral (side 0) then debt (side 1)', async () => {
-      const ctx = createMockContext();
-
-      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
-
-      expect((ixs[0].data as Buffer)[1]).toBe(0);
-      expect((ixs[1].data as Buffer)[1]).toBe(1);
-    });
-
-    it('skips a side whose reserve has no farm', async () => {
-      decodeReserveMock.mockImplementation((addr: Address) => ({
-        ...makeReserve(addr, MINT_ASSET),
-        farmCollateral: SYSTEM_PROGRAM_ID,
-        farmDebt: mockAddr('dfarm'),
-      }));
-      const ctx = createMockContext();
-
-      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
-
-      expect(ixs).toHaveLength(1);
-      expect((ixs[0].data as Buffer)[1]).toBe(1);
     });
   });
 

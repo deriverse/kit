@@ -1,14 +1,10 @@
-import { Address, Base58EncodedBytes, Commitment, Rpc, SolanaRpcApiDevnet, SolanaRpcApiMainnet } from '@solana/kit';
-import bs58 from 'bs58';
+import { Address, Commitment, Rpc, SolanaRpcApiDevnet, SolanaRpcApiMainnet } from '@solana/kit';
 import { Buffer } from 'buffer';
 
 import { KLEND_PROGRAM_ID } from '../../constants';
 import { decodeObligation } from './obligation';
 import {
   decodeReserve,
-  RESERVE_DISCRIMINATOR,
-  RESERVE_LENDING_MARKET_OFFSET,
-  RESERVE_LIQ_MINT_OFFSET,
 } from './reserve';
 import { DecodedObligation, DecodedReserve } from '../../types/kamino';
 
@@ -55,41 +51,5 @@ async function fetchReservesDecoded(
   return out;
 }
 
-async function fetchReserveForMint(
-  ctx: KaminoFetchContext,
-  lendingMarket: Address,
-  mint: Address,
-): Promise<{ address: Address; reserve: DecodedReserve } | null> {
-  const accounts = await ctx.rpc
-    .getProgramAccounts(KLEND_PROGRAM_ID, {
-      encoding: 'base64',
-      commitment: ctx.commitment,
-      filters: [
-        {
-          memcmp: {
-            offset: BigInt(0),
-            encoding: 'base58',
-            bytes: bs58.encode(RESERVE_DISCRIMINATOR) as Base58EncodedBytes,
-          },
-        },
-        {
-          memcmp: {
-            offset: RESERVE_LENDING_MARKET_OFFSET,
-            encoding: 'base58',
-            bytes: lendingMarket as string as Base58EncodedBytes,
-          },
-        },
-        {
-          memcmp: { offset: RESERVE_LIQ_MINT_OFFSET, encoding: 'base58', bytes: mint as string as Base58EncodedBytes },
-        },
-      ],
-    })
-    .send();
-  if (!accounts || accounts.length === 0) return null;
-  const acc = accounts[0];
-  const [b64] = acc.account.data as [string, 'base64'];
-  return { address: acc.pubkey, reserve: decodeReserve(acc.pubkey, Buffer.from(b64, 'base64')) };
-}
-
-export { fetchObligationDecoded, fetchReservesDecoded, fetchReserveForMint };
+export { fetchObligationDecoded, fetchReservesDecoded };
 export type { KaminoFetchContext };

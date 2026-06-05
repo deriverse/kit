@@ -1486,6 +1486,7 @@ export class KaminoChangePositionReportModel {
   static readonly LENGTH = 2 * 1 + 1 * 2 + 5 * 4 + 3 * 8; // 48 bytes
 
   static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_ASSETS_IS_COLLATERAL = 1;
   static readonly OFFSET_SEQ_NO = 8;
   static readonly OFFSET_CLIENT_ID = 12;
   static readonly OFFSET_INSTR_ID = 16;
@@ -1495,6 +1496,7 @@ export class KaminoChangePositionReportModel {
   static readonly OFFSET_CUSTOM_ID = 40;
 
   tag: number;
+  assetsIsCollateral: number;
   seqNo: number;
   clientId: number;
   instrId: number;
@@ -1506,7 +1508,7 @@ export class KaminoChangePositionReportModel {
     const result = new KaminoChangePositionReportModel();
     let autoBuffer = new AutoBuffer(buffer, offset);
     result.tag = autoBuffer.readU8();
-    autoBuffer.readU8();
+    result.assetsIsCollateral = autoBuffer.readU8();
     autoBuffer.readU16();
     autoBuffer.readU32();
     result.seqNo = autoBuffer.readU32();

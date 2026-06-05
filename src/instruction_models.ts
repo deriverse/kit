@@ -500,13 +500,6 @@ export function vmInitActivateData(tag: number, multisig: number): Buffer {
   return buf;
 }
 
-export function setForeignDepositData(tag: number, foreignDeposit: number): Buffer {
-  let buf = Buffer.alloc(2);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(foreignDeposit, 1);
-  return buf;
-}
-
 export function vmAddKaminoData(tag: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
@@ -525,28 +518,10 @@ export function vmRemoveKaminoData(tag: number): Buffer {
   return buf;
 }
 
-export function kaminoInitObligationData(tag: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(instrId, 4);
-  return buf;
-}
-
 export function kaminoInitTokenAccountsData(tag: number, instrId: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(instrId, 4);
-  return buf;
-}
-
-export function kaminoInitObligationFarmsData(tag: number, side: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
   return buf;

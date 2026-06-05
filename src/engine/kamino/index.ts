@@ -3,7 +3,6 @@ export {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
 } from './instructions';
 

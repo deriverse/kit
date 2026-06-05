@@ -1,7 +1,8 @@
 import { Address } from '@solana/kit';
 import { Buffer } from 'buffer';
 
-import { isPubkeySentinel, readAddress, readAddressOrNull, readU128LE } from './bin';
+import { isPubkeySentinel, readAddress, readU128LE } from './bin';
+import { DecodedObligation, ObligationBorrow, ObligationDeposit } from '../../types/kamino';
 
 const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
 
@@ -16,28 +17,6 @@ const BORROW_SLOTS = 5;
 const BORROW_SIZE = 32 + 48 + 8 + 16 + 16 + 16 + 8 + 7 * 8;
 const BORROWS_OFFSET = DEPOSITS_END + 8 + 16;
 const REFERRER_OFFSET = BORROWS_OFFSET + BORROW_SLOTS * BORROW_SIZE + 16 + 16 + 16 + 16 + 13 + 1 + 1 + 1;
-
-interface ObligationDeposit {
-  reserve: Address;
-  depositedCTokens: bigint;
-}
-
-interface ObligationBorrow {
-  reserve: Address;
-  borrowedAmountSf: bigint;
-}
-
-interface DecodedObligation {
-  address: Address;
-  lastUpdateSlot: bigint;
-  lendingMarket: Address;
-  owner: Address;
-  depositReserves: Address[];
-  borrowReserves: Address[];
-  deposits: ObligationDeposit[];
-  borrows: ObligationBorrow[];
-  referrer: Address | null;
-}
 
 function decodeObligation(obligationAddress: Address, raw: Buffer): DecodedObligation {
   if (raw.length < 8 + REFERRER_OFFSET + 32) {
@@ -72,8 +51,6 @@ function decodeObligation(obligationAddress: Address, raw: Buffer): DecodedOblig
     borrows.push({ reserve, borrowedAmountSf: readU128LE(body, slot + 88) });
   }
 
-  const referrer = readAddressOrNull(body, REFERRER_OFFSET);
-
   return {
     address: obligationAddress,
     lastUpdateSlot,
@@ -83,9 +60,7 @@ function decodeObligation(obligationAddress: Address, raw: Buffer): DecodedOblig
     borrowReserves,
     deposits,
     borrows,
-    referrer,
   };
 }
 
 export { decodeObligation };
-export type { DecodedObligation, ObligationDeposit, ObligationBorrow };

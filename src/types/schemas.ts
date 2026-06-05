@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Address, Commitment } from '@solana/kit';
+import { KAMINO_MAIN_MARKET } from '../constants';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
@@ -311,8 +312,7 @@ const VmRemoveKaminoArgsSchema = z.object({
 
 const KaminoInitObligationArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID — used by on-chain VM whitelist check' }),
-  lendingMarket: solanaAddress.meta({ description: 'Kamino lending market address' }),
-  obligation: solanaAddress.meta({ description: 'Kamino obligation account to create' }),
+  lendingMarket: solanaAddress.default(KAMINO_MAIN_MARKET).meta({ description: 'Kamino lending market address' }),
 });
 
 const KaminoInitTokenAccountsArgsSchema = z.object({
@@ -321,67 +321,26 @@ const KaminoInitTokenAccountsArgsSchema = z.object({
 
 const KaminoInitObligationFarmsArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  side: z.int().min(0).max(1, { error: 'Side must be 0 (Collateral) or 1 (Debt)' }),
-  lendingMarket: solanaAddress.meta({ description: 'Kamino lending market address' }),
-  obligation: solanaAddress.meta({ description: 'Kamino obligation account' }),
-  reserve: solanaAddress.meta({ description: 'Kamino reserve account' }),
-  reserveFarmState: solanaAddress.meta({ description: 'Kamino reserve farm state' }),
-});
-
-const KaminoOraclesSchema = z.object({
-  pyth: solanaAddress,
-  sbPrice: solanaAddress,
-  sbTwap: solanaAddress,
-  scope: solanaAddress,
-});
-
-const KaminoExtraReserveSchema = z.object({
-  reserve: solanaAddress,
-  oracles: KaminoOraclesSchema,
+  collateralToken: z.enum(['asset', 'crncy']).meta({
+    description: 'Which instrument token is the collateral side;',
+  }),
+  lendingMarket: solanaAddress.default(KAMINO_MAIN_MARKET).meta({ description: 'Kamino lending market address' }),
 });
 
 const KaminoChangePositionArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   borrowDelta: signedInt.meta({
-    description: 'Signed borrow delta in raw token units. Must be 0 if KaminoChangePositionFlag.repayAll is set.',
+    description: 'Signed borrow delta in raw token units. Must be 0 when repayAll is set.',
   }),
   collateralDelta: signedInt.meta({
-    description:
-      'Signed collateral delta in raw token units. Must be 0 if KaminoChangePositionFlag.withdrawAll is set.',
+    description: 'Signed collateral delta in raw token units. Must be 0 when withdrawAll is set.',
   }),
-  flags: nonNegativeInt.optional().meta({
-    description:
-      'Bitmask of KaminoChangePositionFlag (repayAll = 0x01, withdrawAll = 0x02). Use to close a full debt or full collateral position without computing the exact amount client-side.',
-  }),
+  repayAll: z.boolean().optional().meta({ description: 'Repay the entire debt' }),
+  withdrawAll: z.boolean().optional().meta({ description: 'Withdraw the entire collateral' }),
   customId: nonNegativeInt.optional().meta({ description: 'Custom ID for tagging this position change' }),
-  lendingMarket: solanaAddress,
-  obligation: solanaAddress,
-  collReserve: solanaAddress,
-  collLiqMint: solanaAddress.meta({ description: 'Collateral liquidity mint (must equal instrument.asset_mint or .crncy_mint)' }),
-  collReserveLiqSupply: solanaAddress,
-  collReserveCollMint: solanaAddress,
-  collDestDepositColl: solanaAddress,
-  collTokenProgram: solanaAddress,
-  collLiqTokenProgram: solanaAddress,
-  collOracles: KaminoOraclesSchema,
-  collReserveFarmState: solanaAddress
-    .optional()
-    .meta({ description: 'Collateral reserve farm state; omit if no farm on that reserve' }),
-  debtReserve: solanaAddress,
-  debtLiqMint: solanaAddress,
-  debtReserveSourceLiq: solanaAddress,
-  debtBorrowFeeReceiver: solanaAddress
-    .optional()
-    .meta({ description: 'Borrow fee receiver; omit when not used (sentinel = KLEND program)' }),
-  debtTokenProgram: solanaAddress,
-  debtOracles: KaminoOraclesSchema,
-  debtReserveFarmState: solanaAddress
-    .optional()
-    .meta({ description: 'Debt reserve farm state; omit if no farm on that reserve' }),
-  extraReserves: z
-    .array(KaminoExtraReserveSchema)
-    .optional()
-    .meta({ description: 'Additional reserves the obligation references, beyond collateral & debt' }),
+  lendingMarket: solanaAddress.default(KAMINO_MAIN_MARKET).meta({
+    description: 'Kamino lending market address',
+  }),
 });
 
 export {

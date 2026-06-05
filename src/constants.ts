@@ -13,6 +13,7 @@ export const TOKEN_2022_PROGRAM_ID = address('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBq
 export const ASSOCIATED_TOKEN_PROGRAM_ID = address('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 export const KLEND_PROGRAM_ID = address('KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD');
 export const FARMS_PROGRAM_ID = address('FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr');
+export const KAMINO_MAIN_MARKET = address('7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6Js6CcgyrnG6');
 export const SYSVAR_RENT_ID = address('SysvarRent111111111111111111111111111111111');
 export const SYSVAR_INSTRUCTIONS_ID = address('Sysvar1nstructions1111111111111111111111111');
 export const SEED_USER_METADATA = 'user_meta';
@@ -33,6 +34,11 @@ export let feeRateStep = FEE_RATE_STEP_UI;
 export let poolRatioStep = POOL_RATIO_STEP_UI;
 
 export const nullOrder = 0xffff;
+
+export enum KaminoChangePositionFlag {
+  repayAll = 0x01,
+  withdrawAll = 0x02,
+}
 
 export function setDecimals(uiNumbers: boolean): void {
   dec = uiNumbers ? DF : 1;

@@ -47,9 +47,12 @@ export {
   VmAddKaminoArgs,
   VmRemoveKaminoArgs,
   KaminoInitObligationArgs,
+  ParsedKaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
   KaminoInitObligationFarmsArgs,
+  ParsedKaminoInitObligationFarmsArgs,
   KaminoChangePositionArgs,
+  ParsedKaminoChangePositionArgs,
 } from './engine-args';
 
 export {

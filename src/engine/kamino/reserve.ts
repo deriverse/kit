@@ -1,9 +1,11 @@
 import { Address } from '@solana/kit';
 import { Buffer } from 'buffer';
 
-import { readAddress, readAddressOrNull, readU128LE } from './bin';
+import { readAddress, readU128LE } from './bin';
+import { DecodedReserve } from '../../types/kamino';
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
+const DISCRIMINATOR_LEN = RESERVE_DISCRIMINATOR.length;
 
 const RESERVE_OFF = {
   lastUpdateSlot: 8,
@@ -34,39 +36,8 @@ const RESERVE_OFF = {
   pythPrice: 5216,
 } as const;
 
-interface DecodedReserve {
-  address: Address;
-  lastUpdateSlot: bigint;
-  lendingMarket: Address;
-  farmCollateral: Address;
-  farmDebt: Address;
-  liquidity: {
-    mint: Address;
-    supplyVault: Address;
-    feeVault: Address;
-    tokenProgram: Address;
-    mintDecimals: number;
-    availableAmount: bigint;
-    borrowedAmountSf: bigint;
-    accumulatedProtocolFeesSf: bigint;
-    accumulatedReferrerFeesSf: bigint;
-  };
-  collateral: {
-    mint: Address;
-    supplyVault: Address;
-    mintTotalSupply: bigint;
-  };
-  config: {
-    loanToValuePct: number;
-    borrowFactorPct: bigint;
-  };
-  oracles: {
-    pyth: Address | null;
-    switchboardPrice: Address | null;
-    switchboardTwap: Address | null;
-    scope: Address | null;
-  };
-}
+const RESERVE_LENDING_MARKET_OFFSET = BigInt(DISCRIMINATOR_LEN + RESERVE_OFF.lendingMarket);
+const RESERVE_LIQ_MINT_OFFSET = BigInt(DISCRIMINATOR_LEN + RESERVE_OFF.liqMintPubkey);
 
 function decodeReserve(reserveAddress: Address, raw: Buffer): DecodedReserve {
   if (raw.length < 8 + RESERVE_OFF.pythPrice + 32) {
@@ -104,13 +75,17 @@ function decodeReserve(reserveAddress: Address, raw: Buffer): DecodedReserve {
       borrowFactorPct: body.readBigUInt64LE(RESERVE_OFF.cfgBorrowFactorPct),
     },
     oracles: {
-      pyth: readAddressOrNull(body, RESERVE_OFF.pythPrice),
-      switchboardPrice: readAddressOrNull(body, RESERVE_OFF.switchboardPriceAggregator),
-      switchboardTwap: readAddressOrNull(body, RESERVE_OFF.switchboardTwapAggregator),
-      scope: readAddressOrNull(body, RESERVE_OFF.scopePriceFeed),
+      pyth: readAddress(body, RESERVE_OFF.pythPrice),
+      switchboardPrice: readAddress(body, RESERVE_OFF.switchboardPriceAggregator),
+      switchboardTwap: readAddress(body, RESERVE_OFF.switchboardTwapAggregator),
+      scope: readAddress(body, RESERVE_OFF.scopePriceFeed),
     },
   };
 }
 
-export { decodeReserve };
-export type { DecodedReserve };
+export {
+  decodeReserve,
+  RESERVE_DISCRIMINATOR,
+  RESERVE_LENDING_MARKET_OFFSET,
+  RESERVE_LIQ_MINT_OFFSET,
+};

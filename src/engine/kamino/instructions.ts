@@ -4,10 +4,10 @@ import {
   Instrument,
   VmAddKaminoArgs,
   VmRemoveKaminoArgs,
-  KaminoInitObligationArgs,
+  ParsedKaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
-  KaminoInitObligationFarmsArgs,
-  KaminoChangePositionArgs,
+  ParsedKaminoInitObligationFarmsArgs,
+  ParsedKaminoChangePositionArgs,
   Instruction,
 } from '../../types';
 import {
@@ -19,6 +19,7 @@ import {
   FARMS_PROGRAM_ID,
   SYSVAR_RENT_ID,
   SYSVAR_INSTRUCTIONS_ID,
+  KaminoChangePositionFlag,
 } from '../../constants';
 import { TokenFlag, VmFlag, TokenStateModel } from '../../structure_models';
 import {
@@ -30,10 +31,13 @@ import {
   kaminoChangePositionData,
 } from '../../instruction_models';
 import { findAssociatedTokenAddress } from '../utils';
+import { isPubkeySentinel } from './bin';
+import { fetchObligationDecoded, fetchReservesDecoded, fetchReserveForMint } from './fetch';
 import {
   findClientPrimaryAccount,
   findClientVmAccount,
   findKaminoUserMetadata,
+  findKaminoObligation,
   findKaminoLendingMarketAuthority,
   findKaminoObligationFarmUserState,
   getProgramTokenAccount,
@@ -63,17 +67,13 @@ function requireToken(tokens: Map<number, TokenStateModel>, tokenId: number): To
 /**
  * Tag 81: VM authority adds Kamino to client's VM whitelist.
  *
- * Account layout (Rust: vm_add_kamino.rs):
  *   1) signer (VM authority, ro signer)
  *   2) root (ro)
  *   3) client_primary (writable)
  *   4) client_vm (writable, may need allocation)
  *   5) system_program (ro)
  */
-async function buildVmAddKaminoInstruction(
-  ctx: KaminoInstructionContext,
-  args: VmAddKaminoArgs,
-): Promise<Instruction> {
+async function buildVmAddKaminoInstruction(ctx: KaminoInstructionContext, args: VmAddKaminoArgs): Promise<Instruction> {
   const clientPrimary = await findClientPrimaryAccount(ctx, ctx.signer);
   const clientVm = await findClientVmAccount(ctx, ctx.signer);
 
@@ -93,7 +93,6 @@ async function buildVmAddKaminoInstruction(
 /**
  * Tag 82: VM authority removes Kamino from VM whitelist.
  *
- * Account layout (Rust: vm_remove_kamino.rs):
  *   1) signer (VM authority, ro signer)
  *   2) root (ro)
  *   3) client_primary (writable)
@@ -121,7 +120,6 @@ async function buildVmRemoveKaminoInstruction(
 /**
  * Tag 83: Initialize Kamino user_metadata + obligation accounts for the client.
  *
- * Account layout (Rust: kamino_init_obligation.rs):
  *   1) signer (writable signer, fee payer)
  *   2) root (ro)
  *   3) client_primary (writable)
@@ -137,11 +135,12 @@ async function buildVmRemoveKaminoInstruction(
  */
 async function buildKaminoInitObligationInstruction(
   ctx: KaminoInstructionContext,
-  args: KaminoInitObligationArgs,
+  args: ParsedKaminoInitObligationArgs,
   instrAddress: Address,
 ): Promise<Instruction> {
   const clientPrimary = await findClientPrimaryAccount(ctx, ctx.signer);
   const userMetadata = await findKaminoUserMetadata(clientPrimary);
+  const obligation = await findKaminoObligation(clientPrimary, args.lendingMarket);
   const vmActive = (ctx.vmMask & VmFlag.active) !== 0;
 
   const keys: { address: Address; role: AccountRole }[] = [
@@ -158,7 +157,7 @@ async function buildKaminoInitObligationInstruction(
   keys.push(
     { address: instrAddress, role: AccountRole.READONLY },
     { address: userMetadata, role: AccountRole.WRITABLE },
-    { address: args.obligation, role: AccountRole.WRITABLE },
+    { address: obligation, role: AccountRole.WRITABLE },
     { address: args.lendingMarket, role: AccountRole.READONLY },
     { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
@@ -176,7 +175,6 @@ async function buildKaminoInitObligationInstruction(
 /**
  * Tag 84: Create the client_primary-owned ATAs for the instrument's asset & crncy mints.
  *
- * Account layout (Rust: kamino_init_token_accounts.rs):
  *   1) signer (signer)
  *   2) root (ro)
  *   3) client_primary (ro)
@@ -237,9 +235,8 @@ async function buildKaminoInitTokenAccountsInstruction(
 }
 
 /**
- * Tag 86: Initialize Kamino obligation-farm-user-state for a single side (collateral or debt).
+ * Tag 86: Initialize the Kamino obligation-farm-user-state accounts.
  *
- * Account layout (Rust: kamino_init_obligation_farms.rs):
  *   1) signer (writable signer)
  *   2) root (ro)
  *   3) client_primary (ro)
@@ -256,87 +253,146 @@ async function buildKaminoInitTokenAccountsInstruction(
  *   14) system_program (ro)
  *   15) sysvar_rent (ro)
  */
-async function buildKaminoInitObligationFarmsInstruction(
+async function buildKaminoInitObligationFarmsInstructions(
   ctx: KaminoInstructionContext,
-  args: KaminoInitObligationFarmsArgs,
-  instrAddress: Address,
-): Promise<Instruction> {
+  args: ParsedKaminoInitObligationFarmsArgs,
+  instr: Instrument,
+): Promise<Instruction[]> {
   const clientPrimary = await findClientPrimaryAccount(ctx, ctx.signer);
+  const obligation = await findKaminoObligation(clientPrimary, args.lendingMarket);
   const lendingMarketAuthority = await findKaminoLendingMarketAuthority(args.lendingMarket);
-  const obligationFarm = await findKaminoObligationFarmUserState(args.reserveFarmState, args.obligation);
   const vmActive = (ctx.vmMask & VmFlag.active) !== 0;
+  const clientVm = vmActive ? await findClientVmAccount(ctx, ctx.signer) : null;
 
-  const keys: { address: Address; role: AccountRole }[] = [
-    { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: clientPrimary, role: AccountRole.READONLY },
-  ];
+  const assetToken = requireToken(ctx.tokens, instr.header.assetTokenId);
+  const crncyToken = requireToken(ctx.tokens, instr.header.crncyTokenId);
+  const collMint = args.collateralToken === 'asset' ? assetToken.address : crncyToken.address;
+  const debtMint = args.collateralToken === 'asset' ? crncyToken.address : assetToken.address;
 
-  if (vmActive) {
-    const clientVm = await findClientVmAccount(ctx, ctx.signer);
-    keys.push({ address: clientVm, role: AccountRole.READONLY });
+  const [collRes, debtRes] = await Promise.all([
+    fetchReserveForMint(ctx, args.lendingMarket, collMint),
+    fetchReserveForMint(ctx, args.lendingMarket, debtMint),
+  ]);
+
+  const targets: { reserveAddr: Address; reserveFarmState: Address; side: number }[] = [];
+  if (collRes && !isPubkeySentinel(collRes.reserve.farmCollateral)) {
+    targets.push({ reserveAddr: collRes.address, reserveFarmState: collRes.reserve.farmCollateral, side: 0 });
+  }
+  if (debtRes && !isPubkeySentinel(debtRes.reserve.farmDebt)) {
+    targets.push({ reserveAddr: debtRes.address, reserveFarmState: debtRes.reserve.farmDebt, side: 1 });
   }
 
-  keys.push(
-    { address: instrAddress, role: AccountRole.READONLY },
-    { address: args.obligation, role: AccountRole.WRITABLE },
-    { address: args.lendingMarket, role: AccountRole.READONLY },
-    { address: lendingMarketAuthority, role: AccountRole.READONLY },
-    { address: args.reserve, role: AccountRole.WRITABLE },
-    { address: args.reserveFarmState, role: AccountRole.WRITABLE },
-    { address: obligationFarm, role: AccountRole.WRITABLE },
-    { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: FARMS_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: SYSVAR_RENT_ID, role: AccountRole.READONLY },
-  );
+  const instructions: Instruction[] = [];
+  for (const target of targets) {
+    const obligationFarm = await findKaminoObligationFarmUserState(target.reserveFarmState, obligation);
 
-  return {
-    accounts: keys,
-    programAddress: ctx.programId,
-    data: kaminoInitObligationFarmsData(86, args.side, args.instrId),
-  };
+    const keys: { address: Address; role: AccountRole }[] = [
+      { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
+      { address: ctx.rootAccount, role: AccountRole.READONLY },
+      { address: clientPrimary, role: AccountRole.READONLY },
+    ];
+
+    if (clientVm) {
+      keys.push({ address: clientVm, role: AccountRole.READONLY });
+    }
+
+    keys.push(
+      { address: instr.address, role: AccountRole.READONLY },
+      { address: obligation, role: AccountRole.WRITABLE },
+      { address: args.lendingMarket, role: AccountRole.READONLY },
+      { address: lendingMarketAuthority, role: AccountRole.READONLY },
+      { address: target.reserveAddr, role: AccountRole.WRITABLE },
+      { address: target.reserveFarmState, role: AccountRole.WRITABLE },
+      { address: obligationFarm, role: AccountRole.WRITABLE },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: FARMS_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: SYSVAR_RENT_ID, role: AccountRole.READONLY },
+    );
+
+    instructions.push({
+      accounts: keys,
+      programAddress: ctx.programId,
+      data: kaminoInitObligationFarmsData(86, target.side, args.instrId),
+    });
+  }
+
+  return instructions;
 }
 
 /**
  * Tag 85: Unified signed-delta CPI (deposit / borrow / repay / withdraw).
- *
- * The caller is responsible for resolving all Kamino-side accounts (reserves, oracles,
- * lending market, farm states); the kit only derives client-owned PDAs (obligation,
- * ATAs, vault PDAs, lending-market-authority).
- *
- * Amounts (`borrowDelta`, `collateralDelta`) are raw integer token units. The sentinel
- * `Number.MIN_SAFE_INTEGER` or callers using `BigInt(i64::MIN)`-equivalent encoding
- * cannot be expressed safely as a JS number. If you need the on-chain "settle all"
- * sentinel, you must encode it manually — `kaminoChangePositionData` writes via
- * `writeBigInt64LE(BigInt(Math.floor(value)))`, so values must fit in i64.
- *
- * Account layout (Rust: kamino_change_position.rs:177-232).
  */
 async function buildKaminoChangePositionInstruction(
   ctx: KaminoInstructionContext,
-  args: KaminoChangePositionArgs,
-  instrAddress: Address,
+  args: ParsedKaminoChangePositionArgs,
+  instr: Instrument,
 ): Promise<Instruction> {
+  const assetToken = requireToken(ctx.tokens, instr.header.assetTokenId);
+  const crncyToken = requireToken(ctx.tokens, instr.header.crncyTokenId);
+  const instrMints = new Set<Address>([assetToken.address, crncyToken.address]);
+
   const clientPrimary = await findClientPrimaryAccount(ctx, ctx.signer);
-  const lendingMarketAuthority = await findKaminoLendingMarketAuthority(args.lendingMarket);
-  const userCollAta = await findAssociatedTokenAddress(clientPrimary, args.collTokenProgram, args.collLiqMint);
-  const userDebtAta = await findAssociatedTokenAddress(clientPrimary, args.debtTokenProgram, args.debtLiqMint);
-  const collVault = await getProgramTokenAccount(ctx, args.collLiqMint);
-  const debtVault = await getProgramTokenAccount(ctx, args.debtLiqMint);
+  const obligationAddress = await findKaminoObligation(clientPrimary, args.lendingMarket);
+
+  const obligation = await fetchObligationDecoded(ctx, obligationAddress);
+  const allReserveAddrs = [...new Set<Address>([...obligation.depositReserves, ...obligation.borrowReserves])];
+  const reserves = await fetchReservesDecoded(ctx, allReserveAddrs);
+
+  const mintOf = (reserveAddr: Address): Address => {
+    const r = reserves.get(reserveAddr);
+    if (!r) throw new Error(`Reserve ${reserveAddr} missing from batch fetch`);
+    return r.liquidity.mint;
+  };
+
+  const collReserveAddr = obligation.depositReserves.find((r) => instrMints.has(mintOf(r)));
+  const debtReserveAddr = obligation.borrowReserves.find((r) => instrMints.has(mintOf(r)));
+  if (!collReserveAddr) {
+    throw new Error(
+      `No deposit (collateral) reserve on obligation ${obligationAddress} matches instrument ` +
+        `${instr.header.instrId} mints. Deposit collateral before adjusting this position.`,
+    );
+  }
+  if (!debtReserveAddr) {
+    throw new Error(
+      `No borrow (debt) reserve on obligation ${obligationAddress} matches instrument ` +
+        `${instr.header.instrId} mints. Borrow before adjusting this position.`,
+    );
+  }
+  const collReserve = reserves.get(collReserveAddr)!;
+  const debtReserve = reserves.get(debtReserveAddr)!;
+
+  const lendingMarket = obligation.lendingMarket;
+  const lendingMarketAuthority = await findKaminoLendingMarketAuthority(lendingMarket);
+
+  const collLiqMint = collReserve.liquidity.mint;
+  const debtLiqMint = debtReserve.liquidity.mint;
+
+  const collTokenProgram = collReserve.liquidity.tokenProgram;
+  const debtTokenProgram = debtReserve.liquidity.tokenProgram;
+
+  const userCollAta = await findAssociatedTokenAddress(clientPrimary, collTokenProgram, collLiqMint);
+  const userDebtAta = await findAssociatedTokenAddress(clientPrimary, debtTokenProgram, debtLiqMint);
+  const collVault = await getProgramTokenAccount(ctx, collLiqMint);
+  const debtVault = await getProgramTokenAccount(ctx, debtLiqMint);
   const vmActive = (ctx.vmMask & VmFlag.active) !== 0;
 
-  const collFarmReserveState = args.collReserveFarmState;
-  const debtFarmReserveState = args.debtReserveFarmState;
+  const collFarmReserveState = isPubkeySentinel(collReserve.farmCollateral) ? null : collReserve.farmCollateral;
+  const debtFarmReserveState = isPubkeySentinel(debtReserve.farmDebt) ? null : debtReserve.farmDebt;
   const collObligationFarm = collFarmReserveState
-    ? await findKaminoObligationFarmUserState(collFarmReserveState, args.obligation)
+    ? await findKaminoObligationFarmUserState(collFarmReserveState, obligationAddress)
     : KLEND_PROGRAM_ID;
   const debtObligationFarm = debtFarmReserveState
-    ? await findKaminoObligationFarmUserState(debtFarmReserveState, args.obligation)
+    ? await findKaminoObligationFarmUserState(debtFarmReserveState, obligationAddress)
     : KLEND_PROGRAM_ID;
 
-  const farmRole = (hasFarm: boolean): AccountRole =>
-    hasFarm ? AccountRole.WRITABLE : AccountRole.READONLY;
+  const debtBorrowFeeReceiver = isPubkeySentinel(debtReserve.liquidity.feeVault)
+    ? KLEND_PROGRAM_ID
+    : debtReserve.liquidity.feeVault;
+
+  const extraReserveAddrs = allReserveAddrs.filter((r) => r !== collReserveAddr && r !== debtReserveAddr);
+
+  const farmRole = (hasFarm: boolean): AccountRole => (hasFarm ? AccountRole.WRITABLE : AccountRole.READONLY);
 
   const keys: { address: Address; role: AccountRole }[] = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
@@ -351,38 +407,39 @@ async function buildKaminoChangePositionInstruction(
   }
 
   keys.push(
-    { address: instrAddress, role: AccountRole.READONLY },
-    { address: args.obligation, role: AccountRole.WRITABLE },
-    { address: args.lendingMarket, role: AccountRole.READONLY },
+    { address: instr.address, role: AccountRole.READONLY },
+    { address: obligationAddress, role: AccountRole.WRITABLE },
+    { address: lendingMarket, role: AccountRole.READONLY },
     { address: lendingMarketAuthority, role: AccountRole.READONLY },
     // Collateral cluster
-    { address: args.collReserve, role: AccountRole.WRITABLE },
-    { address: args.collLiqMint, role: AccountRole.READONLY },
-    { address: args.collReserveLiqSupply, role: AccountRole.WRITABLE },
-    { address: args.collReserveCollMint, role: AccountRole.WRITABLE },
-    { address: args.collDestDepositColl, role: AccountRole.WRITABLE },
+    { address: collReserveAddr, role: AccountRole.WRITABLE },
+    { address: collLiqMint, role: AccountRole.READONLY },
+    { address: collReserve.liquidity.supplyVault, role: AccountRole.WRITABLE },
+    { address: collReserve.collateral.mint, role: AccountRole.WRITABLE },
+    { address: collReserve.collateral.supplyVault, role: AccountRole.WRITABLE },
     { address: userCollAta, role: AccountRole.WRITABLE },
     { address: collVault, role: AccountRole.WRITABLE },
-    { address: args.collTokenProgram, role: AccountRole.READONLY },
-    { address: args.collLiqTokenProgram, role: AccountRole.READONLY },
+    { address: collTokenProgram, role: AccountRole.READONLY },
+    // Collateral cToken program: Kamino reserve collateral mints are always SPL Token.
+    { address: TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
     // Debt cluster
-    { address: args.debtReserve, role: AccountRole.WRITABLE },
-    { address: args.debtLiqMint, role: AccountRole.READONLY },
-    { address: args.debtReserveSourceLiq, role: AccountRole.WRITABLE },
-    { address: args.debtBorrowFeeReceiver ?? KLEND_PROGRAM_ID, role: AccountRole.WRITABLE },
+    { address: debtReserveAddr, role: AccountRole.WRITABLE },
+    { address: debtLiqMint, role: AccountRole.READONLY },
+    { address: debtReserve.liquidity.supplyVault, role: AccountRole.WRITABLE },
+    { address: debtBorrowFeeReceiver, role: AccountRole.WRITABLE },
     { address: userDebtAta, role: AccountRole.WRITABLE },
     { address: debtVault, role: AccountRole.WRITABLE },
-    { address: args.debtTokenProgram, role: AccountRole.READONLY },
+    { address: debtTokenProgram, role: AccountRole.READONLY },
     // Oracles — collateral side
-    { address: args.collOracles.pyth, role: AccountRole.READONLY },
-    { address: args.collOracles.sbPrice, role: AccountRole.READONLY },
-    { address: args.collOracles.sbTwap, role: AccountRole.READONLY },
-    { address: args.collOracles.scope, role: AccountRole.READONLY },
+    { address: collReserve.oracles.pyth, role: AccountRole.READONLY },
+    { address: collReserve.oracles.switchboardPrice, role: AccountRole.READONLY },
+    { address: collReserve.oracles.switchboardTwap, role: AccountRole.READONLY },
+    { address: collReserve.oracles.scope, role: AccountRole.READONLY },
     // Oracles — debt side
-    { address: args.debtOracles.pyth, role: AccountRole.READONLY },
-    { address: args.debtOracles.sbPrice, role: AccountRole.READONLY },
-    { address: args.debtOracles.sbTwap, role: AccountRole.READONLY },
-    { address: args.debtOracles.scope, role: AccountRole.READONLY },
+    { address: debtReserve.oracles.pyth, role: AccountRole.READONLY },
+    { address: debtReserve.oracles.switchboardPrice, role: AccountRole.READONLY },
+    { address: debtReserve.oracles.switchboardTwap, role: AccountRole.READONLY },
+    { address: debtReserve.oracles.scope, role: AccountRole.READONLY },
     // Farm slots
     { address: collObligationFarm, role: farmRole(!!collFarmReserveState) },
     { address: collFarmReserveState ?? KLEND_PROGRAM_ID, role: farmRole(!!collFarmReserveState) },
@@ -395,29 +452,25 @@ async function buildKaminoChangePositionInstruction(
   );
 
   // Extras tail: one 5-tuple per additional obligation reserve.
-  if (args.extraReserves) {
-    for (const extra of args.extraReserves) {
-      keys.push(
-        { address: extra.reserve, role: AccountRole.WRITABLE },
-        { address: extra.oracles.pyth, role: AccountRole.READONLY },
-        { address: extra.oracles.sbPrice, role: AccountRole.READONLY },
-        { address: extra.oracles.sbTwap, role: AccountRole.READONLY },
-        { address: extra.oracles.scope, role: AccountRole.READONLY },
-      );
-    }
+  for (const extraAddr of extraReserveAddrs) {
+    const extra = reserves.get(extraAddr)!;
+    keys.push(
+      { address: extraAddr, role: AccountRole.WRITABLE },
+      { address: extra.oracles.pyth, role: AccountRole.READONLY },
+      { address: extra.oracles.switchboardPrice, role: AccountRole.READONLY },
+      { address: extra.oracles.switchboardTwap, role: AccountRole.READONLY },
+      { address: extra.oracles.scope, role: AccountRole.READONLY },
+    );
   }
+
+  let flags = 0;
+  if (args.repayAll) flags |= KaminoChangePositionFlag.repayAll;
+  if (args.withdrawAll) flags |= KaminoChangePositionFlag.withdrawAll;
 
   return {
     accounts: keys,
     programAddress: ctx.programId,
-    data: kaminoChangePositionData(
-      85,
-      args.flags ?? 0,
-      args.instrId,
-      args.borrowDelta,
-      args.collateralDelta,
-      args.customId ?? 0,
-    ),
+    data: kaminoChangePositionData(85, flags, args.instrId, args.borrowDelta, args.collateralDelta, args.customId ?? 0),
   };
 }
 
@@ -426,6 +479,6 @@ export {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
 };

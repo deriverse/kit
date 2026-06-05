@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.59] - 2026-06-05
+
+### Fixed
+
+- **Kamino instructions**: `kaminoInitObligationFarmsInstructions`, `kaminoChangePositionInstruction`, `kaminoInitObligationInstruction` refactored args, derive optional accounts and data
+- **`snapshotKaminoObligation`**: WIP - refactored, but no oracles prices yet
+
 ## [1.0.58] - 2026-05-29
 
 ### Added

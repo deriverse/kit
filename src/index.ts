@@ -6,13 +6,3 @@ export * from './structure_models';
 export { AccountType } from './types';
 export * from './logs_models';
 export * from './instruction_models';
-export type {
-  SnapshotObligationArgs,
-  PositionView,
-  SnapshotTotals,
-  ObligationSnapshot,
-  DecodedReserve,
-  DecodedObligation,
-  ObligationDeposit,
-  ObligationBorrow,
-} from './engine/kamino';

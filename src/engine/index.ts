@@ -180,12 +180,11 @@ import {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
   snapshotObligation,
-  SnapshotObligationArgs,
-  ObligationSnapshot,
 } from './kamino';
+import { ObligationSnapshot } from '../types/kamino';
 
 type Address = SolanaAddress<string>;
 
@@ -1075,30 +1074,27 @@ export class Engine {
     return buildKaminoInitTokenAccountsInstruction(this.getVmInstructionContext(), parsed, instr);
   }
 
-  async kaminoInitObligationFarmsInstruction(args: KaminoInitObligationFarmsArgs): Promise<Instruction> {
+  async kaminoInitObligationFarmsInstructions(args: KaminoInitObligationFarmsArgs): Promise<Instruction[]> {
     const parsed = KaminoInitObligationFarmsArgsSchema.parse(args);
     await this.requireClient();
     const instr = this.requireInstrument(parsed.instrId);
-    return buildKaminoInitObligationFarmsInstruction(this.getVmInstructionContext(), parsed, instr.address);
+    return buildKaminoInitObligationFarmsInstructions(this.getVmInstructionContext(), parsed, instr);
   }
 
   async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {
     const parsed = KaminoChangePositionArgsSchema.parse(args);
     await this.requireClient();
     const instr = this.requireInstrument(parsed.instrId);
-    return buildKaminoChangePositionInstruction(this.getVmInstructionContext(), parsed, instr.address);
+    return buildKaminoChangePositionInstruction(this.getVmInstructionContext(), parsed, instr);
   }
 
-  async snapshotKaminoObligation(args: SnapshotObligationArgs): Promise<ObligationSnapshot> {
+  async snapshotKaminoObligation(obligationAddress: Address): Promise<ObligationSnapshot> {
     return snapshotObligation(
       {
         rpc: this.rpc,
         commitment: this.commitment,
-        tokens: this.tokens,
-        instruments: this.instruments,
-        updateInstrData: (instrId) => this.updateInstrData({ instrId }),
       },
-      args,
+      obligationAddress,
     );
   }
 }

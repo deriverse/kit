@@ -1,16 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { Address } from '@solana/kit';
 import { Buffer } from 'buffer';
 
 import { TokenStateModel, InstrAccountHeaderModel, VmFlag } from '../../structure_models';
+import { KLEND_PROGRAM_ID, SYSTEM_PROGRAM_ID } from '../../constants';
 import {
   Instrument,
   VmAddKaminoArgs,
   VmRemoveKaminoArgs,
-  KaminoInitObligationArgs,
+  ParsedKaminoInitObligationArgs,
   KaminoInitTokenAccountsArgs,
-  KaminoInitObligationFarmsArgs,
-  KaminoChangePositionArgs,
+  ParsedKaminoInitObligationFarmsArgs,
+  ParsedKaminoChangePositionArgs,
 } from '../../types';
 
 import {
@@ -18,15 +19,21 @@ import {
   buildVmRemoveKaminoInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoInitTokenAccountsInstruction,
-  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoInitObligationFarmsInstructions,
   buildKaminoChangePositionInstruction,
   KaminoInstructionContext,
 } from './instructions';
+import { decodeObligation } from './obligation';
+import { decodeReserve } from './reserve';
+
+const decodeObligationMock = decodeObligation as unknown as Mock;
+const decodeReserveMock = decodeReserve as unknown as Mock;
 
 vi.mock('../account-helpers', () => ({
   findClientPrimaryAccount: vi.fn().mockResolvedValue('MockClientPrimary11111111111111' as Address),
   findClientVmAccount: vi.fn().mockResolvedValue('MockClientVm111111111111111111' as Address),
   findKaminoUserMetadata: vi.fn().mockResolvedValue('MockUserMetadata111111111111111' as Address),
+  findKaminoObligation: vi.fn().mockResolvedValue('MockObligation11111111111111111' as Address),
   findKaminoLendingMarketAuthority: vi.fn().mockResolvedValue('MockLendingMarketAuth1111111111' as Address),
   findKaminoObligationFarmUserState: vi
     .fn()
@@ -36,6 +43,17 @@ vi.mock('../account-helpers', () => ({
 
 vi.mock('../utils', () => ({
   findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
+}));
+
+vi.mock('./obligation', () => ({
+  decodeObligation: vi.fn(),
+}));
+
+vi.mock('./reserve', () => ({
+  decodeReserve: vi.fn(),
+  RESERVE_DISCRIMINATOR: Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]),
+  RESERVE_LENDING_MARKET_OFFSET: BigInt(8 + 24),
+  RESERVE_LIQ_MINT_OFFSET: BigInt(8 + 120),
 }));
 
 function mockAddr(label: string): Address {
@@ -71,8 +89,22 @@ function createMockContext(overrides: Partial<KaminoInstructionContext> = {}): K
   const tokens = new Map<number, TokenStateModel>();
   tokens.set(0, createMockToken(0));
   tokens.set(1, createMockToken(1));
+  const account = { owner: KLEND_PROGRAM_ID, data: ['', 'base64'] };
+  const rpc = {
+    getAccountInfo: () => ({ send: async () => ({ value: account }) }),
+    getMultipleAccounts: (addrs: Address[]) => ({
+      send: async () => ({ value: addrs.map(() => account) }),
+    }),
+    getProgramAccounts: (_program: Address, config: any) => ({
+      send: async () => {
+        const mintFilter = config.filters.find((f: any) => f.memcmp.offset === BigInt(8 + 120));
+        const pubkey = mintFilter?.memcmp.bytes === MINT_ASSET ? COLL_RES : DEBT_RES;
+        return [{ pubkey, account: { data: ['', 'base64'] } }];
+      },
+    }),
+  };
   return {
-    rpc: {} as any,
+    rpc: rpc as any,
     programId: mockAddr('PROG'),
     version: 1,
     commitment: 'confirmed',
@@ -86,34 +118,78 @@ function createMockContext(overrides: Partial<KaminoInstructionContext> = {}): K
   };
 }
 
-function defaultKaminoChangeArgs(): KaminoChangePositionArgs {
-  const oracles = {
-    pyth: mockAddr('pyth'),
-    sbPrice: mockAddr('sbp'),
-    sbTwap: mockAddr('sbt'),
-    scope: mockAddr('scp'),
-  };
+function defaultKaminoChangeArgs(): ParsedKaminoChangePositionArgs {
   return {
     instrId: 1,
     borrowDelta: 100,
     collateralDelta: 50,
     customId: 7,
     lendingMarket: mockAddr('lm'),
-    obligation: mockAddr('obl'),
-    collReserve: mockAddr('cres'),
-    collLiqMint: mockAddr('cmint'),
-    collReserveLiqSupply: mockAddr('csup'),
-    collReserveCollMint: mockAddr('ccmint'),
-    collDestDepositColl: mockAddr('cdest'),
-    collTokenProgram: mockAddr('ctok'),
-    collLiqTokenProgram: mockAddr('cliq'),
-    collOracles: oracles,
-    debtReserve: mockAddr('dres'),
-    debtLiqMint: mockAddr('dmint'),
-    debtReserveSourceLiq: mockAddr('dsrc'),
-    debtTokenProgram: mockAddr('dtok'),
-    debtOracles: oracles,
   };
+}
+
+// Instrument 1 prices asset token 1 (Mint1) against crncy token 0 (Mint0).
+const COLL_RES = mockAddr('cres');
+const DEBT_RES = mockAddr('dres');
+const EXTRA_RES = mockAddr('xres');
+const MINT_ASSET = mockAddr('Mint1');
+const MINT_CRNCY = mockAddr('Mint0');
+const MINT_OTHER = mockAddr('Mint9');
+
+function makeReserve(addr: Address, mint: Address) {
+  return {
+    address: addr,
+    lastUpdateSlot: BigInt(0),
+    lendingMarket: mockAddr('lm'),
+    // Sentinel farms -> no farm legs (keeps the base account count at 39).
+    farmCollateral: SYSTEM_PROGRAM_ID,
+    farmDebt: SYSTEM_PROGRAM_ID,
+    liquidity: {
+      mint,
+      supplyVault: mockAddr('sup'),
+      feeVault: mockAddr('fee'),
+      tokenProgram: mockAddr('tprog'),
+      mintDecimals: 6,
+      availableAmount: BigInt(0),
+      borrowedAmountSf: BigInt(0),
+      accumulatedProtocolFeesSf: BigInt(0),
+      accumulatedReferrerFeesSf: BigInt(0),
+    },
+    collateral: { mint: mockAddr('ccmint'), supplyVault: mockAddr('cdest'), mintTotalSupply: BigInt(0) },
+    config: { loanToValuePct: 0, borrowFactorPct: BigInt(0) },
+    oracles: {
+      pyth: mockAddr('pyth'),
+      switchboardPrice: mockAddr('sbp'),
+      switchboardTwap: mockAddr('sbt'),
+      scope: mockAddr('scp'),
+    },
+  };
+}
+
+const RESERVE_MINTS = new Map<Address, Address>([
+  [COLL_RES, MINT_ASSET],
+  [DEBT_RES, MINT_CRNCY],
+  [EXTRA_RES, MINT_OTHER],
+]);
+
+function setupChangePositionMocks(
+  depositReserves: Address[] = [COLL_RES],
+  borrowReserves: Address[] = [DEBT_RES],
+): void {
+  decodeObligationMock.mockReturnValue({
+    address: mockAddr('obl'),
+    lastUpdateSlot: BigInt(0),
+    lendingMarket: mockAddr('lm'),
+    owner: mockAddr('owner'),
+    depositReserves,
+    borrowReserves,
+    deposits: [],
+    borrows: [],
+    referrer: null,
+  });
+  decodeReserveMock.mockImplementation((addr: Address) =>
+    makeReserve(addr, RESERVE_MINTS.get(addr) ?? MINT_OTHER),
+  );
 }
 
 describe('kamino instruction builders', () => {
@@ -148,10 +224,9 @@ describe('kamino instruction builders', () => {
   });
 
   describe('buildKaminoInitObligationInstruction', () => {
-    const args: KaminoInitObligationArgs = {
+    const args: ParsedKaminoInitObligationArgs = {
       instrId: 1,
       lendingMarket: mockAddr('lm'),
-      obligation: mockAddr('obl'),
     };
 
     it('produces tag 83 with 11 accounts when VM is inactive', async () => {
@@ -195,80 +270,97 @@ describe('kamino instruction builders', () => {
     });
   });
 
-  describe('buildKaminoInitObligationFarmsInstruction', () => {
-    const args: KaminoInitObligationFarmsArgs = {
+  describe('buildKaminoInitObligationFarmsInstructions', () => {
+    const args: ParsedKaminoInitObligationFarmsArgs = {
       instrId: 1,
-      side: 0,
+      collateralToken: 'asset',
       lendingMarket: mockAddr('lm'),
-      obligation: mockAddr('obl'),
-      reserve: mockAddr('reserve'),
-      reserveFarmState: mockAddr('rfs'),
     };
 
-    it('produces tag 86 with 14 accounts when VM is inactive', async () => {
-      const ctx = createMockContext({ vmMask: 0 });
-
-      const ix = await buildKaminoInitObligationFarmsInstruction(ctx, args, mockAddr('instr'));
-
-      expect(ix.accounts!.length).toBe(14);
-      expect((ix.data as Buffer)[0]).toBe(86);
+    beforeEach(() => {
+      decodeReserveMock.mockImplementation((addr: Address) => ({
+        ...makeReserve(addr, MINT_ASSET),
+        farmCollateral: mockAddr('cfarm'),
+        farmDebt: mockAddr('dfarm'),
+      }));
     });
 
-    it('encodes the side byte at offset 1', async () => {
+    it('emits one tag-86 instruction per side, 14 accounts each when VM is inactive', async () => {
+      const ctx = createMockContext({ vmMask: 0 });
+
+      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
+
+      expect(ixs).toHaveLength(2);
+      expect(ixs.every((ix) => ix.accounts!.length === 14)).toBe(true);
+      expect(ixs.every((ix) => (ix.data as Buffer)[0] === 86)).toBe(true);
+    });
+
+    it('emits collateral (side 0) then debt (side 1)', async () => {
       const ctx = createMockContext();
 
-      const ixCollat = await buildKaminoInitObligationFarmsInstruction(ctx, args, mockAddr('instr'));
-      const ixDebt = await buildKaminoInitObligationFarmsInstruction(
-        ctx,
-        { ...args, side: 1 },
-        mockAddr('instr'),
-      );
+      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
 
-      expect((ixCollat.data as Buffer)[1]).toBe(0);
-      expect((ixDebt.data as Buffer)[1]).toBe(1);
+      expect((ixs[0].data as Buffer)[1]).toBe(0);
+      expect((ixs[1].data as Buffer)[1]).toBe(1);
+    });
+
+    it('skips a side whose reserve has no farm', async () => {
+      decodeReserveMock.mockImplementation((addr: Address) => ({
+        ...makeReserve(addr, MINT_ASSET),
+        farmCollateral: SYSTEM_PROGRAM_ID,
+        farmDebt: mockAddr('dfarm'),
+      }));
+      const ctx = createMockContext();
+
+      const ixs = await buildKaminoInitObligationFarmsInstructions(ctx, args, createMockInstrument(1));
+
+      expect(ixs).toHaveLength(1);
+      expect((ixs[0].data as Buffer)[1]).toBe(1);
     });
   });
 
   describe('buildKaminoChangePositionInstruction', () => {
     it('produces tag 85 with 39 accounts when VM is inactive and no extras', async () => {
+      setupChangePositionMocks();
       const ctx = createMockContext({ vmMask: 0 });
       const args = defaultKaminoChangeArgs();
 
-      const ix = await buildKaminoChangePositionInstruction(ctx, args, mockAddr('instr'));
+      const ix = await buildKaminoChangePositionInstruction(ctx, args, createMockInstrument(1));
 
       expect(ix.accounts!.length).toBe(39);
       expect((ix.data as Buffer)[0]).toBe(85);
     });
 
     it('inserts the VM account when VmFlag.active is set', async () => {
+      setupChangePositionMocks();
       const ctx = createMockContext({ vmMask: VmFlag.active });
       const args = defaultKaminoChangeArgs();
 
-      const ix = await buildKaminoChangePositionInstruction(ctx, args, mockAddr('instr'));
+      const ix = await buildKaminoChangePositionInstruction(ctx, args, createMockInstrument(1));
 
       expect(ix.accounts!.length).toBe(40);
     });
 
-    it('appends a 5-tuple per extra reserve', async () => {
+    it('appends a 5-tuple per extra reserve the obligation references', async () => {
+      // Obligation references an extra deposit reserve whose mint is not part of the instrument.
+      setupChangePositionMocks([COLL_RES, EXTRA_RES], [DEBT_RES]);
       const ctx = createMockContext({ vmMask: 0 });
-      const args: KaminoChangePositionArgs = {
-        ...defaultKaminoChangeArgs(),
-        extraReserves: [
-          {
-            reserve: mockAddr('xres'),
-            oracles: {
-              pyth: mockAddr('xpyth'),
-              sbPrice: mockAddr('xsbp'),
-              sbTwap: mockAddr('xsbt'),
-              scope: mockAddr('xscp'),
-            },
-          },
-        ],
-      };
+      const args = defaultKaminoChangeArgs();
 
-      const ix = await buildKaminoChangePositionInstruction(ctx, args, mockAddr('instr'));
+      const ix = await buildKaminoChangePositionInstruction(ctx, args, createMockInstrument(1));
 
       expect(ix.accounts!.length).toBe(39 + 5);
+    });
+
+    it('throws when no obligation leg matches the instrument mints', async () => {
+      // Both legs are unrelated reserves -> neither matches the instrument's asset/crncy mints.
+      setupChangePositionMocks([EXTRA_RES], [EXTRA_RES]);
+      const ctx = createMockContext({ vmMask: 0 });
+      const args = defaultKaminoChangeArgs();
+
+      await expect(
+        buildKaminoChangePositionInstruction(ctx, args, createMockInstrument(1)),
+      ).rejects.toThrow(/collateral/i);
     });
   });
 });

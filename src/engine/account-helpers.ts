@@ -87,7 +87,10 @@ async function getTokenAccount(ctx: AccountHelperContext, mint: Address): Promis
 /**
  * Get program token account PDA for a mint.
  */
-async function getProgramTokenAccount(ctx: Pick<AccountHelperContext, 'programId' | 'version'>, mint: Address): Promise<Address> {
+async function getProgramTokenAccount(
+  ctx: Pick<AccountHelperContext, 'programId' | 'version'>,
+  mint: Address,
+): Promise<Address> {
   let versionBuf = Buffer.alloc(4);
   versionBuf.writeUInt32LE(ctx.version, 0);
   const address = (
@@ -235,6 +238,24 @@ async function findKaminoUserMetadata(owner: Address): Promise<Address> {
   return address;
 }
 
+async function findKaminoObligation(owner: Address, lendingMarket: Address): Promise<Address> {
+  const defaultPubkey = Buffer.alloc(32);
+  const address = (
+    await getProgramDerivedAddress({
+      programAddress: KLEND_PROGRAM_ID,
+      seeds: [
+        Buffer.from([0]), // tag
+        Buffer.from([0]), // id
+        getAddressEncoder().encode(owner),
+        getAddressEncoder().encode(lendingMarket),
+        defaultPubkey, // seed1 account
+        defaultPubkey, // seed2 account
+      ],
+    })
+  )[0];
+  return address;
+}
+
 async function findKaminoLendingMarketAuthority(lendingMarket: Address): Promise<Address> {
   const address = (
     await getProgramDerivedAddress({
@@ -245,10 +266,7 @@ async function findKaminoLendingMarketAuthority(lendingMarket: Address): Promise
   return address;
 }
 
-async function findKaminoObligationFarmUserState(
-  reserveFarmState: Address,
-  obligation: Address,
-): Promise<Address> {
+async function findKaminoObligationFarmUserState(reserveFarmState: Address, obligation: Address): Promise<Address> {
   const address = (
     await getProgramDerivedAddress({
       programAddress: FARMS_PROGRAM_ID,
@@ -284,6 +302,7 @@ export {
   findClientCommunityAccount,
   findClientVmAccount,
   findKaminoUserMetadata,
+  findKaminoObligation,
   findKaminoLendingMarketAuthority,
   findKaminoObligationFarmUserState,
   requireClientPrimaryAccount,

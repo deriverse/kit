@@ -1,5 +1,5 @@
 import { SF_FRAC_BITS } from '../../constants';
-import { DecodedReserve } from './reserve';
+import { DecodedReserve } from '../../types/kamino';
 
 const ZERO = BigInt(0);
 const ONE = BigInt(1);
@@ -18,10 +18,7 @@ function sfToRoundedUpRaw(sf: bigint): bigint {
 function reserveTotalSupplierLiquiditySf(reserve: DecodedReserve): bigint {
   const l = reserve.liquidity;
   return (
-    (l.availableAmount << SF_FRAC_BITS) +
-    l.borrowedAmountSf -
-    l.accumulatedProtocolFeesSf -
-    l.accumulatedReferrerFeesSf
+    (l.availableAmount << SF_FRAC_BITS) + l.borrowedAmountSf - l.accumulatedProtocolFeesSf - l.accumulatedReferrerFeesSf
   );
 }
 

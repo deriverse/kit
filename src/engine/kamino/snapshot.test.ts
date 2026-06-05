@@ -1,10 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Address, getAddressDecoder, getAddressEncoder } from '@solana/kit';
 import { Buffer } from 'buffer';
 
 import { KLEND_PROGRAM_ID, SF_FRAC_BITS } from '../../constants';
-import { Instrument } from '../../types';
-import { InstrAccountHeaderModel, TokenFlag, TokenStateModel } from '../../structure_models';
 import { decodeObligation } from './obligation';
 import { decodeReserve } from './reserve';
 import {
@@ -165,8 +163,9 @@ describe('kamino account decoders', () => {
     expect(decoded.collateral.mintTotalSupply).toBe(BigInt(2000));
     expect(decoded.config.loanToValuePct).toBe(75);
     expect(decoded.config.borrowFactorPct).toBe(BigInt(110));
-    expect(decoded.oracles.pyth).toBeNull();
-    expect(decoded.oracles.switchboardPrice).toBeNull();
+    // Oracles are forwarded verbatim; an unset slot decodes to the default (all-zero) pubkey.
+    expect(decoded.oracles.pyth).toBe('11111111111111111111111111111111');
+    expect(decoded.oracles.switchboardPrice).toBe('11111111111111111111111111111111');
   });
 
   it('throws on wrong discriminator', () => {
@@ -269,43 +268,6 @@ describe('kamino obligation decoder', () => {
   });
 });
 
-function makeToken(id: number, address: Address, mask: number = 0): TokenStateModel {
-  const t = new TokenStateModel();
-  t.tag = 0;
-  t.version = 0;
-  t.address = address;
-  t.programAddress = pubkeyAt(Buffer.alloc(32), 0);
-  t.id = id;
-  t.mask = mask;
-  t.reserved = 0;
-  t.baseCrncyIndex = 0;
-  return t;
-}
-
-function makeInstrument(opts: {
-  instrId: number;
-  assetTokenId: number;
-  crncyTokenId: number;
-  lastPx: number;
-  addressSeed?: number;
-}): Instrument {
-  const header = new InstrAccountHeaderModel();
-  header.instrId = opts.instrId;
-  header.assetTokenId = opts.assetTokenId;
-  header.crncyTokenId = opts.crncyTokenId;
-  header.lastPx = opts.lastPx;
-  const addrBuf = Buffer.alloc(32);
-  for (let i = 0; i < 32; i++) addrBuf[i] = ((opts.addressSeed ?? opts.instrId) + i) & 0xff;
-  return {
-    address: pubkeyAt(addrBuf, 0),
-    header,
-    spotBids: [],
-    spotAsks: [],
-    perpBids: [],
-    perpAsks: [],
-  };
-}
-
 function makeRpc(opts: {
   obligationAddress: Address;
   obligationBuf: Buffer;
@@ -314,7 +276,7 @@ function makeRpc(opts: {
 }) {
   const b64 = (b: Buffer) => [b.toString('base64'), 'base64'] as [string, 'base64'];
   return {
-    getAccountInfo: (addr: Address, _o: unknown) => ({
+    getAccountInfo: (addr: Address) => ({
       send: async () => {
         if (addr !== opts.obligationAddress) {
           throw new Error(`unexpected getAccountInfo: ${addr}`);
@@ -322,7 +284,7 @@ function makeRpc(opts: {
         return { value: { owner: KLEND_PROGRAM_ID, data: b64(opts.obligationBuf) } };
       },
     }),
-    getMultipleAccounts: (addrs: Address[], _o: unknown) => ({
+    getMultipleAccounts: (addrs: Address[]) => ({
       send: async () => ({
         value: addrs.map((a) => {
           const buf = opts.reservesByAddr.get(a);
@@ -331,57 +293,13 @@ function makeRpc(opts: {
         }),
       }),
     }),
-    getSlot: (_o: unknown) => ({
+    getSlot: () => ({
       send: async () => opts.currentSlot,
     }),
   };
 }
 
 describe('snapshotObligation', () => {
-  const USDC_TOKEN_ID = 0;
-  const ASSET_TOKEN_ID = 1;
-  const OTHER_TOKEN_ID = 2;
-  const ASSET_INSTR_ID = 100;
-  const OTHER_INSTR_ID = 101;
-  const ASSET_LAST_PX = 50;
-  const OTHER_LAST_PX = 4; // For inverse case: USDC/OTHER means OTHER price = 1/4 = 0.25
-
-  // Builds a Deriverse stub: USDC base + ASSET token + OTHER token, with an
-  // ASSET/USDC instrument (direct) and a USDC/OTHER instrument (inverse).
-  function makeStubMaps(opts: { assetMint: Address; otherMint?: Address }) {
-    const usdcMint = pubkeyAt(Buffer.from(new Array(32).fill(7)), 0);
-    const tokens = new Map<number, TokenStateModel>();
-    tokens.set(USDC_TOKEN_ID, makeToken(USDC_TOKEN_ID, usdcMint, TokenFlag.baseCrncy));
-    tokens.set(ASSET_TOKEN_ID, makeToken(ASSET_TOKEN_ID, opts.assetMint));
-    if (opts.otherMint) {
-      tokens.set(OTHER_TOKEN_ID, makeToken(OTHER_TOKEN_ID, opts.otherMint));
-    }
-
-    const instruments = new Map<number, Instrument>();
-    instruments.set(
-      ASSET_INSTR_ID,
-      makeInstrument({
-        instrId: ASSET_INSTR_ID,
-        assetTokenId: ASSET_TOKEN_ID,
-        crncyTokenId: USDC_TOKEN_ID,
-        lastPx: ASSET_LAST_PX,
-      }),
-    );
-    if (opts.otherMint) {
-      instruments.set(
-        OTHER_INSTR_ID,
-        makeInstrument({
-          instrId: OTHER_INSTR_ID,
-          assetTokenId: USDC_TOKEN_ID,
-          crncyTokenId: OTHER_TOKEN_ID,
-          lastPx: OTHER_LAST_PX,
-        }),
-      );
-    }
-    return { tokens, instruments, usdcMint };
-  }
-
-  // Pre-built reserve+obligation for the happy-path case.
   function buildHappyFixture() {
     const reserveBuf = buildReserveBuf({
       lastUpdateSlot: BigInt(900),
@@ -394,26 +312,20 @@ describe('snapshotObligation', () => {
       mintSeed: 42,
     });
     const reserveAddr = pubkeyAt(Buffer.from(new Array(32).fill(11)), 0);
-    const assetMint = pubkeyAt(reserveBuf.subarray(8), RESERVE_OFF.liqMintPubkey);
 
     const obligationAddr = pubkeyAt(Buffer.from(new Array(32).fill(99)), 0);
-    const lm = pubkeyAt(Buffer.from(new Array(32).fill(50)), 0);
-    const owner = pubkeyAt(Buffer.from(new Array(32).fill(60)), 0);
     const obligationBuf = buildObligationBuf({
-      lendingMarket: lm,
-      owner,
+      lendingMarket: pubkeyAt(Buffer.from(new Array(32).fill(50)), 0),
+      owner: pubkeyAt(Buffer.from(new Array(32).fill(60)), 0),
       deposits: [{ reserve: reserveAddr, depositedCTokens: BigInt(1000) }],
       borrows: [],
     });
 
-    return { reserveBuf, reserveAddr, assetMint, obligationAddr, obligationBuf, lm, owner };
+    return { reserveBuf, reserveAddr, obligationAddr, obligationBuf };
   }
 
-  it('values a direct-pricing deposit and reports stalest slot', async () => {
-    const { reserveBuf, reserveAddr, assetMint, obligationAddr, obligationBuf } = buildHappyFixture();
-    const { tokens, instruments } = makeStubMaps({ assetMint });
-    const updateInstrData = vi.fn().mockResolvedValue(undefined);
-
+  it('computes deposit position structure (USD pricing is a stub → 0)', async () => {
+    const { reserveBuf, reserveAddr, obligationAddr, obligationBuf } = buildHappyFixture();
     const ctx = {
       rpc: makeRpc({
         obligationAddress: obligationAddr,
@@ -422,82 +334,26 @@ describe('snapshotObligation', () => {
         currentSlot: 1000,
       }),
       commitment: 'confirmed' as const,
-      tokens,
-      instruments,
-      updateInstrData,
     } as any;
 
-    const snap = await snapshotObligation(ctx, { obligation: obligationAddr });
+    const snap = await snapshotObligation(ctx, obligationAddr);
 
     // 1000 cTokens / 2000 mintTotalSupply * 1000 lamports of supplier liq = 500 lamports.
     expect(snap.deposits).toHaveLength(1);
     expect(snap.deposits[0].rawLamports).toBe(BigInt(500));
     expect(snap.deposits[0].uiAmount).toBeCloseTo(0.0005); // 500 / 10^6
-    expect(snap.deposits[0].priceUsd).toBe(ASSET_LAST_PX);
-    expect(snap.deposits[0].usdValue).toBeCloseTo(0.0005 * ASSET_LAST_PX);
-
-    expect(snap.totals.collateralUsd).toBeCloseTo(0.0005 * ASSET_LAST_PX);
-    expect(snap.totals.borrowUsd).toBe(0);
-    expect(snap.totals.maxBorrowUsd).toBeCloseTo(snap.totals.collateralUsd * 0.8);
-    expect(snap.totals.healthFactor).toBe(Infinity); // no debt
-    expect(snap.totals.stalestReserveSlot).toBe(BigInt(900));
+    expect(snap.deposits[0].priceUsd).toBe(0);
+    expect(snap.deposits[0].usdValue).toBe(0);
+    expect(snap.deposits[0].slotsSinceRefresh).toBe(BigInt(100)); // 1000 - 900
     expect(snap.currentSlot).toBe(BigInt(1000));
 
-    // Refreshed the ASSET/USDC instrument exactly once.
-    expect(updateInstrData).toHaveBeenCalledTimes(1);
-    expect(updateInstrData).toHaveBeenCalledWith(ASSET_INSTR_ID);
+    expect(snap.totals.collateralUsd).toBe(0);
+    expect(snap.totals.borrowUsd).toBe(0);
+    expect(snap.totals.maxBorrowUsd).toBe(0);
+    expect(snap.totals.healthFactor).toBe(Infinity);
   });
 
-  it('prices a base-currency mint at 1.0 without refreshing any instrument', async () => {
-    const usdcReserve = buildReserveBuf({
-      lastUpdateSlot: BigInt(500),
-      availableAmount: BigInt(2000),
-      borrowedAmountSf: ZERO,
-      mintTotalSupply: BigInt(2000),
-      mintDecimals: 6,
-      loanToValuePct: 90,
-      borrowFactorPct: BigInt(100),
-      mintSeed: 7,
-    });
-    const usdcReserveAddr = pubkeyAt(Buffer.from(new Array(32).fill(31)), 0);
-    const assetMintUnused = pubkeyAt(Buffer.from(new Array(32).fill(15)), 0);
-    const { tokens, instruments, usdcMint } = makeStubMaps({ assetMint: assetMintUnused });
-    // Override the USDC reserve buf so its mint pubkey matches the base-currency token.
-    Buffer.from(getAddressEncoder().encode(usdcMint)).copy(
-      usdcReserve.subarray(8),
-      RESERVE_OFF.liqMintPubkey,
-    );
-
-    const obligationAddr = pubkeyAt(Buffer.from(new Array(32).fill(98)), 0);
-    const obligationBuf = buildObligationBuf({
-      lendingMarket: pubkeyAt(Buffer.from(new Array(32).fill(50)), 0),
-      owner: pubkeyAt(Buffer.from(new Array(32).fill(60)), 0),
-      deposits: [{ reserve: usdcReserveAddr, depositedCTokens: BigInt(1000) }],
-      borrows: [],
-    });
-
-    const updateInstrData = vi.fn().mockResolvedValue(undefined);
-    const ctx = {
-      rpc: makeRpc({
-        obligationAddress: obligationAddr,
-        obligationBuf,
-        reservesByAddr: new Map([[usdcReserveAddr, usdcReserve]]),
-        currentSlot: 1000,
-      }),
-      commitment: 'confirmed' as const,
-      tokens,
-      instruments,
-      updateInstrData,
-    } as any;
-
-    const snap = await snapshotObligation(ctx, { obligation: obligationAddr });
-
-    expect(snap.deposits[0].priceUsd).toBe(1.0);
-    expect(updateInstrData).not.toHaveBeenCalled();
-  });
-
-  it('applies inverse pricing when the mint is the crncy side of a base-asset instrument', async () => {
-    // OTHER lives on the crncy side of a USDC/OTHER instrument → priceUsd = 1/lastPx.
+  it('computes borrow position structure', async () => {
     const reserveBuf = buildReserveBuf({
       lastUpdateSlot: BigInt(900),
       availableAmount: BigInt(1000),
@@ -509,17 +365,14 @@ describe('snapshotObligation', () => {
       mintSeed: 77,
     });
     const reserveAddr = pubkeyAt(Buffer.from(new Array(32).fill(22)), 0);
-    const otherMint = pubkeyAt(reserveBuf.subarray(8), RESERVE_OFF.liqMintPubkey);
-    const assetMintUnused = pubkeyAt(Buffer.from(new Array(32).fill(15)), 0);
-
-    const { tokens, instruments } = makeStubMaps({ assetMint: assetMintUnused, otherMint });
+    const borrowedAmountSf = BigInt(7) << SF_FRAC_BITS;
 
     const obligationAddr = pubkeyAt(Buffer.from(new Array(32).fill(97)), 0);
     const obligationBuf = buildObligationBuf({
       lendingMarket: pubkeyAt(Buffer.from(new Array(32).fill(50)), 0),
       owner: pubkeyAt(Buffer.from(new Array(32).fill(60)), 0),
-      deposits: [{ reserve: reserveAddr, depositedCTokens: BigInt(1000) }],
-      borrows: [],
+      deposits: [],
+      borrows: [{ reserve: reserveAddr, borrowedAmountSf }],
     });
 
     const ctx = {
@@ -530,26 +383,23 @@ describe('snapshotObligation', () => {
         currentSlot: 1000,
       }),
       commitment: 'confirmed' as const,
-      tokens,
-      instruments,
-      updateInstrData: vi.fn().mockResolvedValue(undefined),
     } as any;
 
-    const snap = await snapshotObligation(ctx, { obligation: obligationAddr });
-    expect(snap.deposits[0].priceUsd).toBeCloseTo(1 / OTHER_LAST_PX);
+    const snap = await snapshotObligation(ctx, obligationAddr);
+
+    expect(snap.borrows).toHaveLength(1);
+    expect(snap.borrows[0].rawLamports).toBe(sfToRoundedUpRaw(borrowedAmountSf));
+    expect(snap.totals.borrowUsd).toBe(0);
+    expect(snap.totals.healthFactor).toBe(Infinity);
   });
 
-  it('returns empty positions, null stalestReserveSlot, and Infinity health on an empty obligation', async () => {
+  it('returns empty positions and Infinity health on an empty obligation', async () => {
     const obligationAddr = pubkeyAt(Buffer.from(new Array(32).fill(96)), 0);
     const obligationBuf = buildObligationBuf({
       lendingMarket: pubkeyAt(Buffer.from(new Array(32).fill(50)), 0),
       owner: pubkeyAt(Buffer.from(new Array(32).fill(60)), 0),
       deposits: [],
       borrows: [],
-    });
-
-    const { tokens, instruments } = makeStubMaps({
-      assetMint: pubkeyAt(Buffer.from(new Array(32).fill(15)), 0),
     });
 
     const ctx = {
@@ -560,61 +410,13 @@ describe('snapshotObligation', () => {
         currentSlot: 1000,
       }),
       commitment: 'confirmed' as const,
-      tokens,
-      instruments,
-      updateInstrData: vi.fn().mockResolvedValue(undefined),
     } as any;
 
-    const snap = await snapshotObligation(ctx, { obligation: obligationAddr });
+    const snap = await snapshotObligation(ctx, obligationAddr);
     expect(snap.deposits).toHaveLength(0);
     expect(snap.borrows).toHaveLength(0);
     expect(snap.totals.collateralUsd).toBe(0);
     expect(snap.totals.borrowUsd).toBe(0);
     expect(snap.totals.healthFactor).toBe(Infinity);
-    expect(snap.totals.stalestReserveSlot).toBeNull();
-  });
-
-  it('throws when a non-base mint has no base-currency pricing instrument', async () => {
-    const reserveBuf = buildReserveBuf({
-      lastUpdateSlot: BigInt(900),
-      availableAmount: BigInt(1000),
-      borrowedAmountSf: ZERO,
-      mintTotalSupply: BigInt(2000),
-      mintDecimals: 6,
-      loanToValuePct: 80,
-      borrowFactorPct: BigInt(100),
-      mintSeed: 88,
-    });
-    const reserveAddr = pubkeyAt(Buffer.from(new Array(32).fill(33)), 0);
-    const orphanMint = pubkeyAt(reserveBuf.subarray(8), RESERVE_OFF.liqMintPubkey);
-
-    const tokens = new Map<number, TokenStateModel>();
-    // Token registered, but no instrument quotes it.
-    tokens.set(3, makeToken(3, orphanMint));
-
-    const obligationAddr = pubkeyAt(Buffer.from(new Array(32).fill(95)), 0);
-    const obligationBuf = buildObligationBuf({
-      lendingMarket: pubkeyAt(Buffer.from(new Array(32).fill(50)), 0),
-      owner: pubkeyAt(Buffer.from(new Array(32).fill(60)), 0),
-      deposits: [{ reserve: reserveAddr, depositedCTokens: BigInt(1000) }],
-      borrows: [],
-    });
-
-    const ctx = {
-      rpc: makeRpc({
-        obligationAddress: obligationAddr,
-        obligationBuf,
-        reservesByAddr: new Map([[reserveAddr, reserveBuf]]),
-        currentSlot: 1000,
-      }),
-      commitment: 'confirmed' as const,
-      tokens,
-      instruments: new Map<number, Instrument>(),
-      updateInstrData: vi.fn().mockResolvedValue(undefined),
-    } as any;
-
-    await expect(snapshotObligation(ctx, { obligation: obligationAddr })).rejects.toThrow(
-      /No Deriverse instrument found pricing token/,
-    );
   });
 });

@@ -13,6 +13,7 @@ import {
   EarningsReportModel,
   FeesDepositReportModel,
   FeesWithdrawReportModel,
+  KaminoChangePositionReportModel,
   LogType,
   MoveSpotAvailFundsReportModel,
   PerpChangeLeverageReportModel,
@@ -561,6 +562,13 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
             crncyTokenDec = tokenDec(tokens, report.tokenId, uiNumbers);
             report.amount /= crncyTokenDec;
           }
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.kaminoChangePosition: {
+        if (buffer.length == KaminoChangePositionReportModel.LENGTH) {
+          let report = KaminoChangePositionReportModel.fromBuffer(buffer);
           logs.push(report);
         }
         break;

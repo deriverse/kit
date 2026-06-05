@@ -180,6 +180,21 @@ function requireInstrument(ctx: KaminoInstructionContext, instrId: number): Inst
   return instr;
 }
 
+function requireTokenMint(ctx: KaminoInstructionContext, tokenId: number, label: string): Address {
+  const token = ctx.tokens.get(tokenId);
+  if (token === undefined) {
+    throw new Error(`${label} token not found`);
+  }
+  return token.address;
+}
+
+function instrumentMints(ctx: KaminoInstructionContext, instr: Instrument): { assetMint: Address; crncyMint: Address } {
+  return {
+    assetMint: requireTokenMint(ctx, instr.header.assetTokenId, 'Asset'),
+    crncyMint: requireTokenMint(ctx, instr.header.crncyTokenId, 'Currency'),
+  };
+}
+
 function reserveMemcmp(offset: number, bytes: Buffer): {
   memcmp: { offset: bigint; encoding: 'base58'; bytes: Base58EncodedBytes };
 } {
@@ -443,6 +458,7 @@ export async function buildKaminoContext(
 ): Promise<KaminoContext> {
   const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
   const instr = requireInstrument(ctx, args.instrId);
+  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
   const clientPrimaryAccount = requireClientPrimary(ctx);
   const clientVmAccount = ctx.clientVmActive ? await findClientVmAccount(ctx, ctx.signer) : null;
   const obligation = await vanillaObligationPda({ owner: clientPrimaryAccount, lendingMarket });
@@ -450,15 +466,15 @@ export async function buildKaminoContext(
 
   const collateralReserveInfo =
     args.collateralReserve == null
-      ? await findKaminoReserveByMint(ctx, { mint: instr.header.assetMint, lendingMarket })
+      ? await findKaminoReserveByMint(ctx, { mint: assetMint, lendingMarket })
       : await loadReserve(ctx, args.collateralReserve);
-  validateReserveForMint(collateralReserveInfo, instr.header.assetMint, lendingMarket, 'Collateral');
+  validateReserveForMint(collateralReserveInfo, assetMint, lendingMarket, 'Collateral');
 
   const debtReserveInfo =
     args.debtReserve == null
-      ? await findKaminoReserveByMint(ctx, { mint: instr.header.crncyMint, lendingMarket })
+      ? await findKaminoReserveByMint(ctx, { mint: crncyMint, lendingMarket })
       : await loadReserve(ctx, args.debtReserve);
-  validateReserveForMint(debtReserveInfo, instr.header.crncyMint, lendingMarket, 'Debt');
+  validateReserveForMint(debtReserveInfo, crncyMint, lendingMarket, 'Debt');
 
   const uniqueExtra = [...new Set(args.extraReserves ?? [])].filter(
     (reserve) => reserve !== collateralReserveInfo.address && reserve !== debtReserveInfo.address,
@@ -541,6 +557,7 @@ export async function buildKaminoInitTokenAccountsInstruction(
   kaminoCtx: KaminoContext,
 ): Promise<Instruction> {
   const instr = requireInstrument(ctx, args.instrId);
+  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
   const accounts = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
@@ -549,8 +566,8 @@ export async function buildKaminoInitTokenAccountsInstruction(
   appendOptionalVmAccount(accounts, kaminoCtx);
   accounts.push(
     { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
-    { address: instr.header.assetMint, role: AccountRole.READONLY },
-    { address: instr.header.crncyMint, role: AccountRole.READONLY },
+    { address: assetMint, role: AccountRole.READONLY },
+    { address: crncyMint, role: AccountRole.READONLY },
     { address: kaminoCtx.collateralReserve.clientAta, role: AccountRole.WRITABLE },
     { address: kaminoCtx.debtReserve.clientAta, role: AccountRole.WRITABLE },
     { address: kaminoCtx.collateralReserve.tokenProgram, role: AccountRole.READONLY },
@@ -613,7 +630,8 @@ export async function buildKaminoInitObligationFarmsInstruction(
         });
 
   const instr = requireInstrument(ctx, args.instrId);
-  const expectedMint = sideName === 'collateral' ? instr.header.assetMint : instr.header.crncyMint;
+  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
+  const expectedMint = sideName === 'collateral' ? assetMint : crncyMint;
   validateReserveForMint(selectedReserve, expectedMint, kaminoCtx.lendingMarket, 'Farm');
   if (!selectedReserve.hasFarm) {
     throw new Error(`Selected Kamino ${sideName} reserve has no farm`);
@@ -769,6 +787,11 @@ function addUniqueAddress(out: Address[], value: Address | null | undefined): vo
   out.push(value);
 }
 
+function instrumentLut(instr: Instrument): Address | null {
+  const lut = instr.header.lutAddress as Address | undefined;
+  return lut == null || isDefaultAddress(lut) ? null : lut;
+}
+
 export async function getKaminoUserLookupTable(
   ctx: KaminoInstructionContext,
   userMetadata: Address,
@@ -795,17 +818,17 @@ export async function kaminoLookupTableAddresses(
   const instr = requireInstrument(ctx, args.instrId);
   const marketLut = kaminoMarketLut(args.lendingMarket);
   const clientLut = ctx.clientLutAddress;
-  const instrumentLut = isDefaultAddress(instr.header.lutAddress) ? null : instr.header.lutAddress;
+  const instrumentLutAddress = instrumentLut(instr);
   const userLookupTable = await getKaminoUserLookupTable(ctx, kaminoCtx.userMetadata);
   const all: Address[] = [];
   addUniqueAddress(all, marketLut);
   addUniqueAddress(all, clientLut);
-  addUniqueAddress(all, instrumentLut);
+  addUniqueAddress(all, instrumentLutAddress);
   addUniqueAddress(all, userLookupTable);
   return {
     marketLut,
     clientLut,
-    instrumentLut,
+    instrumentLut: instrumentLutAddress,
     userLookupTable,
     all,
   };
@@ -883,29 +906,30 @@ export async function kaminoInstrumentAtasExist(
   args: KaminoInstrumentAtasExistArgs,
 ): Promise<KaminoInstrumentAtasExistResponse> {
   const instr = requireInstrument(ctx, args.instrId);
+  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
   const clientPrimaryAccount = requireClientPrimary(ctx);
-  const assetTokenProgram = (await resolveTokenProgram(ctx, instr.header.assetMint)) ?? TOKEN_PROGRAM_ID;
-  const crncyTokenProgram = (await resolveTokenProgram(ctx, instr.header.crncyMint)) ?? TOKEN_PROGRAM_ID;
+  const assetTokenProgram = (await resolveTokenProgram(ctx, assetMint)) ?? TOKEN_PROGRAM_ID;
+  const crncyTokenProgram = (await resolveTokenProgram(ctx, crncyMint)) ?? TOKEN_PROGRAM_ID;
   const [assetAta, crncyAta] = await Promise.all([
     clientPrimaryAta({
       clientPrimaryAccount,
-      mint: instr.header.assetMint,
+      mint: assetMint,
       tokenProgram: assetTokenProgram,
     }),
     clientPrimaryAta({
       clientPrimaryAccount,
-      mint: instr.header.crncyMint,
+      mint: crncyMint,
       tokenProgram: crncyTokenProgram,
     }),
   ]);
   const [assetExists, crncyExists] = await Promise.all([
     kaminoAtaExists(ctx, {
-      mint: instr.header.assetMint,
+      mint: assetMint,
       owner: clientPrimaryAccount,
       tokenProgram: assetTokenProgram,
     }),
     kaminoAtaExists(ctx, {
-      mint: instr.header.crncyMint,
+      mint: crncyMint,
       owner: clientPrimaryAccount,
       tokenProgram: crncyTokenProgram,
     }),

@@ -144,8 +144,6 @@ function instrument(): Instrument {
   header.instrId = 1;
   header.assetTokenId = 1;
   header.crncyTokenId = 2;
-  header.assetMint = ASSET_MINT;
-  header.crncyMint = CRNCY_MINT;
   header.lutAddress = INSTR_LUT;
   return {
     address: INSTR_ACCOUNT,

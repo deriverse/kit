@@ -1103,7 +1103,6 @@ export class Engine {
   async getKaminoContext(args: GetKaminoContextArgs): Promise<KaminoContext> {
     const parsed = GetKaminoContextArgsSchema.parse(args);
     await this.requireClient();
-    await this.updateInstrData({ instrId: parsed.instrId });
     return buildKaminoContext(this.getKaminoInstructionContext(), parsed);
   }
 
@@ -1146,7 +1145,6 @@ export class Engine {
   async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {
     const parsed = KaminoChangePositionArgsSchema.parse(args);
     await this.requireClient();
-    await this.updateInstrData({ instrId: parsed.instrId });
     const kaminoCtx = await buildKaminoContext(this.getKaminoInstructionContext(), {
       instrId: parsed.instrId,
       lendingMarket: parsed.lendingMarket,
@@ -1187,7 +1185,6 @@ export class Engine {
   async kaminoInstrumentAtasExist(args: KaminoInstrumentAtasExistArgs): Promise<KaminoInstrumentAtasExistResponse> {
     const parsed = KaminoInstrumentAtasExistArgsSchema.parse(args);
     await this.requireClient();
-    await this.updateInstrData({ instrId: parsed.instrId });
     return kaminoInstrumentAtasExistFn(this.getKaminoInstructionContext(), parsed);
   }
 

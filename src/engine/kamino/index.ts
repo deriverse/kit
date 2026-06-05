@@ -9,3 +9,5 @@ export {
 export { snapshotObligation } from './snapshot';
 export { decodeReserve } from './reserve';
 export { decodeObligation } from './obligation';
+export { checkKaminoInstrumentAtas, checkKaminoObligation } from './checks';
+

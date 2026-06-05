@@ -89,6 +89,10 @@ import {
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
   KaminoChangePositionArgsSchema,
+  KaminoInstrumentAtasExistArgsSchema,
+  KaminoObligationExistsArgsSchema,
+  KaminoInstrumentAtasExistArgs,
+  KaminoObligationExistsArgs,
   InstrIdSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
@@ -180,8 +184,10 @@ import {
   buildKaminoInitTokenAccountsInstruction,
   buildKaminoChangePositionInstruction,
   snapshotObligation,
+  checkKaminoInstrumentAtas,
+  checkKaminoObligation,
 } from './kamino';
-import { ObligationSnapshot } from '../types/kamino';
+import { ObligationSnapshot, KaminoObligationStatus, KaminoInstrumentAtasStatus } from '../types/kamino';
 
 type Address = SolanaAddress<string>;
 
@@ -1085,6 +1091,35 @@ export class Engine {
         commitment: this.commitment,
       },
       obligationAddress,
+    );
+  }
+
+  async kaminoInstrumentAtasExist(args: KaminoInstrumentAtasExistArgs): Promise<KaminoInstrumentAtasStatus> {
+    const parsed = KaminoInstrumentAtasExistArgsSchema.parse(args);
+    await this.requireClient();
+    const instr = this.requireInstrument(parsed.instrId);
+    return checkKaminoInstrumentAtas(
+      {
+        rpc: this.rpc,
+        commitment: this.commitment,
+        tokens: this.tokens,
+        clientPrimary: this.clientPrimaryAccount!,
+      },
+      instr,
+    );
+  }
+
+  async kaminoObligationExists(args: KaminoObligationExistsArgs = {}): Promise<KaminoObligationStatus> {
+    const parsed = KaminoObligationExistsArgsSchema.parse(args);
+    await this.requireClient();
+    return checkKaminoObligation(
+      {
+        rpc: this.rpc,
+        commitment: this.commitment,
+        tokens: this.tokens,
+        clientPrimary: this.clientPrimaryAccount!,
+      },
+      parsed.lendingMarket,
     );
   }
 }

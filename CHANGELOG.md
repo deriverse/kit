@@ -5,6 +5,8 @@
 ### Fixed
 
 - **Kamino instructions**: `kaminoInitObligationFarmsInstructions`, `kaminoChangePositionInstruction`, `kaminoInitObligationInstruction` refactored args, derive optional accounts and data
+- **`engine.kaminoInstrumentAtasExist`**: Check ATA exists for instr
+- **`engine.kaminoObligationExists`**: Check obligation exists for kamino lending market
 - **`snapshotKaminoObligation`**: WIP - refactored, but no oracles prices yet
 
 ## [1.0.58] - 2026-05-29

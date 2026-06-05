@@ -45,6 +45,8 @@ import {
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
   KaminoChangePositionArgsSchema,
+  KaminoInstrumentAtasExistArgsSchema,
+  KaminoObligationExistsArgsSchema,
 } from './schemas';
 
 export type EngineArgs = z.infer<typeof EngineArgsSchema>;
@@ -95,3 +97,5 @@ export type ParsedKaminoInitObligationArgs = z.infer<typeof KaminoInitObligation
 export type KaminoInitTokenAccountsArgs = z.infer<typeof KaminoInitTokenAccountsArgsSchema>;
 export type KaminoChangePositionArgs = z.input<typeof KaminoChangePositionArgsSchema>;
 export type ParsedKaminoChangePositionArgs = z.infer<typeof KaminoChangePositionArgsSchema>;
+export type KaminoInstrumentAtasExistArgs = z.input<typeof KaminoInstrumentAtasExistArgsSchema>;
+export type KaminoObligationExistsArgs = z.input<typeof KaminoObligationExistsArgsSchema>;

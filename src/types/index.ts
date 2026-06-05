@@ -51,6 +51,8 @@ export {
   KaminoInitTokenAccountsArgs,
   KaminoChangePositionArgs,
   ParsedKaminoChangePositionArgs,
+  KaminoInstrumentAtasExistArgs,
+  KaminoObligationExistsArgs,
 } from './engine-args';
 
 export {
@@ -120,6 +122,8 @@ export {
   KaminoInitObligationArgsSchema,
   KaminoInitTokenAccountsArgsSchema,
   KaminoChangePositionArgsSchema,
+  KaminoInstrumentAtasExistArgsSchema,
+  KaminoObligationExistsArgsSchema,
 } from './schemas';
 
 export type Instruction = IInstruction;

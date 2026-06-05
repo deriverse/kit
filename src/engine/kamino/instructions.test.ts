@@ -39,9 +39,13 @@ vi.mock('../account-helpers', () => ({
   getProgramTokenAccount: vi.fn().mockResolvedValue('MockProgramTokenAccount11111111' as Address),
 }));
 
-vi.mock('../utils', () => ({
-  findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
-}));
+vi.mock('../utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils')>();
+  return {
+    ...actual,
+    findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
+  };
+});
 
 vi.mock('./obligation', () => ({
   decodeObligation: vi.fn(),

@@ -1,7 +1,19 @@
 import { Address, Base64EncodedDataResponse, getProgramDerivedAddress, getAddressEncoder } from '@solana/kit';
 import { Buffer } from 'buffer';
-import { OrderModel, SpotTradeAccountHeaderModel, PerpTradeAccountHeaderModel, TokenStateModel } from '../structure_models';
-import { ADDRESS_LOOKUP_TABLE_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, nullOrder } from '../constants';
+import {
+  OrderModel,
+  SpotTradeAccountHeaderModel,
+  PerpTradeAccountHeaderModel,
+  TokenFlag,
+  TokenStateModel,
+} from '../structure_models';
+import {
+  ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  nullOrder,
+} from '../constants';
 
 /**
  * Get token decimal factor for UI number conversion
@@ -14,6 +26,18 @@ export function tokenDec(tokens: Map<number, TokenStateModel>, tokenId: number, 
     }
   }
   return 1;
+}
+
+export function tokenProgramFor(token: TokenStateModel): Address {
+  return (token.mask & TokenFlag.token2022) !== 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+}
+
+export function requireToken(tokens: Map<number, TokenStateModel>, tokenId: number): TokenStateModel {
+  const token = tokens.get(tokenId);
+  if (!token) {
+    throw new Error(`Token ${tokenId} not found`);
+  }
+  return token;
 }
 
 export const SAM_PRICE_STEP = 0.00001;

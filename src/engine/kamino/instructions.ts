@@ -12,7 +12,6 @@ import {
 import {
   SYSTEM_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
-  TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   KLEND_PROGRAM_ID,
   FARMS_PROGRAM_ID,
@@ -20,14 +19,14 @@ import {
   SYSVAR_INSTRUCTIONS_ID,
   KaminoChangePositionFlag,
 } from '../../constants';
-import { TokenFlag, VmFlag, TokenStateModel } from '../../structure_models';
+import { VmFlag, TokenStateModel } from '../../structure_models';
 import {
   vmAddKaminoData,
   vmRemoveKaminoData,
   kaminoInitTokenAccountsData,
   kaminoChangePositionData,
 } from '../../instruction_models';
-import { findAssociatedTokenAddress } from '../utils';
+import { findAssociatedTokenAddress, requireToken, tokenProgramFor } from '../utils';
 import { isPubkeySentinel } from './bin';
 import { fetchObligationDecoded, fetchReservesDecoded } from './fetch';
 import {
@@ -47,18 +46,6 @@ export interface KaminoInstructionContext extends AccountHelperContext {
   signer: Address;
   rootAccount: Address;
   vmMask: number;
-}
-
-function tokenProgramFor(token: TokenStateModel): Address {
-  return (token.mask & TokenFlag.token2022) !== 0 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
-}
-
-function requireToken(tokens: Map<number, TokenStateModel>, tokenId: number): TokenStateModel {
-  const token = tokens.get(tokenId);
-  if (!token) {
-    throw new Error(`Token ${tokenId} not found`);
-  }
-  return token;
 }
 
 /**
@@ -317,7 +304,7 @@ async function buildKaminoChangePositionInstruction(
   }
 
   keys.push(
-    { address: instr.address, role: AccountRole.READONLY },
+    { address: instr.address, role: AccountRole.WRITABLE },
     { address: obligationAddress, role: AccountRole.WRITABLE },
     { address: lendingMarket, role: AccountRole.READONLY },
     { address: lendingMarketAuthority, role: AccountRole.READONLY },

@@ -1,5 +1,20 @@
 import { Address } from '@solana/kit';
 
+interface AtaCheck {
+  address: Address;
+  exists: boolean;
+}
+
+interface KaminoInstrumentAtasStatus {
+  assetAta: AtaCheck;
+  crncyAta: AtaCheck;
+}
+
+interface KaminoObligationStatus {
+  obligation: Address;
+  exists: boolean;
+}
+
 interface ObligationDeposit {
   reserve: Address;
   depositedCTokens: bigint;
@@ -91,4 +106,6 @@ export type {
   DecodedObligation,
   ObligationDeposit,
   ObligationBorrow,
+  KaminoInstrumentAtasStatus,
+  KaminoObligationStatus,
 };

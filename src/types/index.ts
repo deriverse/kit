@@ -55,6 +55,7 @@ export {
   KaminoAtaExistsArgs,
   KaminoInstrumentAtasExistArgs,
   GetKaminoClientStateArgs,
+  GetKaminoClientStateFromBuffersArgs,
 } from './engine-args';
 
 export {
@@ -138,6 +139,7 @@ export {
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAtasExistArgsSchema,
   GetKaminoClientStateArgsSchema,
+  GetKaminoClientStateFromBuffersArgsSchema,
 } from './schemas';
 
 export type Instruction = IInstruction;

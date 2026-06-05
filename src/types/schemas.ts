@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Address, Commitment } from '@solana/kit';
+import { Address, Base64EncodedDataResponse, Commitment } from '@solana/kit';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
@@ -11,6 +11,10 @@ const solanaAddress = z.custom<Address>((val) => typeof val === 'string', { erro
 const commitment = z.custom<Commitment>((val) => typeof val === 'string', {
   error: 'Must be a valid commitment level',
 });
+const base64EncodedDataResponse = z.custom<Base64EncodedDataResponse>(
+  (val) => Array.isArray(val) && typeof val[0] === 'string' && val[1] === 'base64',
+  { error: 'Must be a base64 encoded account data response' },
+);
 
 const EngineArgsSchema = z.object({
   programId: solanaAddress.optional(),
@@ -402,6 +406,17 @@ const GetKaminoClientStateArgsSchema = z
   })
   .strict();
 
+const GetKaminoClientStateFromBuffersArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    collateralReserveData: base64EncodedDataResponse.meta({ description: 'Collateral reserve account data' }),
+    debtReserveData: base64EncodedDataResponse.meta({ description: 'Debt reserve account data' }),
+    obligationData: base64EncodedDataResponse.meta({ description: 'Kamino obligation account data' }),
+    obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+  })
+  .strict();
+
 export {
   EngineArgsSchema,
   InstrIdSchema,
@@ -454,4 +469,5 @@ export {
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAtasExistArgsSchema,
   GetKaminoClientStateArgsSchema,
+  GetKaminoClientStateFromBuffersArgsSchema,
 };

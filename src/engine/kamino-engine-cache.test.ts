@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Address, getAddressEncoder } from '@solana/kit';
+import { Address, Base64EncodedDataResponse, getAddressEncoder } from '@solana/kit';
 import { Buffer } from 'buffer';
 
 import { KLEND_PROGRAM_ID, MAIN_KAMINO_MARKET, TOKEN_PROGRAM_ID } from '../constants';
@@ -22,9 +22,10 @@ const DEBT_RESERVE = 'Es9vMFrzaCERmJfrF4H2FYD4KCoZTqtfQxXGCfCM8GgD' as Address;
 const ALT_MARKET = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const OTHER_CLIENT_PRIMARY = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'SysvarRent111111111111111111111111111111111' as Address;
+const OBLIGATION_OVERRIDE = 'Sysvar1nstructions1111111111111111111111111' as Address;
 
-function dataResponse(buffer: Buffer): [string, 'base64'] {
-  return [buffer.toString('base64'), 'base64'];
+function dataResponse(buffer: Buffer): Base64EncodedDataResponse {
+  return [buffer.toString('base64'), 'base64'] as unknown as Base64EncodedDataResponse;
 }
 
 function writeAddress(buffer: Buffer, offset: number, value: Address): void {
@@ -40,7 +41,7 @@ function sf(value: number): bigint {
   return (BigInt(Math.floor(value * 1_000_000)) * (BigInt(1) << BigInt(60))) / BigInt(1_000_000);
 }
 
-function reserveBuffer(args: { lendingMarket?: Address; liquidityMint: Address }): Buffer {
+function reserveBuffer(args: { lendingMarket?: Address; liquidityMint: Address; loanToValuePct?: number }): Buffer {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
   writeAddress(buffer, 32, args.lendingMarket ?? MAIN_KAMINO_MARKET);
@@ -54,7 +55,7 @@ function reserveBuffer(args: { lendingMarket?: Address; liquidityMint: Address }
   writeAddress(buffer, 408, TOKEN_PROGRAM_ID);
   writeAddress(buffer, 2560, 'AddressLookupTab1e1111111111111111111111111' as Address);
   writeAddress(buffer, 2592, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
-  buffer.writeUint8(70, 4856 + 16);
+  buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(80, 4856 + 17);
   buffer.writeBigUInt64LE(BigInt(1_000_000), 4856 + 160);
   buffer.writeBigUInt64LE(BigInt(500_000), 4856 + 168);
@@ -116,7 +117,7 @@ function instrument(): Instrument {
 
 function mockRpc(
   args: {
-    programAccounts?: Array<{ pubkey: Address; account: { data: [string, 'base64'] } }[]>;
+    programAccounts?: Array<{ pubkey: Address; account: { data: Base64EncodedDataResponse } }[]>;
     accountInfo?: Map<Address, { value: any }>;
     multipleAccounts?: { value: any };
   } = {},
@@ -352,6 +353,102 @@ describe('Engine Kamino reserve and context cache', () => {
     expect(result.lendingMarket).toBe(ALT_MARKET);
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(4);
     expect(reserveReads(rpc)).toBe(0);
+  });
+
+  it('throws when websocket buffer state is requested without cached context', async () => {
+    const rpc = mockRpc();
+    const engine = setupEngine(rpc);
+
+    await expect(
+      engine.getKaminoClientStateFromBuffers({
+        instrId: 1,
+        collateralReserveData: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })),
+        debtReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+        obligationData: dataResponse(obligationBuffer()),
+      }),
+    ).rejects.toThrow('Kamino context cache is empty; call refreshKaminoContext first');
+  });
+
+  it('decodes websocket reserve and obligation buffers without RPC account reads', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
+    rpc.getProgramAccounts.mockClear();
+    rpc.getAccountInfo.mockClear();
+
+    const result = await engine.getKaminoClientStateFromBuffers({
+      instrId: 1,
+      collateralReserveData: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, loanToValuePct: 50 })),
+      debtReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+      obligationData: dataResponse(obligationBuffer()),
+      obligation: OBLIGATION_OVERRIDE,
+    });
+
+    expect(result.exists).toBe(true);
+    expect(result.obligation).toBe(OBLIGATION_OVERRIDE);
+    expect(result.totalDepositValue).toBe(150);
+    expect(result.totalBorrowValue).toBe(50);
+    expect(result.maxWithdrawEstimate?.reserve).toBe(COLL_RESERVE);
+    expect(rpc.getProgramAccounts).not.toHaveBeenCalled();
+    expect(rpc.getAccountInfo).not.toHaveBeenCalled();
+  });
+
+  it('updates cached context from websocket reserve buffers', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
+    await engine.getKaminoClientStateFromBuffers({
+      instrId: 1,
+      collateralReserveData: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, loanToValuePct: 55 })),
+      debtReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+      obligationData: dataResponse(obligationBuffer()),
+    });
+
+    expect(
+      (engine as any).kaminoContextsByClientInstrMarket.values().next().value.collateralReserve.loanToValuePct,
+    ).toBe(55);
+  });
+
+  it('rejects websocket reserve buffers with mismatched liquidity mints', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
+
+    await expect(
+      engine.getKaminoClientStateFromBuffers({
+        instrId: 1,
+        collateralReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+        debtReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+        obligationData: dataResponse(obligationBuffer()),
+      }),
+    ).rejects.toThrow(/Collateral reserve liquidity mint/);
+  });
+
+  it('rejects websocket reserve buffers with mismatched lending market', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
+
+    await expect(
+      engine.getKaminoClientStateFromBuffers({
+        instrId: 1,
+        collateralReserveData: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, lendingMarket: ALT_MARKET })),
+        debtReserveData: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+        obligationData: dataResponse(obligationBuffer()),
+      }),
+    ).rejects.toThrow(/Collateral reserve lending market mismatch/);
   });
 
   it('uses separate context cache entries for different clients', async () => {

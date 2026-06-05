@@ -51,6 +51,7 @@ import {
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAtasExistArgsSchema,
   GetKaminoClientStateArgsSchema,
+  GetKaminoClientStateFromBuffersArgsSchema,
 } from './schemas';
 
 export type EngineArgs = z.infer<typeof EngineArgsSchema>;
@@ -105,3 +106,4 @@ export type KaminoObligationExistsArgs = z.infer<typeof KaminoObligationExistsAr
 export type KaminoAtaExistsArgs = z.infer<typeof KaminoAtaExistsArgsSchema>;
 export type KaminoInstrumentAtasExistArgs = z.infer<typeof KaminoInstrumentAtasExistArgsSchema>;
 export type GetKaminoClientStateArgs = z.infer<typeof GetKaminoClientStateArgsSchema>;
+export type GetKaminoClientStateFromBuffersArgs = z.infer<typeof GetKaminoClientStateFromBuffersArgsSchema>;

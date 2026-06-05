@@ -344,6 +344,10 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
   };
 }
 
+export function decodeKaminoReserveData(address: Address, data: Base64EncodedDataResponse): KaminoReserveInfo {
+  return decodeReserve(address, dataToBuffer(data));
+}
+
 export async function loadKaminoReserve(
   ctx: Pick<KaminoInstructionContext, 'rpc' | 'commitment'>,
   reserve: Address,
@@ -356,6 +360,46 @@ export async function loadKaminoReserve(
     throw new Error(`Kamino reserve is not owned by KLend: ${reserve}`);
   }
   return decodeReserve(reserve, dataToBuffer(info.value.data));
+}
+
+export async function refreshKaminoContextReserveData(
+  ctx: KaminoInstructionContext,
+  context: KaminoContext,
+  args: {
+    collateralReserveData: Base64EncodedDataResponse;
+    debtReserveData: Base64EncodedDataResponse;
+  },
+): Promise<KaminoContext> {
+  const instr = requireInstrument(ctx, context.instrId);
+  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
+  const collateralReserveInfo = decodeKaminoReserveData(context.collateralReserve.address, args.collateralReserveData);
+  validateReserveForMint(collateralReserveInfo, assetMint, context.lendingMarket, 'Collateral');
+  const debtReserveInfo = decodeKaminoReserveData(context.debtReserve.address, args.debtReserveData);
+  validateReserveForMint(debtReserveInfo, crncyMint, context.lendingMarket, 'Debt');
+
+  const [collateralReserve, debtReserve] = await Promise.all([
+    reserveContext({
+      ctx,
+      reserve: collateralReserveInfo,
+      obligation: context.obligation,
+      clientPrimaryAccount: context.clientPrimaryAccount,
+      side: 'collateral',
+    }),
+    reserveContext({
+      ctx,
+      reserve: debtReserveInfo,
+      obligation: context.obligation,
+      clientPrimaryAccount: context.clientPrimaryAccount,
+      side: 'debt',
+    }),
+  ]);
+
+  return {
+    ...context,
+    collateralReserve,
+    debtReserve,
+    extraReserves: [],
+  };
 }
 
 function validateReserveForMint(
@@ -1086,4 +1130,19 @@ export async function getKaminoClientState(
     throw new Error(`Invalid Kamino obligation layout: ${obligation}`);
   }
   return decodeKaminoClientState(obligation, buffer, context);
+}
+
+export function getKaminoClientStateFromData(args: {
+  obligation: Address;
+  obligationData: Base64EncodedDataResponse;
+  context: KaminoContext;
+}): KaminoClientStateResponse {
+  const buffer = dataToBuffer(args.obligationData);
+  if (
+    buffer.length < OBLIGATION_UNHEALTHY_BORROW_VALUE_SF_OFFSET + 16 ||
+    !buffer.subarray(0, 8).equals(OBLIGATION_DISCRIMINATOR)
+  ) {
+    throw new Error(`Invalid Kamino obligation layout: ${args.obligation}`);
+  }
+  return decodeKaminoClientState(args.obligation, buffer, args.context);
 }

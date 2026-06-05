@@ -1253,6 +1253,15 @@ export class Engine {
     return getKaminoClientStateFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
   }
 
+  async getCachedKaminoClientState(args: GetKaminoClientStateArgs): Promise<KaminoClientStateResponse> {
+    const parsed = GetKaminoClientStateArgsSchema.parse(args);
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return getKaminoClientStateFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
   // ============================================
   // NEW INSTRUMENT INSTRUCTIONS
   // ============================================

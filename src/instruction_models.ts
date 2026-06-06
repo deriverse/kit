@@ -493,28 +493,19 @@ export function vmDirectWithdrawData(tag: number, tokenId: number, amount: numbe
   return buf;
 }
 
-export function kaminoInitObligationData(tag: number, instrId: number): Buffer {
+export function kaminoInitObligationData(tag: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
   buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(instrId, 4);
+  buf.writeUint32LE(0, 4);
   return buf;
 }
 
-export function kaminoInitTokenAccountsData(tag: number, instrId: number): Buffer {
+export function kaminoInitInstrumentData(tag: number, instrId: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);
   buf.writeUint8(0, 1);
-  buf.writeUint16LE(0, 2);
-  buf.writeUint32LE(instrId, 4);
-  return buf;
-}
-
-export function kaminoInitObligationFarmsData(tag: number, side: number, instrId: number): Buffer {
-  let buf = Buffer.alloc(8);
-  buf.writeUint8(tag, 0);
-  buf.writeUint8(side, 1);
   buf.writeUint16LE(0, 2);
   buf.writeUint32LE(instrId, 4);
   return buf;

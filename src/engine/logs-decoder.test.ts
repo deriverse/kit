@@ -26,6 +26,7 @@ import {
   SpotPlaceMassCancelReportModel,
   PerpPlaceMassCancelReportModel,
   EarningsReportModel,
+  KaminoChangePositionReportModel,
   SpotOrderRevokeReportModel,
   PerpOrderRevokeReportModel,
 } from '../logs_models';
@@ -429,6 +430,30 @@ function createPerpOrderRevokeBuffer(
   buffer.writeBigInt64LE(orderId, 8);
   buffer.writeBigInt64LE(perps, 16);
   buffer.writeBigInt64LE(crncy, 24);
+  return buffer;
+}
+
+function createKaminoChangePositionBuffer(args: {
+  assetsIsCollateral: number;
+  clientId: number;
+  instrId: number;
+  time: number;
+  borrowDelta: bigint;
+  collateralDelta: bigint;
+  customId: bigint;
+}): Buffer {
+  const buffer = Buffer.alloc(KaminoChangePositionReportModel.LENGTH);
+  buffer.writeUInt8(LogType.kaminoChangePosition, KaminoChangePositionReportModel.OFFSET_TAG);
+  buffer.writeUInt8(args.assetsIsCollateral, KaminoChangePositionReportModel.OFFSET_ASSETS_IS_COLLATERAL);
+  buffer.writeUInt16LE(0, 2);
+  buffer.writeUInt32LE(0, 4);
+  buffer.writeUInt32LE(9, KaminoChangePositionReportModel.OFFSET_SEQ_NO);
+  buffer.writeUInt32LE(args.clientId, KaminoChangePositionReportModel.OFFSET_CLIENT_ID);
+  buffer.writeUInt32LE(args.instrId, KaminoChangePositionReportModel.OFFSET_INSTR_ID);
+  buffer.writeUInt32LE(args.time, KaminoChangePositionReportModel.OFFSET_TIME);
+  buffer.writeBigInt64LE(args.borrowDelta, KaminoChangePositionReportModel.OFFSET_BORROW_DELTA);
+  buffer.writeBigInt64LE(args.collateralDelta, KaminoChangePositionReportModel.OFFSET_COLLATERAL_DELTA);
+  buffer.writeBigInt64LE(args.customId, KaminoChangePositionReportModel.OFFSET_CUSTOM_ID);
   return buffer;
 }
 
@@ -1123,6 +1148,65 @@ describe('decodeTransactionLogs', () => {
       expect(report.side).toBe(1);
       expect(report.clientId).toBe(200);
       expect(report.orderId).toBe(44444);
+    });
+  });
+
+  describe('kamino log decoding', () => {
+    it('decodes Kamino change-position log with raw offsets and UI conversion', () => {
+      const instruments = new Map<number, Instrument>([[1, createMockInstrument(1, 1, 2)]]);
+      const tokens = new Map<number, TokenStateModel>([
+        [1, createMockToken(1, 9)],
+        [2, createMockToken(2, 6)],
+      ]);
+      const ctx = createTestContext({ instruments, tokens, uiNumbers: true });
+
+      const buffer = createKaminoChangePositionBuffer({
+        assetsIsCollateral: 1,
+        clientId: 100,
+        instrId: 1,
+        time: 1700000000,
+        borrowDelta: BigInt(-2_500_000),
+        collateralDelta: BigInt(3_000_000_000),
+        customId: BigInt(77),
+      });
+      const result = decodeTransactionLogs([toLogString(buffer)], ctx);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toBeInstanceOf(KaminoChangePositionReportModel);
+      const report = result[0] as KaminoChangePositionReportModel;
+      expect(report.tag).toBe(LogType.kaminoChangePosition);
+      expect(report.assetsIsCollateral).toBe(1);
+      expect(report.seqNo).toBe(9);
+      expect(report.clientId).toBe(100);
+      expect(report.instrId).toBe(1);
+      expect(report.borrowDelta).toBe(-2.5);
+      expect(report.collateralDelta).toBe(3);
+      expect(report.customId).toBe(77);
+    });
+
+    it('decodes Kamino change-position log with reversed asset/currency sides', () => {
+      const instruments = new Map<number, Instrument>([[1, createMockInstrument(1, 1, 2)]]);
+      const tokens = new Map<number, TokenStateModel>([
+        [1, createMockToken(1, 9)],
+        [2, createMockToken(2, 6)],
+      ]);
+      const ctx = createTestContext({ instruments, tokens, uiNumbers: true });
+
+      const buffer = createKaminoChangePositionBuffer({
+        assetsIsCollateral: 0,
+        clientId: 100,
+        instrId: 1,
+        time: 1700000000,
+        borrowDelta: BigInt(4_000_000_000),
+        collateralDelta: BigInt(-1_500_000),
+        customId: BigInt(78),
+      });
+      const result = decodeTransactionLogs([toLogString(buffer)], ctx);
+
+      const report = result[0] as KaminoChangePositionReportModel;
+      expect(report.borrowDelta).toBe(4);
+      expect(report.collateralDelta).toBe(-1.5);
+      expect(report.customId).toBe(78);
     });
   });
 

@@ -42,14 +42,13 @@ import {
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
   GetKaminoContextArgsSchema,
-  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
   KaminoAtaExistsArgsSchema,
-  KaminoInstrumentAtasExistArgsSchema,
+  KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,
   GetKaminoClientStateFromBuffersArgsSchema,
 } from './schemas';
@@ -97,13 +96,12 @@ export type VmRemoveWithdrawalAddressArgs = z.infer<typeof VmRemoveWithdrawalAdd
 export type VmDirectWithdrawArgs = z.infer<typeof VmDirectWithdrawArgsSchema>;
 export type KaminoReserveByMintArgs = z.infer<typeof KaminoReserveByMintArgsSchema>;
 export type GetKaminoContextArgs = z.infer<typeof GetKaminoContextArgsSchema>;
-export type KaminoInitTokenAccountsArgs = z.infer<typeof KaminoInitTokenAccountsArgsSchema>;
+export type KaminoInitInstrumentArgs = z.infer<typeof KaminoInitInstrumentArgsSchema>;
 export type KaminoInitObligationArgs = z.infer<typeof KaminoInitObligationArgsSchema>;
-export type KaminoInitObligationFarmsArgs = z.infer<typeof KaminoInitObligationFarmsArgsSchema>;
 export type KaminoChangePositionArgs = z.infer<typeof KaminoChangePositionArgsSchema>;
 export type KaminoLookupTableAddressesArgs = z.infer<typeof KaminoLookupTableAddressesArgsSchema>;
 export type KaminoObligationExistsArgs = z.infer<typeof KaminoObligationExistsArgsSchema>;
 export type KaminoAtaExistsArgs = z.infer<typeof KaminoAtaExistsArgsSchema>;
-export type KaminoInstrumentAtasExistArgs = z.infer<typeof KaminoInstrumentAtasExistArgsSchema>;
+export type KaminoInstrumentAccountsExistArgs = z.infer<typeof KaminoInstrumentAccountsExistArgsSchema>;
 export type GetKaminoClientStateArgs = z.infer<typeof GetKaminoClientStateArgsSchema>;
 export type GetKaminoClientStateFromBuffersArgs = z.infer<typeof GetKaminoClientStateFromBuffersArgsSchema>;

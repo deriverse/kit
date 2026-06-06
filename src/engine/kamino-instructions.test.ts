@@ -12,29 +12,25 @@ import {
   SYSTEM_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from '../constants';
-import {
-  kaminoChangePositionData,
-  kaminoInitObligationData,
-  kaminoInitObligationFarmsData,
-  kaminoInitTokenAccountsData,
-} from '../instruction_models';
+import { kaminoChangePositionData, kaminoInitInstrumentData, kaminoInitObligationData } from '../instruction_models';
 import { InstrAccountHeaderModel, TokenStateModel } from '../structure_models';
 import { Instrument } from '../types';
 import {
   buildKaminoChangePositionInstruction,
   buildKaminoContext,
-  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoInitInstrumentInstruction,
   buildKaminoInitObligationInstruction,
-  buildKaminoInitTokenAccountsInstruction,
   buildVmAddKaminoInstruction,
   buildVmRemoveKaminoInstruction,
   getKaminoClientState,
   kaminoAtaExists,
-  kaminoInstrumentAtasExist,
+  kaminoInstrumentAccountsExist,
   kaminoLookupTableAddresses,
   kaminoMarketLut,
   kaminoObligationExists,
   KaminoInstructionContext,
+  userMetadataPda,
+  vanillaObligationPda,
 } from './kamino-instructions';
 
 const encoder = getAddressEncoder();
@@ -51,6 +47,7 @@ const COLL_RESERVE = '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E' as Address;
 const DEBT_RESERVE = 'Es9vMFrzaCERmJfrF4H2FYD4KCoZTqtfQxXGCfCM8GgD' as Address;
 const FARM_COLL = 'FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr' as Address;
 const FARM_DEBT = 'Sysvar1nstructions1111111111111111111111111' as Address;
+const NULL_ADDRESS = '11111111111111111111111111111111' as Address;
 const USER_METADATA = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const VM_ACCOUNT = 'SysvarRent111111111111111111111111111111111' as Address;
@@ -195,34 +192,65 @@ function context(rpc: any = mockRpc()): KaminoInstructionContext {
   };
 }
 
-function fakeKaminoContext(clientVmAccount: Address | null = null) {
-  const reserve = (address: Address, mint: Address, farm: Address) => ({
-    address,
-    lendingMarket: MAIN_KAMINO_MARKET,
-    liquidityMint: mint,
-    liquiditySupply: `${address}Supply` as Address,
-    collateralMint: `${address}CMint` as Address,
-    collateralSupply: `${address}CSupply` as Address,
-    feeVault: `${address}Fee` as Address,
-    tokenProgram: TOKEN_PROGRAM_ID,
-    farmCollateral: farm,
-    farmDebt: farm,
-    oracles: {
-      pyth: KLEND_PROGRAM_ID,
-      switchboardPrice: KLEND_PROGRAM_ID,
-      switchboardTwap: KLEND_PROGRAM_ID,
-      scope: KLEND_PROGRAM_ID,
-    },
-    loanToValuePct: 70,
-    liquidationThresholdPct: 80,
-    mintDecimals: 9,
-    raw: { marketPriceSf: 1, borrowLimit: 1, depositLimit: 1 },
-    vault: `${address}Vault` as Address,
-    clientAta: `${address}Ata` as Address,
-    obligationFarm: `${address}OblFarm` as Address,
-    reserveFarmState: farm,
-    hasFarm: true,
+function fakeKaminoContext(
+  clientVmAccount: Address | null = null,
+  farms: {
+    assetCollateral: Address | null;
+    assetLiquidity: Address | null;
+    crncyCollateral: Address | null;
+    crncyLiquidity: Address | null;
+  } = {
+    assetCollateral: FARM_COLL,
+    assetLiquidity: FARM_DEBT,
+    crncyCollateral: FARM_COLL,
+    crncyLiquidity: FARM_DEBT,
+  },
+) {
+  const farm = (address: Address | null) => ({
+    reserveFarmState: address ?? KLEND_PROGRAM_ID,
+    obligationFarm: address == null ? KLEND_PROGRAM_ID : (`${address}Obl` as Address),
+    hasFarm: address != null,
   });
+  const reserve = (
+    address: Address,
+    mint: Address,
+    collateralFarmAddress: Address | null,
+    liquidityFarmAddress: Address | null,
+    selectedSide: 'collateral' | 'liquidity',
+  ) => {
+    const collateralFarm = farm(collateralFarmAddress);
+    const liquidityFarm = farm(liquidityFarmAddress);
+    const selectedFarm = selectedSide === 'collateral' ? collateralFarm : liquidityFarm;
+    return {
+      address,
+      lendingMarket: MAIN_KAMINO_MARKET,
+      liquidityMint: mint,
+      liquiditySupply: `${address}Supply` as Address,
+      collateralMint: `${address}CMint` as Address,
+      collateralSupply: `${address}CSupply` as Address,
+      feeVault: `${address}Fee` as Address,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      farmCollateral: collateralFarmAddress ?? NULL_ADDRESS,
+      farmDebt: liquidityFarmAddress ?? NULL_ADDRESS,
+      oracles: {
+        pyth: KLEND_PROGRAM_ID,
+        switchboardPrice: KLEND_PROGRAM_ID,
+        switchboardTwap: KLEND_PROGRAM_ID,
+        scope: KLEND_PROGRAM_ID,
+      },
+      loanToValuePct: 70,
+      liquidationThresholdPct: 80,
+      mintDecimals: 9,
+      raw: { marketPriceSf: 1, borrowLimit: 1, depositLimit: 1 },
+      vault: `${address}Vault` as Address,
+      clientAta: `${address}Ata` as Address,
+      collateralFarm,
+      liquidityFarm,
+      obligationFarm: selectedFarm.obligationFarm,
+      reserveFarmState: selectedFarm.reserveFarmState,
+      hasFarm: selectedFarm.hasFarm,
+    };
+  };
   return {
     instrId: 1,
     lendingMarket: MAIN_KAMINO_MARKET,
@@ -232,20 +260,20 @@ function fakeKaminoContext(clientVmAccount: Address | null = null) {
     clientVmAccount,
     userMetadata: USER_METADATA,
     obligation: OBLIGATION,
-    collateralReserve: reserve(COLL_RESERVE, ASSET_MINT, FARM_COLL),
-    debtReserve: reserve(DEBT_RESERVE, CRNCY_MINT, FARM_DEBT),
+    collateralReserve: reserve(COLL_RESERVE, ASSET_MINT, farms.assetCollateral, farms.assetLiquidity, 'collateral'),
+    debtReserve: reserve(DEBT_RESERVE, CRNCY_MINT, farms.crncyCollateral, farms.crncyLiquidity, 'liquidity'),
     extraReserves: [],
   };
 }
 
 describe('Kamino instruction data', () => {
-  it('builds byte layouts for tags 81..86', async () => {
+  it('builds byte layouts for tags 81..85', async () => {
     const ctx = context();
     expect((await buildVmAddKaminoInstruction(ctx, { vmAuthority: SIGNER })).data![0]).toBe(81);
     expect((await buildVmRemoveKaminoInstruction(ctx, { vmAuthority: SIGNER })).data![0]).toBe(82);
-    expect(kaminoInitObligationData(83, 7)).toEqual(Buffer.from([83, 0, 0, 0, 7, 0, 0, 0]));
-    expect(kaminoInitTokenAccountsData(84, 7)).toEqual(Buffer.from([84, 0, 0, 0, 7, 0, 0, 0]));
-    expect(kaminoInitObligationFarmsData(86, 1, 7)).toEqual(Buffer.from([86, 1, 0, 0, 7, 0, 0, 0]));
+    expect(kaminoInitObligationData(83)).toEqual(Buffer.from([83, 0, 0, 0, 0, 0, 0, 0]));
+    expect(kaminoInitInstrumentData(84, 7)).toEqual(Buffer.from([84, 0, 0, 0, 7, 0, 0, 0]));
+    expect(kaminoChangePositionData(85, 0, 7, 0, 0, 0)[0]).toBe(85);
   });
 
   it('keeps KaminoChangePositionData at 32 bytes with flags in the second byte', () => {
@@ -304,15 +332,68 @@ describe('Kamino context and services', () => {
 
   it('checks client-primary owned ATA existence', async () => {
     const ctx = context();
-    const ataResult = await kaminoInstrumentAtasExist(ctx, { instrId: 1 });
+    const kctx = fakeKaminoContext();
+    const accountsResult = await kaminoInstrumentAccountsExist(ctx, { instrId: 1 }, kctx);
     const rpc = mockRpc({
       accountInfo: new Map([
-        [ataResult.assetAta, { value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } }],
+        [
+          accountsResult.assetAta.address,
+          { value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } },
+        ],
       ]),
     });
 
     await expect(kaminoAtaExists(context(rpc), { mint: ASSET_MINT })).resolves.toBe(true);
     await expect(kaminoAtaExists(context(mockRpc()), { mint: ASSET_MINT })).resolves.toBe(false);
+  });
+
+  it('checks all non-obligation Kamino instrument accounts', async () => {
+    const kctx = fakeKaminoContext();
+    const firstPass = await kaminoInstrumentAccountsExist(context(), { instrId: 1 }, kctx);
+    const accountInfo = new Map<Address, { value: any }>();
+    accountInfo.set(firstPass.assetAta.address, {
+      value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) },
+    });
+    accountInfo.set(firstPass.crncyAta.address, {
+      value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) },
+    });
+    for (const farm of Object.values(firstPass.farms)) {
+      if (farm == null) continue;
+      accountInfo.set(farm.reserveFarmState.address, {
+        value: { owner: FARM_COLL, data: dataResponse(Buffer.alloc(128)) },
+      });
+      accountInfo.set(farm.obligationFarm.address, {
+        value: { owner: FARM_COLL, data: dataResponse(Buffer.alloc(128)) },
+      });
+    }
+
+    const result = await kaminoInstrumentAccountsExist(context(mockRpc({ accountInfo })), { instrId: 1 }, kctx);
+
+    expect(result.assetAta.exists).toBe(true);
+    expect(result.farms.assetCollateral?.reserveFarmState.exists).toBe(true);
+    expect(result.farms.crncyLiquidity?.obligationFarm.exists).toBe(true);
+    expect(result.allExist).toBe(true);
+  });
+
+  it('marks account checks missing on owner mismatch and ignores absent farm sides', async () => {
+    const noFarmCtx = fakeKaminoContext(null, {
+      assetCollateral: null,
+      assetLiquidity: null,
+      crncyCollateral: null,
+      crncyLiquidity: null,
+    });
+    const firstPass = await kaminoInstrumentAccountsExist(context(), { instrId: 1 }, noFarmCtx);
+    const accountInfo = new Map<Address, { value: any }>([
+      [firstPass.assetAta.address, { value: { owner: TOKEN_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } }],
+      [firstPass.crncyAta.address, { value: { owner: SYSTEM_PROGRAM_ID, data: dataResponse(Buffer.alloc(165)) } }],
+    ]);
+
+    const result = await kaminoInstrumentAccountsExist(context(mockRpc({ accountInfo })), { instrId: 1 }, noFarmCtx);
+
+    expect(result.assetAta.exists).toBe(true);
+    expect(result.crncyAta.exists).toBe(false);
+    expect(result.farms.assetCollateral).toBeNull();
+    expect(result.allExist).toBe(false);
   });
 
   it('deduplicates ALT discovery and unpacks user metadata LUT', async () => {
@@ -397,44 +478,72 @@ describe('Kamino account order', () => {
 
   it('builds init account orders including optional VM account', async () => {
     const ctx = context();
-    const noVm = fakeKaminoContext();
     const withVm = fakeKaminoContext(VM_ACCOUNT);
 
-    const tokenIx = await buildKaminoInitTokenAccountsInstruction(ctx, { instrId: 1 }, withVm);
-    expect(tokenIx.accounts!.map((account) => account.address).slice(0, 6)).toEqual([
+    const initInstrumentIx = await buildKaminoInitInstrumentInstruction(ctx, { instrId: 1 }, withVm);
+    expect(initInstrumentIx.accounts!.map((account) => account.address).slice(0, 9)).toEqual([
       SIGNER,
       ROOT,
+      INSTR_ACCOUNT,
       CLIENT_PRIMARY,
       VM_ACCOUNT,
-      INSTR_ACCOUNT,
-      ASSET_MINT,
-    ]);
-
-    const obligationIx = await buildKaminoInitObligationInstruction(ctx, { instrId: 1 }, noVm);
-    expect(obligationIx.accounts!.map((account) => account.address).slice(0, 6)).toEqual([
-      SIGNER,
-      ROOT,
-      CLIENT_PRIMARY,
-      INSTR_ACCOUNT,
-      USER_METADATA,
-      OBLIGATION,
-    ]);
-
-    const farmsIx = await buildKaminoInitObligationFarmsInstruction(ctx, { instrId: 1, side: 0 }, noVm);
-    expect(farmsIx.accounts!.map((account) => account.address).slice(0, 8)).toEqual([
-      SIGNER,
-      ROOT,
-      CLIENT_PRIMARY,
-      INSTR_ACCOUNT,
       OBLIGATION,
       MAIN_KAMINO_MARKET,
-      noVm.lendingMarketAuthority,
-      COLL_RESERVE,
+      withVm.lendingMarketAuthority,
+      ASSET_MINT,
+    ]);
+    expect(initInstrumentIx.accounts!.map((account) => account.address).slice(-2)).toEqual([
+      FARM_COLL,
+      'SysvarRent111111111111111111111111111111111' as Address,
     ]);
 
-    const debtFarmsIx = await buildKaminoInitObligationFarmsInstruction(ctx, { instrId: 1, side: 1 }, noVm);
-    expect(debtFarmsIx.accounts!.map((account) => account.address)[6]).toBe(noVm.lendingMarketAuthority);
-    expect(debtFarmsIx.accounts!.map((account) => account.address)[7]).toBe(DEBT_RESERVE);
+    const obligationIx = await buildKaminoInitObligationInstruction(ctx, {});
+    const expectedUserMetadata = await userMetadataPda(CLIENT_PRIMARY);
+    const expectedObligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    expect(obligationIx.accounts!.map((account) => account.address).slice(0, 5)).toEqual([
+      SIGNER,
+      ROOT,
+      CLIENT_PRIMARY,
+      expectedUserMetadata,
+      expectedObligation,
+    ]);
+    expect(obligationIx.accounts!.map((account) => account.address)).not.toContain(INSTR_ACCOUNT);
+  });
+
+  it('omits optional farm accounts and farm program when reserves have no farms', async () => {
+    const ctx = context();
+    const noFarmCtx = fakeKaminoContext(null, {
+      assetCollateral: null,
+      assetLiquidity: null,
+      crncyCollateral: null,
+      crncyLiquidity: null,
+    });
+
+    const ix = await buildKaminoInitInstrumentInstruction(ctx, { instrId: 1 }, noFarmCtx);
+
+    expect(ix.accounts!.map((account) => account.address)).toEqual([
+      SIGNER,
+      ROOT,
+      INSTR_ACCOUNT,
+      CLIENT_PRIMARY,
+      OBLIGATION,
+      MAIN_KAMINO_MARKET,
+      noFarmCtx.lendingMarketAuthority,
+      ASSET_MINT,
+      noFarmCtx.collateralReserve.clientAta,
+      TOKEN_PROGRAM_ID,
+      COLL_RESERVE,
+      CRNCY_MINT,
+      noFarmCtx.debtReserve.clientAta,
+      TOKEN_PROGRAM_ID,
+      DEBT_RESERVE,
+      'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address,
+      KLEND_PROGRAM_ID,
+      SYSTEM_PROGRAM_ID,
+    ]);
   });
 
   it('builds VM add/remove Kamino account order', async () => {
@@ -451,6 +560,14 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
+  it('bumps package metadata to 1.0.60', () => {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
+    expect(packageJson.version).toBe('1.0.60');
+    expect(packageLock.version).toBe('1.0.60');
+    expect(packageLock.packages[''].version).toBe('1.0.60');
+  });
+
   it('does not add forbidden Kamino SDK dependencies', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const deps = {

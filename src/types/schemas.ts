@@ -316,21 +316,17 @@ const GetKaminoContextArgsSchema = z
   })
   .strict();
 
-const KaminoInitTokenAccountsArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-});
-
-const KaminoInitObligationArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-  referrerUserMetadata: solanaAddress.optional().meta({ description: 'Kamino referrer user metadata account' }),
-});
-
-const KaminoInitObligationFarmsArgsSchema = z
+const KaminoInitInstrumentArgsSchema = z
   .object({
     instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-    side: side.meta({ description: '0 - collateral farm, 1 - debt farm' }),
     lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
+const KaminoInitObligationArgsSchema = z
+  .object({
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    referrerUserMetadata: solanaAddress.optional().meta({ description: 'Kamino referrer user metadata account' }),
   })
   .strict();
 
@@ -394,9 +390,12 @@ const KaminoAtaExistsArgsSchema = z.object({
   tokenProgram: solanaAddress.optional().meta({ description: 'Token program' }),
 });
 
-const KaminoInstrumentAtasExistArgsSchema = z.object({
-  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
-});
+const KaminoInstrumentAccountsExistArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
 
 const GetKaminoClientStateArgsSchema = z
   .object({
@@ -460,14 +459,13 @@ export {
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
   GetKaminoContextArgsSchema,
-  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
   KaminoAtaExistsArgsSchema,
-  KaminoInstrumentAtasExistArgsSchema,
+  KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,
   GetKaminoClientStateFromBuffersArgsSchema,
 };

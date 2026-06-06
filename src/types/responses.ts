@@ -306,6 +306,8 @@ export interface KaminoReserveContext extends KaminoReserveInfo {
   obligationFarm: Address;
   reserveFarmState: Address;
   hasFarm: boolean;
+  collateralFarm: KaminoFarmContext;
+  liquidityFarm: KaminoFarmContext;
 }
 
 export interface KaminoContext {
@@ -330,11 +332,33 @@ export interface KaminoLookupTableAddressesResponse {
   all: Address[];
 }
 
-export interface KaminoInstrumentAtasExistResponse {
-  assetAta: Address;
-  crncyAta: Address;
-  assetExists: boolean;
-  crncyExists: boolean;
+export interface KaminoFarmContext {
+  reserveFarmState: Address;
+  obligationFarm: Address;
+  hasFarm: boolean;
+}
+
+export interface KaminoAccountExistence {
+  address: Address;
+  exists: boolean;
+  expectedOwner: Address;
+}
+
+export interface KaminoFarmAccountsExistence {
+  reserveFarmState: KaminoAccountExistence;
+  obligationFarm: KaminoAccountExistence;
+}
+
+export interface KaminoInstrumentAccountsExistResponse {
+  assetAta: KaminoAccountExistence;
+  crncyAta: KaminoAccountExistence;
+  farms: {
+    assetCollateral: KaminoFarmAccountsExistence | null;
+    assetLiquidity: KaminoFarmAccountsExistence | null;
+    crncyCollateral: KaminoFarmAccountsExistence | null;
+    crncyLiquidity: KaminoFarmAccountsExistence | null;
+  };
+  allExist: boolean;
 }
 
 export interface KaminoClientReservePosition {

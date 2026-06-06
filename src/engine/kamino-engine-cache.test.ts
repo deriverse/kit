@@ -262,7 +262,7 @@ describe('Engine Kamino reserve and context cache', () => {
     const engine = setupEngine(rpc);
 
     await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
-    await engine.kaminoInitTokenAccountsInstruction({ instrId: 1 });
+    await engine.kaminoInitInstrumentInstruction({ instrId: 1 });
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
     expect(reserveReads(rpc)).toBe(0);

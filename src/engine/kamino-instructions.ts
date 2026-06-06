@@ -19,11 +19,11 @@ import {
   KaminoChangePositionArgs,
   KaminoClientStateResponse,
   KaminoContext,
+  KaminoFarmContext,
   KaminoInitObligationArgs,
-  KaminoInitObligationFarmsArgs,
-  KaminoInitTokenAccountsArgs,
-  KaminoInstrumentAtasExistArgs,
-  KaminoInstrumentAtasExistResponse,
+  KaminoInitInstrumentArgs,
+  KaminoInstrumentAccountsExistArgs,
+  KaminoInstrumentAccountsExistResponse,
   KaminoLookupTableAddressesArgs,
   KaminoLookupTableAddressesResponse,
   KaminoObligationExistsArgs,
@@ -45,12 +45,7 @@ import {
 } from '../constants';
 import { Instrument } from '../types/responses';
 import { TokenStateModel } from '../structure_models';
-import {
-  kaminoChangePositionData,
-  kaminoInitObligationData,
-  kaminoInitObligationFarmsData,
-  kaminoInitTokenAccountsData,
-} from '../instruction_models';
+import { kaminoChangePositionData, kaminoInitInstrumentData, kaminoInitObligationData } from '../instruction_models';
 import { findAssociatedTokenAddress, tokenDec } from './utils';
 import {
   AccountHelperContext,
@@ -454,8 +449,8 @@ async function resolveKaminoReserveByMint(
 async function farmContext(args: {
   reserve: KaminoReserveInfo;
   obligation: Address;
-  side: 'collateral' | 'debt';
-}): Promise<Pick<KaminoReserveContext, 'obligationFarm' | 'reserveFarmState' | 'hasFarm'>> {
+  side: 'collateral' | 'liquidity';
+}): Promise<KaminoFarmContext> {
   const reserveFarmState = args.side === 'collateral' ? args.reserve.farmCollateral : args.reserve.farmDebt;
   if (isDefaultAddress(reserveFarmState)) {
     return {
@@ -478,7 +473,7 @@ async function reserveContext(args: {
   clientPrimaryAccount: Address;
   side: 'collateral' | 'debt';
 }): Promise<KaminoReserveContext> {
-  const [vault, clientAta, farm] = await Promise.all([
+  const [vault, clientAta, collateralFarm, liquidityFarm] = await Promise.all([
     getProgramTokenAccount(args.ctx, args.reserve.liquidityMint),
     clientPrimaryAta({
       clientPrimaryAccount: args.clientPrimaryAccount,
@@ -488,15 +483,25 @@ async function reserveContext(args: {
     farmContext({
       reserve: args.reserve,
       obligation: args.obligation,
-      side: args.side,
+      side: 'collateral',
+    }),
+    farmContext({
+      reserve: args.reserve,
+      obligation: args.obligation,
+      side: 'liquidity',
     }),
   ]);
+  const selectedFarm = args.side === 'collateral' ? collateralFarm : liquidityFarm;
 
   return {
     ...args.reserve,
     vault,
     clientAta,
-    ...farm,
+    collateralFarm,
+    liquidityFarm,
+    obligationFarm: selectedFarm.obligationFarm,
+    reserveFarmState: selectedFarm.reserveFarmState,
+    hasFarm: selectedFarm.hasFarm,
   };
 }
 
@@ -598,53 +603,97 @@ export async function buildVmRemoveKaminoInstruction(
   };
 }
 
-export async function buildKaminoInitTokenAccountsInstruction(
+function appendInitInstrumentFarmAccounts(
+  accounts: { address: Address; role: AccountRole }[],
+  farm: KaminoFarmContext,
+): boolean {
+  if (!farm.hasFarm) {
+    return false;
+  }
+  accounts.push(
+    { address: farm.reserveFarmState, role: AccountRole.WRITABLE },
+    { address: farm.obligationFarm, role: AccountRole.WRITABLE },
+  );
+  return true;
+}
+
+export async function buildKaminoInitInstrumentInstruction(
   ctx: KaminoInstructionContext,
-  args: KaminoInitTokenAccountsArgs,
+  args: KaminoInitInstrumentArgs,
   kaminoCtx: KaminoContext,
 ): Promise<Instruction> {
   const instr = requireInstrument(ctx, args.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
+  validateReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
+  validateReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
+
   const accounts = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
+    { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
     { address: kaminoCtx.clientPrimaryAccount, role: AccountRole.READONLY },
   ];
   appendOptionalVmAccount(accounts, kaminoCtx);
   accounts.push(
-    { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
+    { address: kaminoCtx.obligation, role: AccountRole.WRITABLE },
+    { address: kaminoCtx.lendingMarket, role: AccountRole.READONLY },
+    { address: kaminoCtx.lendingMarketAuthority, role: AccountRole.READONLY },
     { address: assetMint, role: AccountRole.READONLY },
-    { address: crncyMint, role: AccountRole.READONLY },
     { address: kaminoCtx.collateralReserve.clientAta, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.clientAta, role: AccountRole.WRITABLE },
     { address: kaminoCtx.collateralReserve.tokenProgram, role: AccountRole.READONLY },
+    { address: kaminoCtx.collateralReserve.address, role: AccountRole.WRITABLE },
+  );
+  const hasAssetCollateralFarm = appendInitInstrumentFarmAccounts(accounts, kaminoCtx.collateralReserve.collateralFarm);
+  const hasAssetLiquidityFarm = appendInitInstrumentFarmAccounts(accounts, kaminoCtx.collateralReserve.liquidityFarm);
+  accounts.push(
+    { address: crncyMint, role: AccountRole.READONLY },
+    { address: kaminoCtx.debtReserve.clientAta, role: AccountRole.WRITABLE },
     { address: kaminoCtx.debtReserve.tokenProgram, role: AccountRole.READONLY },
+    { address: kaminoCtx.debtReserve.address, role: AccountRole.WRITABLE },
+  );
+  const hasCrncyCollateralFarm = appendInitInstrumentFarmAccounts(accounts, kaminoCtx.debtReserve.collateralFarm);
+  const hasCrncyLiquidityFarm = appendInitInstrumentFarmAccounts(accounts, kaminoCtx.debtReserve.liquidityFarm);
+  accounts.push(
     { address: ASSOCIATED_TOKEN_PROGRAM_ID, role: AccountRole.READONLY },
+    { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
   );
+  if (hasAssetCollateralFarm || hasAssetLiquidityFarm || hasCrncyCollateralFarm || hasCrncyLiquidityFarm) {
+    accounts.push(
+      { address: FARMS_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: SYSVAR_RENT, role: AccountRole.READONLY },
+    );
+  }
   return {
     accounts,
     programAddress: ctx.programId,
-    data: kaminoInitTokenAccountsData(84, args.instrId),
+    data: kaminoInitInstrumentData(84, args.instrId),
   };
 }
 
 export async function buildKaminoInitObligationInstruction(
   ctx: KaminoInstructionContext,
-  args: KaminoInitObligationArgs,
-  kaminoCtx: KaminoContext,
+  args: KaminoInitObligationArgs = {},
 ): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimary(ctx);
+  const clientVmAccount = ctx.clientVmActive ? await findClientVmAccount(ctx, ctx.signer) : null;
+  const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+  const [userMetadata, obligation] = await Promise.all([
+    userMetadataPda(clientPrimaryAccount),
+    vanillaObligationPda({ owner: clientPrimaryAccount, lendingMarket }),
+  ]);
   const accounts = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
     { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: kaminoCtx.clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientPrimaryAccount, role: AccountRole.READONLY },
   ];
-  appendOptionalVmAccount(accounts, kaminoCtx);
+  if (clientVmAccount !== null) {
+    accounts.push({ address: clientVmAccount, role: AccountRole.READONLY });
+  }
   accounts.push(
-    { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
-    { address: kaminoCtx.userMetadata, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.obligation, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.lendingMarket, role: AccountRole.READONLY },
+    { address: userMetadata, role: AccountRole.WRITABLE },
+    { address: obligation, role: AccountRole.WRITABLE },
+    { address: lendingMarket, role: AccountRole.READONLY },
     { address: args.referrerUserMetadata ?? KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -653,49 +702,7 @@ export async function buildKaminoInitObligationInstruction(
   return {
     accounts,
     programAddress: ctx.programId,
-    data: kaminoInitObligationData(83, args.instrId),
-  };
-}
-
-export async function buildKaminoInitObligationFarmsInstruction(
-  ctx: KaminoInstructionContext,
-  args: KaminoInitObligationFarmsArgs,
-  kaminoCtx: KaminoContext,
-): Promise<Instruction> {
-  const sideName = args.side === 0 ? 'collateral' : 'debt';
-  const selectedReserve = sideName === 'collateral' ? kaminoCtx.collateralReserve : kaminoCtx.debtReserve;
-
-  const instr = requireInstrument(ctx, args.instrId);
-  const { assetMint, crncyMint } = instrumentMints(ctx, instr);
-  const expectedMint = sideName === 'collateral' ? assetMint : crncyMint;
-  validateReserveForMint(selectedReserve, expectedMint, kaminoCtx.lendingMarket, 'Farm');
-  if (!selectedReserve.hasFarm) {
-    throw new Error(`Selected Kamino ${sideName} reserve has no farm`);
-  }
-
-  const accounts = [
-    { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
-    { address: ctx.rootAccount, role: AccountRole.READONLY },
-    { address: kaminoCtx.clientPrimaryAccount, role: AccountRole.READONLY },
-  ];
-  appendOptionalVmAccount(accounts, kaminoCtx);
-  accounts.push(
-    { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
-    { address: kaminoCtx.obligation, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.lendingMarket, role: AccountRole.READONLY },
-    { address: kaminoCtx.lendingMarketAuthority, role: AccountRole.READONLY },
-    { address: selectedReserve.address, role: AccountRole.WRITABLE },
-    { address: selectedReserve.reserveFarmState, role: AccountRole.WRITABLE },
-    { address: selectedReserve.obligationFarm, role: AccountRole.WRITABLE },
-    { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: FARMS_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
-    { address: SYSVAR_RENT, role: AccountRole.READONLY },
-  );
-  return {
-    accounts,
-    programAddress: ctx.programId,
-    data: kaminoInitObligationFarmsData(86, args.side, args.instrId),
+    data: kaminoInitObligationData(83),
   };
 }
 
@@ -938,40 +945,78 @@ export async function kaminoAtaExists(ctx: KaminoInstructionContext, args: Kamin
   return info.value != null && accountOwner(info.value) === tokenProgram;
 }
 
-export async function kaminoInstrumentAtasExist(
+async function accountExistence(
   ctx: KaminoInstructionContext,
-  args: KaminoInstrumentAtasExistArgs,
-): Promise<KaminoInstrumentAtasExistResponse> {
+  address: Address,
+  expectedOwner: Address,
+): Promise<{ address: Address; exists: boolean; expectedOwner: Address }> {
+  const info = await ctx.rpc.getAccountInfo(address, { commitment: ctx.commitment, encoding: 'base64' }).send();
+  return {
+    address,
+    expectedOwner,
+    exists: info.value != null && accountOwner(info.value) === expectedOwner,
+  };
+}
+
+async function farmAccountsExistence(
+  ctx: KaminoInstructionContext,
+  farm: KaminoFarmContext,
+): Promise<KaminoInstrumentAccountsExistResponse['farms']['assetCollateral']> {
+  if (!farm.hasFarm) {
+    return null;
+  }
+  const [reserveFarmState, obligationFarm] = await Promise.all([
+    accountExistence(ctx, farm.reserveFarmState, FARMS_PROGRAM_ID),
+    accountExistence(ctx, farm.obligationFarm, FARMS_PROGRAM_ID),
+  ]);
+  return { reserveFarmState, obligationFarm };
+}
+
+export async function kaminoInstrumentAccountsExist(
+  ctx: KaminoInstructionContext,
+  args: KaminoInstrumentAccountsExistArgs,
+  kaminoCtx: KaminoContext,
+): Promise<KaminoInstrumentAccountsExistResponse> {
   const instr = requireInstrument(ctx, args.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
-  const clientPrimaryAccount = requireClientPrimary(ctx);
-  const assetTokenProgram = (await resolveTokenProgram(ctx, assetMint)) ?? TOKEN_PROGRAM_ID;
-  const crncyTokenProgram = (await resolveTokenProgram(ctx, crncyMint)) ?? TOKEN_PROGRAM_ID;
+  validateReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
+  validateReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
   const [assetAta, crncyAta] = await Promise.all([
     clientPrimaryAta({
-      clientPrimaryAccount,
+      clientPrimaryAccount: kaminoCtx.clientPrimaryAccount,
       mint: assetMint,
-      tokenProgram: assetTokenProgram,
+      tokenProgram: kaminoCtx.collateralReserve.tokenProgram,
     }),
     clientPrimaryAta({
-      clientPrimaryAccount,
+      clientPrimaryAccount: kaminoCtx.clientPrimaryAccount,
       mint: crncyMint,
-      tokenProgram: crncyTokenProgram,
+      tokenProgram: kaminoCtx.debtReserve.tokenProgram,
     }),
   ]);
-  const [assetExists, crncyExists] = await Promise.all([
-    kaminoAtaExists(ctx, {
-      mint: assetMint,
-      owner: clientPrimaryAccount,
-      tokenProgram: assetTokenProgram,
-    }),
-    kaminoAtaExists(ctx, {
-      mint: crncyMint,
-      owner: clientPrimaryAccount,
-      tokenProgram: crncyTokenProgram,
-    }),
-  ]);
-  return { assetAta, crncyAta, assetExists, crncyExists };
+  const [assetAtaResult, crncyAtaResult, assetCollateral, assetLiquidity, crncyCollateral, crncyLiquidity] =
+    await Promise.all([
+      accountExistence(ctx, assetAta, kaminoCtx.collateralReserve.tokenProgram),
+      accountExistence(ctx, crncyAta, kaminoCtx.debtReserve.tokenProgram),
+      farmAccountsExistence(ctx, kaminoCtx.collateralReserve.collateralFarm),
+      farmAccountsExistence(ctx, kaminoCtx.collateralReserve.liquidityFarm),
+      farmAccountsExistence(ctx, kaminoCtx.debtReserve.collateralFarm),
+      farmAccountsExistence(ctx, kaminoCtx.debtReserve.liquidityFarm),
+    ]);
+  const farmGroups = [assetCollateral, assetLiquidity, crncyCollateral, crncyLiquidity];
+  const allFarmAccountsExist = farmGroups.every(
+    (farm) => farm == null || (farm.reserveFarmState.exists && farm.obligationFarm.exists),
+  );
+  return {
+    assetAta: assetAtaResult,
+    crncyAta: crncyAtaResult,
+    farms: {
+      assetCollateral,
+      assetLiquidity,
+      crncyCollateral,
+      crncyLiquidity,
+    },
+    allExist: assetAtaResult.exists && crncyAtaResult.exists && allFarmAccountsExist,
+  };
 }
 
 function reserveDecimals(context: KaminoContext, reserve: Address): number {

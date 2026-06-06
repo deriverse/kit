@@ -53,20 +53,19 @@ import {
   VmDirectWithdrawArgs,
   KaminoReserveByMintArgs,
   GetKaminoContextArgs,
-  KaminoInitTokenAccountsArgs,
+  KaminoInitInstrumentArgs,
   KaminoInitObligationArgs,
-  KaminoInitObligationFarmsArgs,
   KaminoChangePositionArgs,
   KaminoLookupTableAddressesArgs,
   KaminoObligationExistsArgs,
   KaminoAtaExistsArgs,
-  KaminoInstrumentAtasExistArgs,
+  KaminoInstrumentAccountsExistArgs,
   GetKaminoClientStateArgs,
   GetKaminoClientStateFromBuffersArgs,
   KaminoContext,
   KaminoReserveInfo,
   KaminoLookupTableAddressesResponse,
-  KaminoInstrumentAtasExistResponse,
+  KaminoInstrumentAccountsExistResponse,
   KaminoClientStateResponse,
   LogMessage,
   DepositArgsSchema,
@@ -98,14 +97,13 @@ import {
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
   GetKaminoContextArgsSchema,
-  KaminoInitTokenAccountsArgsSchema,
+  KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
   KaminoAtaExistsArgsSchema,
-  KaminoInstrumentAtasExistArgsSchema,
+  KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,
   GetKaminoClientStateFromBuffersArgsSchema,
   InstrIdSchema,
@@ -206,16 +204,15 @@ import {
 import {
   buildKaminoChangePositionInstruction,
   buildKaminoContext,
-  buildKaminoInitObligationFarmsInstruction,
+  buildKaminoInitInstrumentInstruction,
   buildKaminoInitObligationInstruction,
-  buildKaminoInitTokenAccountsInstruction,
   buildVmAddKaminoInstruction,
   buildVmRemoveKaminoInstruction,
   findKaminoReserveByMint,
   getKaminoClientState as getKaminoClientStateFn,
   getKaminoClientStateFromData,
   kaminoAtaExists as kaminoAtaExistsFn,
-  kaminoInstrumentAtasExist as kaminoInstrumentAtasExistFn,
+  kaminoInstrumentAccountsExist as kaminoInstrumentAccountsExistFn,
   kaminoLookupTableAddresses as kaminoLookupTableAddressesFn,
   kaminoMarketLut as kaminoMarketLutFn,
   kaminoObligationExists as kaminoObligationExistsFn,
@@ -1192,28 +1189,19 @@ export class Engine {
     return buildVmRemoveKaminoInstruction(this.getKaminoInstructionContext(), parsed);
   }
 
-  async kaminoInitTokenAccountsInstruction(args: KaminoInitTokenAccountsArgs): Promise<Instruction> {
-    const parsed = KaminoInitTokenAccountsArgsSchema.parse(args);
-    const kaminoCtx = await this.getCachedKaminoContext({ instrId: parsed.instrId });
-    return buildKaminoInitTokenAccountsInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
-  }
-
-  async kaminoInitObligationInstruction(args: KaminoInitObligationArgs): Promise<Instruction> {
+  async kaminoInitObligationInstruction(args: KaminoInitObligationArgs = {}): Promise<Instruction> {
     const parsed = KaminoInitObligationArgsSchema.parse(args);
-    const kaminoCtx = await this.getCachedKaminoContext({
-      instrId: parsed.instrId,
-      lendingMarket: parsed.lendingMarket,
-    });
-    return buildKaminoInitObligationInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+    await this.requireClient();
+    return buildKaminoInitObligationInstruction(this.getKaminoInstructionContext(), parsed);
   }
 
-  async kaminoInitObligationFarmsInstruction(args: KaminoInitObligationFarmsArgs): Promise<Instruction> {
-    const parsed = KaminoInitObligationFarmsArgsSchema.parse(args);
+  async kaminoInitInstrumentInstruction(args: KaminoInitInstrumentArgs): Promise<Instruction> {
+    const parsed = KaminoInitInstrumentArgsSchema.parse(args);
     const kaminoCtx = await this.getCachedKaminoContext({
       instrId: parsed.instrId,
       lendingMarket: parsed.lendingMarket,
     });
-    return buildKaminoInitObligationFarmsInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+    return buildKaminoInitInstrumentInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
   }
 
   async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {
@@ -1251,10 +1239,16 @@ export class Engine {
     return kaminoAtaExistsFn(this.getKaminoInstructionContext(), parsed);
   }
 
-  async kaminoInstrumentAtasExist(args: KaminoInstrumentAtasExistArgs): Promise<KaminoInstrumentAtasExistResponse> {
-    const parsed = KaminoInstrumentAtasExistArgsSchema.parse(args);
+  async kaminoInstrumentAccountsExist(
+    args: KaminoInstrumentAccountsExistArgs,
+  ): Promise<KaminoInstrumentAccountsExistResponse> {
+    const parsed = KaminoInstrumentAccountsExistArgsSchema.parse(args);
     await this.requireClient();
-    return kaminoInstrumentAtasExistFn(this.getKaminoInstructionContext(), parsed);
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return kaminoInstrumentAccountsExistFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
   }
 
   async getKaminoClientState(args: GetKaminoClientStateArgs): Promise<KaminoClientStateResponse> {

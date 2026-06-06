@@ -41,6 +41,7 @@ import {
   VmInitWithdrawCancelReportModel,
   VmInitWithdrawFinalizeReportModel,
   VmInitWithdrawReportModel,
+  KaminoChangePositionReportModel,
   WithdrawReportModel,
 } from '../logs_models';
 
@@ -87,4 +88,5 @@ export type LogMessage =
   | VmChangeListReportModel
   | VmInitWithdrawReportModel
   | VmInitWithdrawCancelReportModel
-  | VmInitWithdrawFinalizeReportModel;
+  | VmInitWithdrawFinalizeReportModel
+  | KaminoChangePositionReportModel;

@@ -13,6 +13,7 @@ import {
   EarningsReportModel,
   FeesDepositReportModel,
   FeesWithdrawReportModel,
+  KaminoChangePositionReportModel,
   LogType,
   MoveSpotAvailFundsReportModel,
   PerpChangeLeverageReportModel,
@@ -483,6 +484,24 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
       case LogType.changedPoints: {
         if (buffer.length == ChangePointsReportModel.LENGTH) {
           let report = ChangePointsReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.kaminoChangePosition: {
+        if (buffer.length == KaminoChangePositionReportModel.LENGTH) {
+          let report = KaminoChangePositionReportModel.fromBuffer(buffer);
+          if (uiNumbers) {
+            const instrInfo = instruments.get(report.instrId);
+            if (instrInfo) {
+              assetTokenDec = tokenDec(tokens, instrInfo.header.assetTokenId, uiNumbers);
+              crncyTokenDec = tokenDec(tokens, instrInfo.header.crncyTokenId, uiNumbers);
+              const collateralTokenDec = report.assetsIsCollateral === 1 ? assetTokenDec : crncyTokenDec;
+              const borrowTokenDec = report.assetsIsCollateral === 1 ? crncyTokenDec : assetTokenDec;
+              report.collateralDelta /= collateralTokenDec;
+              report.borrowDelta /= borrowTokenDec;
+            }
+          }
           logs.push(report);
         }
         break;

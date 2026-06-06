@@ -7,7 +7,8 @@ import {
   SpotQuotesReplaceArgsSchema,
   GetKaminoContextArgsSchema,
   KaminoChangePositionArgsSchema,
-  KaminoInitObligationFarmsArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoInitInstrumentArgsSchema,
   GetKaminoClientStateArgsSchema,
 } from './schemas';
 
@@ -115,9 +116,8 @@ describe('Zod Schemas', () => {
     it('rejects removed manual reserve fields', () => {
       expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
       expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, debtReserve: ADDRESS }).success).toBe(false);
-      expect(KaminoInitObligationFarmsArgsSchema.safeParse({ instrId: 1, side: 0, reserve: ADDRESS }).success).toBe(
-        false,
-      );
+      expect(KaminoInitObligationArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
+      expect(KaminoInitInstrumentArgsSchema.safeParse({ instrId: 1, side: 0, reserve: ADDRESS }).success).toBe(false);
       expect(GetKaminoClientStateArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
     });
 

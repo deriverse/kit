@@ -270,3 +270,135 @@ export interface GetClientDataResponse {
   refLinks: RefLink[];
   community: ClientCommunityData;
 }
+
+export interface KaminoOracleAccounts {
+  pyth: Address;
+  switchboardPrice: Address;
+  switchboardTwap: Address;
+  scope: Address;
+}
+
+export interface KaminoReserveInfo {
+  address: Address;
+  lendingMarket: Address;
+  liquidityMint: Address;
+  liquiditySupply: Address;
+  collateralMint: Address;
+  collateralSupply: Address;
+  feeVault: Address;
+  tokenProgram: Address;
+  farmCollateral: Address;
+  farmDebt: Address;
+  oracles: KaminoOracleAccounts;
+  loanToValuePct: number;
+  liquidationThresholdPct: number;
+  mintDecimals: number;
+  raw: {
+    marketPriceSf: number;
+    borrowLimit: number;
+    depositLimit: number;
+  };
+}
+
+export interface KaminoReserveContext extends KaminoReserveInfo {
+  vault: Address;
+  clientAta: Address;
+  obligationFarm: Address;
+  reserveFarmState: Address;
+  hasFarm: boolean;
+  collateralFarm: KaminoFarmContext;
+  liquidityFarm: KaminoFarmContext;
+}
+
+export interface KaminoContext {
+  instrId: number;
+  lendingMarket: Address;
+  lendingMarketAuthority: Address;
+  instrAccount: Address;
+  clientPrimaryAccount: Address;
+  clientVmAccount: Address | null;
+  userMetadata: Address;
+  obligation: Address;
+  collateralReserve: KaminoReserveContext;
+  debtReserve: KaminoReserveContext;
+  extraReserves: KaminoReserveInfo[];
+}
+
+export interface KaminoLookupTableAddressesResponse {
+  marketLut: Address | null;
+  clientLut: Address | null;
+  instrumentLut: Address | null;
+  userLookupTable: Address | null;
+  all: Address[];
+}
+
+export interface KaminoFarmContext {
+  reserveFarmState: Address;
+  obligationFarm: Address;
+  hasFarm: boolean;
+}
+
+export interface KaminoAccountExistence {
+  address: Address;
+  exists: boolean;
+  expectedOwner: Address;
+}
+
+export interface KaminoFarmAccountsExistence {
+  reserveFarmState: KaminoAccountExistence;
+  obligationFarm: KaminoAccountExistence;
+}
+
+export interface KaminoInstrumentAccountsExistResponse {
+  assetAta: KaminoAccountExistence;
+  crncyAta: KaminoAccountExistence;
+  farms: {
+    assetCollateral: KaminoFarmAccountsExistence | null;
+    assetLiquidity: KaminoFarmAccountsExistence | null;
+    crncyCollateral: KaminoFarmAccountsExistence | null;
+    crncyLiquidity: KaminoFarmAccountsExistence | null;
+  };
+  allExist: boolean;
+}
+
+export interface KaminoClientReservePosition {
+  reserve: Address;
+  depositedAmount: number;
+  depositedAmountRaw: number;
+  depositMarketValue: number;
+  borrowedAmount: number;
+  borrowedAmountRaw: number;
+  borrowMarketValue: number;
+}
+
+export interface KaminoClientStateResponse {
+  obligation: Address;
+  exists: boolean;
+  lendingMarket: Address;
+  reserves: {
+    collateralReserve: Address;
+    debtReserve: Address;
+  };
+  deposits: KaminoClientReservePosition[];
+  borrows: KaminoClientReservePosition[];
+  totalDepositValue: number;
+  totalBorrowValue: number;
+  borrowLimit: number;
+  unhealthyBorrowValue: number;
+  ltv: number | null;
+  healthFactor: number | null;
+  liquidationBuffer: number | null;
+  maxWithdrawEstimate: {
+    amount: number;
+    amountRaw: number;
+    reserve: Address;
+  } | null;
+  raw: {
+    owner?: Address;
+    depositedValueSf?: number;
+    borrowedAssetsMarketValueSf?: number;
+    borrowFactorAdjustedDebtValueSf?: number;
+    allowedBorrowValueSf?: number;
+    unhealthyBorrowValueSf?: number;
+  };
+}

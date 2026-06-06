@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { Address, Commitment } from '@solana/kit';
+import { Address, Base64EncodedDataResponse, Commitment } from '@solana/kit';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
+const signedAmount = z.number().finite({ error: 'Must be a finite number' });
 const side = z.int().min(0).max(1, { error: 'Side must be 0 (Bid) or 1 (Ask)' });
 const orderType = z.int().min(0).max(1, { error: 'Order type must be 0 (Limit) or 1 (Market)' });
 const iocFlag = z.int().min(0).max(1, { error: 'IOC flag must be 0 (No) or 1 (Yes)' });
@@ -10,6 +11,10 @@ const solanaAddress = z.custom<Address>((val) => typeof val === 'string', { erro
 const commitment = z.custom<Commitment>((val) => typeof val === 'string', {
   error: 'Must be a valid commitment level',
 });
+const base64EncodedDataResponse = z.custom<Base64EncodedDataResponse>(
+  (val) => Array.isArray(val) && typeof val[0] === 'string' && val[1] === 'base64',
+  { error: 'Must be a base64 encoded account data response' },
+);
 
 const EngineArgsSchema = z.object({
   programId: solanaAddress.optional(),
@@ -299,6 +304,118 @@ const VmDirectWithdrawArgsSchema = z.object({
   withdrawalTokenAccount: solanaAddress.meta({ description: 'Withdrawal destination token account' }),
 });
 
+const KaminoReserveByMintArgsSchema = z.object({
+  mint: solanaAddress.meta({ description: 'Reserve liquidity mint' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+});
+
+const GetKaminoContextArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
+const KaminoInitInstrumentArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
+const KaminoInitObligationArgsSchema = z
+  .object({
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    referrerUserMetadata: solanaAddress.optional().meta({ description: 'Kamino referrer user metadata account' }),
+  })
+  .strict();
+
+const KaminoChangePositionArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    collateralDelta: signedAmount.meta({ description: 'Signed collateral change' }),
+    borrowDelta: signedAmount.meta({ description: 'Signed borrow change' }),
+    customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
+    repayAll: z.boolean().optional(),
+    withdrawAll: z.boolean().optional(),
+    keepObligationAlive: z.boolean().optional(),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict()
+  .superRefine((args, ctx) => {
+    if (args.repayAll && args.borrowDelta !== 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['borrowDelta'],
+        message: 'repayAll requires borrowDelta to be 0',
+      });
+    }
+    if (args.withdrawAll && args.collateralDelta !== 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['collateralDelta'],
+        message: 'withdrawAll requires collateralDelta to be 0',
+      });
+    }
+    if (args.keepObligationAlive && args.withdrawAll) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['keepObligationAlive'],
+        message: 'keepObligationAlive cannot be used together with withdrawAll',
+      });
+    }
+    if (args.keepObligationAlive && args.collateralDelta === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['collateralDelta'],
+        message: 'keepObligationAlive requires collateralDelta to be non-zero',
+      });
+    }
+  });
+
+const KaminoLookupTableAddressesArgsSchema = z.object({
+  instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+});
+
+const KaminoObligationExistsArgsSchema = z.object({
+  instrId: nonNegativeInt.optional().meta({ description: 'Instrument ID' }),
+  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+});
+
+const KaminoAtaExistsArgsSchema = z.object({
+  mint: solanaAddress.meta({ description: 'Token mint' }),
+  owner: solanaAddress.optional().meta({ description: 'ATA owner' }),
+  tokenProgram: solanaAddress.optional().meta({ description: 'Token program' }),
+});
+
+const KaminoInstrumentAccountsExistArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
+const GetKaminoClientStateArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+  })
+  .strict();
+
+const GetKaminoClientStateFromBuffersArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    collateralReserveData: base64EncodedDataResponse.meta({ description: 'Collateral reserve account data' }),
+    debtReserveData: base64EncodedDataResponse.meta({ description: 'Debt reserve account data' }),
+    obligationData: base64EncodedDataResponse.meta({ description: 'Kamino obligation account data' }),
+    obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+  })
+  .strict();
+
 export {
   EngineArgsSchema,
   InstrIdSchema,
@@ -340,4 +457,15 @@ export {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  KaminoReserveByMintArgsSchema,
+  GetKaminoContextArgsSchema,
+  KaminoInitInstrumentArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoChangePositionArgsSchema,
+  KaminoLookupTableAddressesArgsSchema,
+  KaminoObligationExistsArgsSchema,
+  KaminoAtaExistsArgsSchema,
+  KaminoInstrumentAccountsExistArgsSchema,
+  GetKaminoClientStateArgsSchema,
+  GetKaminoClientStateFromBuffersArgsSchema,
 };

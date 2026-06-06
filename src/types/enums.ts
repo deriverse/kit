@@ -1,4 +1,7 @@
-import { AccountType as GeneratedAccountType } from '../structure_models';
+import {
+  AccountType as GeneratedAccountType,
+  VmWhitelistTag as GeneratedVmWhitelistTag,
+} from '../structure_models';
 
 export { LogType } from '../logs_models';
 
@@ -62,6 +65,17 @@ export const AccountType = {
   PERP_REBALANCE_TIME_TREE: GeneratedAccountType.perpRebalanceTimeTree,
   PRIVATE_CLIENTS: GeneratedAccountType.privateClients,
   VM_CLIENT: GeneratedAccountType.vmClient,
+  KAMINO_CLIENT: GeneratedAccountType.kaminoClient,
 } as const satisfies AccountTypeShape;
 
 export type AccountType = (typeof AccountType)[keyof typeof AccountType];
+
+export const VmWhitelistTag = {
+  VACANT: GeneratedVmWhitelistTag.vacant,
+  WITHDRAW_ACCOUNT: GeneratedVmWhitelistTag.withdrawAccount,
+  PROGRAM_ID: GeneratedVmWhitelistTag.programId,
+  MARKET_ID: GeneratedVmWhitelistTag.marketId,
+  KAMINO: GeneratedVmWhitelistTag.kamino,
+} as const;
+
+export type VmWhitelistTag = (typeof VmWhitelistTag)[keyof typeof VmWhitelistTag];

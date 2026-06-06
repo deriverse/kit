@@ -51,6 +51,22 @@ import {
   VmAddWithdrawalAddressArgs,
   VmRemoveWithdrawalAddressArgs,
   VmDirectWithdrawArgs,
+  KaminoReserveByMintArgs,
+  GetKaminoContextArgs,
+  KaminoInitInstrumentArgs,
+  KaminoInitObligationArgs,
+  KaminoChangePositionArgs,
+  KaminoLookupTableAddressesArgs,
+  KaminoObligationExistsArgs,
+  KaminoAtaExistsArgs,
+  KaminoInstrumentAccountsExistArgs,
+  GetKaminoClientStateArgs,
+  GetKaminoClientStateFromBuffersArgs,
+  KaminoContext,
+  KaminoReserveInfo,
+  KaminoLookupTableAddressesResponse,
+  KaminoInstrumentAccountsExistResponse,
+  KaminoClientStateResponse,
   LogMessage,
   DepositArgsSchema,
   WithdrawArgsSchema,
@@ -79,6 +95,17 @@ import {
   VmAddWithdrawalAddressArgsSchema,
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
+  KaminoReserveByMintArgsSchema,
+  GetKaminoContextArgsSchema,
+  KaminoInitInstrumentArgsSchema,
+  KaminoInitObligationArgsSchema,
+  KaminoChangePositionArgsSchema,
+  KaminoLookupTableAddressesArgsSchema,
+  KaminoObligationExistsArgsSchema,
+  KaminoAtaExistsArgsSchema,
+  KaminoInstrumentAccountsExistArgsSchema,
+  GetKaminoClientStateArgsSchema,
+  GetKaminoClientStateFromBuffersArgsSchema,
   InstrIdSchema,
   GetClientSpotOrdersInfoArgsSchema,
   GetClientPerpOrdersInfoArgsSchema,
@@ -89,7 +116,17 @@ import {
   Instruction,
 } from '../types';
 import { AccountType } from '../types/enums';
-import { VERSION, PROGRAM_ID, MARKET_DEPTH, dec, lpDec, feeRateStep, poolRatioStep, setDecimals } from '../constants';
+import {
+  VERSION,
+  PROGRAM_ID,
+  MAIN_KAMINO_MARKET,
+  MARKET_DEPTH,
+  dec,
+  lpDec,
+  feeRateStep,
+  poolRatioStep,
+  setDecimals,
+} from '../constants';
 import {
   BaseCrncyRecordModel,
   ClientPrimaryAccountHeaderModel,
@@ -98,6 +135,7 @@ import {
   LineQuotesModel,
   RootStateModel,
   TokenStateModel,
+  VmFlag,
 } from '../structure_models';
 
 import { decodeTransactionLogs } from './logs-decoder';
@@ -163,6 +201,24 @@ import {
   buildVmRemoveWithdrawalAddressInstruction,
   buildVmDirectWithdrawInstruction,
 } from './vm-instructions';
+import {
+  buildKaminoChangePositionInstruction,
+  buildKaminoContext,
+  buildKaminoInitInstrumentInstruction,
+  buildKaminoInitObligationInstruction,
+  buildVmAddKaminoInstruction,
+  buildVmRemoveKaminoInstruction,
+  findKaminoReserveByMint,
+  getKaminoClientState as getKaminoClientStateFn,
+  getKaminoClientStateFromData,
+  kaminoAtaExists as kaminoAtaExistsFn,
+  kaminoInstrumentAccountsExist as kaminoInstrumentAccountsExistFn,
+  kaminoLookupTableAddresses as kaminoLookupTableAddressesFn,
+  kaminoMarketLut as kaminoMarketLutFn,
+  kaminoObligationExists as kaminoObligationExistsFn,
+  loadKaminoReserve,
+  refreshKaminoContextReserveData,
+} from './kamino-instructions';
 
 type Address = SolanaAddress<string>;
 
@@ -190,6 +246,9 @@ export class Engine {
   drvsAuthority: Address;
   clientPrimaryAccount: Address | null = null;
   clientCommunityAccount: Address | null = null;
+  clientVmActive: boolean = false;
+  private kaminoReserveAddressesByMarketMint = new Map<string, Address>();
+  private kaminoContextsByClientInstrMarket = new Map<string, KaminoContext>();
 
   private rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
   private signer: Address | null = null;
@@ -272,6 +331,38 @@ export class Engine {
     };
   }
 
+  private getKaminoInstructionContext() {
+    if (this.signer === null) {
+      throw new Error('Wallet is not connected');
+    }
+    return {
+      ...this.getAccountHelperContext(),
+      instruments: this.instruments,
+      tokens: this.tokens,
+      uiNumbers: this.uiNumbers,
+      signer: this.signer,
+      rootAccount: this.rootAccount,
+      clientPrimaryAccount: this.clientPrimaryAccount,
+      clientLutAddress: this.clientLutAddress,
+      clientVmActive: this.clientVmActive,
+      getKaminoReserveInfoByMint: this.getCachedKaminoReserveInfoByMint.bind(this),
+    };
+  }
+
+  private getKaminoServiceContext() {
+    return {
+      ...this.getAccountHelperContext(),
+      instruments: this.instruments,
+      tokens: this.tokens,
+      uiNumbers: this.uiNumbers,
+      signer: this.signer ?? this.programId,
+      rootAccount: this.rootAccount ?? this.programId,
+      clientPrimaryAccount: this.clientPrimaryAccount,
+      clientLutAddress: this.clientLutAddress,
+      clientVmActive: this.clientVmActive,
+    };
+  }
+
   private getClientQueryContext(): ClientQueryContext {
     return {
       ...this.getAccountHelperContext(),
@@ -341,6 +432,8 @@ export class Engine {
         this.signer,
       );
       this.originalClientId = clientPrimaryAccountHeaderModel.id;
+      this.clientLutAddress = clientPrimaryAccountHeaderModel.lutAddress;
+      this.clientVmActive = (clientPrimaryAccountHeaderModel.vmMask & VmFlag.active) !== 0;
       return true;
     } catch (err) {
       console.error(err);
@@ -365,6 +458,8 @@ export class Engine {
   // ============================================
 
   async initialize(): Promise<boolean> {
+    this.kaminoReserveAddressesByMarketMint.clear();
+    this.kaminoContextsByClientInstrMarket.clear();
     try {
       this.drvsAuthority = (await getProgramDerivedAddress({ programAddress: this.programId, seeds: ['ndxnt'] }))[0];
       const ctx = this.getAccountHelperContext();
@@ -460,6 +555,7 @@ export class Engine {
   }
 
   async setSigner(signer: Address) {
+    this.kaminoContextsByClientInstrMarket.clear();
     this.signer = signer;
     const clientPrimaryAccount = await findClientPrimaryAccount(
       { programId: this.programId, version: this.version },
@@ -480,6 +576,7 @@ export class Engine {
           );
           this.originalClientId = clientPrimaryAccountHeaderModel.id;
           this.clientLutAddress = clientPrimaryAccountHeaderModel.lutAddress;
+          this.clientVmActive = (clientPrimaryAccountHeaderModel.vmMask & VmFlag.active) !== 0;
           let date = Math.floor(new Date().valueOf() / 1000);
           if (date < clientPrimaryAccountHeaderModel.refProgramExpiration) {
             this.refClientPrimaryAccount = clientPrimaryAccountHeaderModel.refAddress;
@@ -507,6 +604,8 @@ export class Engine {
     if (!exists) {
       this.clientPrimaryAccount = null;
       this.originalClientId = null;
+      this.clientLutAddress = null;
+      this.clientVmActive = false;
     }
   }
 
@@ -1000,6 +1099,193 @@ export class Engine {
     const parsed = VmDirectWithdrawArgsSchema.parse(args);
     await this.requireClient();
     return buildVmDirectWithdrawInstruction(this.getVmInstructionContext(), parsed);
+  }
+
+  // ============================================
+  // KAMINO INSTRUCTIONS & SERVICES
+  // ============================================
+
+  private kaminoReserveCacheKey(args: KaminoReserveByMintArgs): string {
+    return `${args.lendingMarket ?? MAIN_KAMINO_MARKET}:${args.mint}`;
+  }
+
+  private async getCachedKaminoReserveAddressByMint(args: KaminoReserveByMintArgs): Promise<Address> {
+    const key = this.kaminoReserveCacheKey(args);
+    const cached = this.kaminoReserveAddressesByMarketMint.get(key);
+    if (cached != null) {
+      return cached;
+    }
+    const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+    const reserve = await findKaminoReserveByMint(this.getKaminoServiceContext(), {
+      mint: args.mint,
+      lendingMarket,
+    });
+    this.kaminoReserveAddressesByMarketMint.set(key, reserve.address);
+    return reserve.address;
+  }
+
+  private async getCachedKaminoReserveInfoByMint(args: KaminoReserveByMintArgs): Promise<KaminoReserveInfo> {
+    const key = this.kaminoReserveCacheKey(args);
+    const cached = this.kaminoReserveAddressesByMarketMint.get(key);
+    if (cached != null) {
+      return loadKaminoReserve(this.getKaminoServiceContext(), cached);
+    }
+    const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+    const reserve = await findKaminoReserveByMint(this.getKaminoServiceContext(), {
+      mint: args.mint,
+      lendingMarket,
+    });
+    this.kaminoReserveAddressesByMarketMint.set(key, reserve.address);
+    return reserve;
+  }
+
+  async getKaminoReserveByMint(args: KaminoReserveByMintArgs): Promise<Address> {
+    const parsed = KaminoReserveByMintArgsSchema.parse(args);
+    return this.getCachedKaminoReserveAddressByMint(parsed);
+  }
+
+  private kaminoContextCacheKey(args: GetKaminoContextArgs): string {
+    if (this.clientPrimaryAccount == null) {
+      throw new Error('Client primary account not found');
+    }
+    return `${this.clientPrimaryAccount}:${args.instrId}:${args.lendingMarket ?? MAIN_KAMINO_MARKET}`;
+  }
+
+  async refreshKaminoContext(args: GetKaminoContextArgs): Promise<KaminoContext> {
+    const parsed = GetKaminoContextArgsSchema.parse(args);
+    await this.requireClient();
+    const kaminoCtx = await buildKaminoContext(this.getKaminoInstructionContext(), parsed);
+    this.kaminoContextsByClientInstrMarket.set(this.kaminoContextCacheKey(parsed), kaminoCtx);
+    return kaminoCtx;
+  }
+
+  private async getCachedKaminoContext(args: GetKaminoContextArgs): Promise<KaminoContext> {
+    await this.requireClient();
+    const cached = this.kaminoContextsByClientInstrMarket.get(this.kaminoContextCacheKey(args));
+    if (cached != null) {
+      return cached;
+    }
+    return this.refreshKaminoContext(args);
+  }
+
+  private async requireCachedKaminoContext(args: GetKaminoContextArgs): Promise<KaminoContext> {
+    await this.requireClient();
+    const cached = this.kaminoContextsByClientInstrMarket.get(this.kaminoContextCacheKey(args));
+    if (cached == null) {
+      throw new Error('Kamino context cache is empty; call refreshKaminoContext first');
+    }
+    return cached;
+  }
+
+  async vmAddKaminoInstruction(args: VmFinalizeActivateArgs): Promise<Instruction> {
+    const parsed = VmFinalizeActivateArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmAddKaminoInstruction(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async vmRemoveKaminoInstruction(args: VmFinalizeActivateArgs): Promise<Instruction> {
+    const parsed = VmFinalizeActivateArgsSchema.parse(args);
+    await this.requireClient();
+    return buildVmRemoveKaminoInstruction(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async kaminoInitObligationInstruction(args: KaminoInitObligationArgs = {}): Promise<Instruction> {
+    const parsed = KaminoInitObligationArgsSchema.parse(args);
+    await this.requireClient();
+    return buildKaminoInitObligationInstruction(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async kaminoInitInstrumentInstruction(args: KaminoInitInstrumentArgs): Promise<Instruction> {
+    const parsed = KaminoInitInstrumentArgsSchema.parse(args);
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return buildKaminoInitInstrumentInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  async kaminoChangePositionInstruction(args: KaminoChangePositionArgs): Promise<Instruction> {
+    const parsed = KaminoChangePositionArgsSchema.parse(args);
+    await this.requireClient();
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return buildKaminoChangePositionInstruction(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  kaminoMarketLut(lendingMarket?: Address): Address | null {
+    return kaminoMarketLutFn(lendingMarket);
+  }
+
+  async kaminoLookupTableAddresses(args: KaminoLookupTableAddressesArgs): Promise<KaminoLookupTableAddressesResponse> {
+    const parsed = KaminoLookupTableAddressesArgsSchema.parse(args);
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return kaminoLookupTableAddressesFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  async kaminoObligationExists(args: KaminoObligationExistsArgs): Promise<boolean> {
+    const parsed = KaminoObligationExistsArgsSchema.parse(args);
+    await this.requireClient();
+    return kaminoObligationExistsFn(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async kaminoAtaExists(args: KaminoAtaExistsArgs): Promise<boolean> {
+    const parsed = KaminoAtaExistsArgsSchema.parse(args);
+    await this.requireClient();
+    return kaminoAtaExistsFn(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async kaminoInstrumentAccountsExist(
+    args: KaminoInstrumentAccountsExistArgs,
+  ): Promise<KaminoInstrumentAccountsExistResponse> {
+    const parsed = KaminoInstrumentAccountsExistArgsSchema.parse(args);
+    await this.requireClient();
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return kaminoInstrumentAccountsExistFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  async getKaminoClientState(args: GetKaminoClientStateArgs): Promise<KaminoClientStateResponse> {
+    const parsed = GetKaminoClientStateArgsSchema.parse(args);
+    const kaminoCtx = await this.refreshKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return getKaminoClientStateFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  async getCachedKaminoClientState(args: GetKaminoClientStateArgs): Promise<KaminoClientStateResponse> {
+    const parsed = GetKaminoClientStateArgsSchema.parse(args);
+    const kaminoCtx = await this.getCachedKaminoContext({
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    });
+    return getKaminoClientStateFn(this.getKaminoInstructionContext(), parsed, kaminoCtx);
+  }
+
+  async getKaminoClientStateFromBuffers(args: GetKaminoClientStateFromBuffersArgs): Promise<KaminoClientStateResponse> {
+    const parsed = GetKaminoClientStateFromBuffersArgsSchema.parse(args);
+    const cacheArgs = {
+      instrId: parsed.instrId,
+      lendingMarket: parsed.lendingMarket,
+    };
+    const cachedContext = await this.requireCachedKaminoContext(cacheArgs);
+    const kaminoCtx = await refreshKaminoContextReserveData(this.getKaminoInstructionContext(), cachedContext, {
+      collateralReserveData: parsed.collateralReserveData,
+      debtReserveData: parsed.debtReserveData,
+    });
+    this.kaminoContextsByClientInstrMarket.set(this.kaminoContextCacheKey(cacheArgs), kaminoCtx);
+    return getKaminoClientStateFromData({
+      obligation: parsed.obligation ?? kaminoCtx.obligation,
+      obligationData: parsed.obligationData,
+      context: kaminoCtx,
+    });
   }
 
   // ============================================

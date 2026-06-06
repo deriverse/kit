@@ -20,6 +20,7 @@ export enum LogType {
   changedPoints = 34,
   moveSpot = 32,
   vmDirectWithdraw = 47,
+  kaminoChangePosition = 48,
   perpDeposit = 3,
   perpWithdraw = 4,
   spotLpTrade = 7,
@@ -47,6 +48,46 @@ export enum LogType {
   swapOrder = 31,
   swapFees = 35,
   perpLossCoverage = 46,
+}
+
+export class KaminoChangePositionReportModel {
+  static readonly LENGTH = 2 * 1 + 1 * 2 + 5 * 4 + 3 * 8; // 48 bytes
+
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_ASSETS_IS_COLLATERAL = 1;
+  static readonly OFFSET_SEQ_NO = 8;
+  static readonly OFFSET_CLIENT_ID = 12;
+  static readonly OFFSET_INSTR_ID = 16;
+  static readonly OFFSET_TIME = 20;
+  static readonly OFFSET_BORROW_DELTA = 24;
+  static readonly OFFSET_COLLATERAL_DELTA = 32;
+  static readonly OFFSET_CUSTOM_ID = 40;
+
+  tag: number;
+  assetsIsCollateral: number;
+  seqNo: number;
+  clientId: number;
+  instrId: number;
+  time: number;
+  borrowDelta: number;
+  collateralDelta: number;
+  customId: number;
+  static fromBuffer(buffer: Buffer, offset?: number): KaminoChangePositionReportModel {
+    const result = new KaminoChangePositionReportModel();
+    let autoBuffer = new AutoBuffer(buffer, offset);
+    result.tag = autoBuffer.readU8();
+    result.assetsIsCollateral = autoBuffer.readU8();
+    autoBuffer.readU16();
+    autoBuffer.readU32();
+    result.seqNo = autoBuffer.readU32();
+    result.clientId = autoBuffer.readU32();
+    result.instrId = autoBuffer.readU32();
+    result.time = autoBuffer.readU32();
+    result.borrowDelta = autoBuffer.readI64();
+    result.collateralDelta = autoBuffer.readI64();
+    result.customId = autoBuffer.readI64();
+    return result;
+  }
 }
 
 export class PerpLossCoverageReportModel {
@@ -1480,4 +1521,3 @@ export class VmDirectWithdrawReportModel {
     return result;
   }
 }
-

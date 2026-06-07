@@ -378,11 +378,12 @@ const KaminoLookupTableAddressesArgsSchema = z.object({
   lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
 });
 
-const KaminoObligationExistsArgsSchema = z.object({
-  instrId: nonNegativeInt.optional().meta({ description: 'Instrument ID' }),
-  lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
-  obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
-});
+const KaminoObligationExistsArgsSchema = z
+  .object({
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    obligation: solanaAddress.optional().meta({ description: 'Kamino obligation address' }),
+  })
+  .strict();
 
 const KaminoAtaExistsArgsSchema = z.object({
   mint: solanaAddress.meta({ description: 'Token mint' }),

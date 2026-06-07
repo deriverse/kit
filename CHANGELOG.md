@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.0.61] - 2026-06-07
+
+### Added
+
+- **Kamino init instrument**: Added unified `kaminoInitInstrumentInstruction({ instrId, lendingMarket? })` for the new `protocol-v1` `kamino_init_instrument` instruction.
+- **Kamino account checks**: Added `kaminoInstrumentAccountsExist({ instrId, lendingMarket? })` to check required init-instrument accounts except obligation.
+- **Kamino logs**: Added `KaminoChangePositionReportModel` and `logsDecode` support for `LogType.kaminoChangePosition = 48`.
+
+### Changed
+
+- **Kamino init obligation**: `kaminoInitObligationInstruction` no longer requires `instrId` and no longer builds full Kamino instrument context.
+- **Kamino init flow**: Replaced split token-account/farm init builders with the unified `kamino_init_instrument` flow.
+
+### Removed
+
+- **Kamino args cleanup**: Removed unused `instrId` from `KaminoObligationExistsArgs`.
+- **Kamino split init API**: Removed `kaminoInitTokenAccountsInstruction`, `kaminoInitObligationFarmsInstruction`, and the old ATA-only `kaminoInstrumentAtasExist` API.
+
+## [1.0.60] - 2026-06-06
+
+### Added
+
+- **Kamino support**: Added Kamino instruction builders through Deriverse `protocol-v1` instructions, including VM add/remove, obligation init, token account init, obligation farms init, and change-position.
+- **Kamino context services**: Added reserve auto-discovery by instrument mints, reserve-address caching, client/instrument/market context caching, ALT discovery, obligation checks, ATA checks, and client state visualization.
+- **Kamino websocket state**: Added `getKaminoClientStateFromBuffers` for refreshing client state from reserve and obligation accountSubscribe buffers without reserve/obligation RPC reads.
+
+### Changed
+
+- **Kamino reserve flow**: Removed manual reserve account inputs from the public flow; reserves are derived from instrument `assetMint` and `crncyMint`.
+- **Kamino context refresh**: Replaced public `getKaminoContext` with `refreshKaminoContext` and cache-first methods for instruction builders and cached state reads.
+
 ## [1.0.57] - 2026-04-27
 
 ### Added

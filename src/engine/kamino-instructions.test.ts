@@ -103,13 +103,6 @@ function reserveBuffer(args: {
   return buffer;
 }
 
-function userMetadataBuffer(lut: Address): Buffer {
-  const buffer = Buffer.alloc(1024);
-  Buffer.from([157, 214, 220, 235, 98, 135, 171, 28]).copy(buffer, 0);
-  writeAddress(buffer, 48, lut);
-  return buffer;
-}
-
 function obligationBuffer(): Buffer {
   const buffer = Buffer.alloc(2400);
   Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]).copy(buffer, 0);
@@ -396,16 +389,12 @@ describe('Kamino context and services', () => {
     expect(result.allExist).toBe(false);
   });
 
-  it('deduplicates ALT discovery and unpacks user metadata LUT', async () => {
-    const rpc = mockRpc({
-      accountInfo: new Map([
-        [USER_METADATA, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(userMetadataBuffer(CLIENT_LUT)) } }],
-      ]),
-    });
+  it('deduplicates ALT discovery without treating Kamino user metadata as a LUT', async () => {
+    const rpc = mockRpc();
     const result = await kaminoLookupTableAddresses(context(rpc), { instrId: 1 }, fakeKaminoContext());
 
     expect(result.marketLut).toBe(MAIN_KAMINO_MARKET_LUT);
-    expect(result.userLookupTable).toBe(CLIENT_LUT);
+    expect(result.userLookupTable).toBeNull();
     expect(result.all).toEqual([MAIN_KAMINO_MARKET_LUT, INSTR_LUT]);
   });
 

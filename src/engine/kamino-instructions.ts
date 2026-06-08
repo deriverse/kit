@@ -64,7 +64,6 @@ const SYSVAR_INSTRUCTIONS = 'Sysvar1nstructions1111111111111111111111111' as Add
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
 const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
-const USER_METADATA_DISCRIMINATOR = Buffer.from([157, 214, 220, 235, 98, 135, 171, 28]);
 
 const RESERVE_LENDING_MARKET_OFFSET = 32;
 const RESERVE_FARM_COLLATERAL_OFFSET = 64;
@@ -86,8 +85,6 @@ const RESERVE_SCOPE_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 80;
 const RESERVE_SWITCHBOARD_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 128;
 const RESERVE_SWITCHBOARD_TWAP_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 160;
 const RESERVE_PYTH_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 192;
-
-const USER_METADATA_LOOKUP_TABLE_OFFSET = 48;
 
 const OBLIGATION_OWNER_OFFSET = 64;
 const OBLIGATION_DEPOSITS_OFFSET = 96;
@@ -835,40 +832,20 @@ function instrumentLut(instr: Instrument): Address | null {
   return lut == null || isDefaultAddress(lut) ? null : lut;
 }
 
-export async function getKaminoUserLookupTable(
-  ctx: KaminoInstructionContext,
-  userMetadata: Address,
-): Promise<Address | null> {
-  const info = await ctx.rpc.getAccountInfo(userMetadata, { commitment: ctx.commitment, encoding: 'base64' }).send();
-  if (info.value == null || accountOwner(info.value) !== KLEND_PROGRAM_ID) {
-    return null;
-  }
-  const buffer = dataToBuffer(info.value.data);
-  if (
-    buffer.length < USER_METADATA_LOOKUP_TABLE_OFFSET + 32 ||
-    !buffer.subarray(0, 8).equals(USER_METADATA_DISCRIMINATOR)
-  ) {
-    return null;
-  }
-  const lut = readAddress(buffer, USER_METADATA_LOOKUP_TABLE_OFFSET);
-  return isDefaultAddress(lut) ? null : lut;
-}
-
 export async function kaminoLookupTableAddresses(
   ctx: KaminoInstructionContext,
   args: KaminoLookupTableAddressesArgs,
-  kaminoCtx: KaminoContext,
+  _kaminoCtx: KaminoContext,
 ): Promise<KaminoLookupTableAddressesResponse> {
   const instr = requireInstrument(ctx, args.instrId);
   const marketLut = kaminoMarketLut(args.lendingMarket);
   const clientLut = ctx.clientLutAddress;
   const instrumentLutAddress = instrumentLut(instr);
-  const userLookupTable = await getKaminoUserLookupTable(ctx, kaminoCtx.userMetadata);
+  const userLookupTable = null;
   const all: Address[] = [];
   addUniqueAddress(all, marketLut);
   addUniqueAddress(all, clientLut);
   addUniqueAddress(all, instrumentLutAddress);
-  addUniqueAddress(all, userLookupTable);
   return {
     marketLut,
     clientLut,

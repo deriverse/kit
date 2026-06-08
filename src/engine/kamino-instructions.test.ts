@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AccountRole, Address, getAddressEncoder } from '@solana/kit';
+import { AccountRole, Address, Base64EncodedDataResponse, getAddressEncoder } from '@solana/kit';
 import { Buffer } from 'buffer';
 import fs from 'fs';
 import path from 'path';
@@ -21,6 +21,7 @@ import {
   buildKaminoInitInstrumentInstruction,
   buildKaminoInitObligationInstruction,
   buildKaminoUpdateObligationsInstruction,
+  decodeKaminoReserveData,
   buildVmAddKaminoInstruction,
   buildVmRemoveKaminoInstruction,
   getKaminoClientState,
@@ -54,8 +55,8 @@ const USER_METADATA = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const VM_ACCOUNT = 'SysvarRent111111111111111111111111111111111' as Address;
 
-function dataResponse(buffer: Buffer): [string, 'base64'] {
-  return [buffer.toString('base64'), 'base64'];
+function dataResponse(buffer: Buffer): Base64EncodedDataResponse {
+  return [buffer.toString('base64'), 'base64'] as unknown as Base64EncodedDataResponse;
 }
 
 function writeAddress(buffer: Buffer, offset: number, value: Address): void {
@@ -93,7 +94,8 @@ function reserveBuffer(args: {
   buffer.writeBigUInt64LE(BigInt(args.mintDecimals ?? 9), 272);
   writeAddress(buffer, 408, args.tokenProgram ?? TOKEN_PROGRAM_ID);
   writeAddress(buffer, 2560, 'AddressLookupTab1e1111111111111111111111111' as Address);
-  writeAddress(buffer, 2592, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
+  buffer.writeBigUInt64LE(BigInt(123_456), 2592);
+  writeAddress(buffer, 2600, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
   buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(args.liquidationThresholdPct ?? 80, 4856 + 17);
   buffer.writeBigUInt64LE(BigInt(1_000_000), 4856 + 160);
@@ -158,7 +160,7 @@ function instrument(): Instrument {
 
 function mockRpc(
   args: {
-    programAccounts?: Array<{ pubkey: Address; account: { data: [string, 'base64'] } }[]>;
+    programAccounts?: Array<{ pubkey: Address; account: { data: Base64EncodedDataResponse } }[]>;
     accountInfo?: Map<Address, { value: any }>;
   } = {},
 ) {
@@ -301,6 +303,14 @@ describe('Kamino instruction data', () => {
 
     expect(ix.programAddress).toBe(KLEND_PROGRAM_ID);
     expect(ix.data).toEqual(KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR);
+  });
+});
+
+describe('Kamino reserve decoding', () => {
+  it('decodes collateral supply vault after collateral mint total supply', () => {
+    const result = decodeKaminoReserveData(COLL_RESERVE, dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })));
+
+    expect(result.collateralSupply).toBe('BPFLoaderUpgradeab1e11111111111111111111111');
   });
 });
 
@@ -713,12 +723,12 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.63', () => {
+  it('bumps package metadata to 1.0.64', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.63');
-    expect(packageLock.version).toBe('1.0.63');
-    expect(packageLock.packages[''].version).toBe('1.0.63');
+    expect(packageJson.version).toBe('1.0.64');
+    expect(packageLock.version).toBe('1.0.64');
+    expect(packageLock.packages[''].version).toBe('1.0.64');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

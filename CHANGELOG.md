@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.64] - 2026-06-08
+
+### Fixed
+
+- **Kamino reserve decoding**: Corrected the collateral supply vault offset to skip the collateral mint total supply field in KLend reserve accounts.
+
 ## [1.0.63] - 2026-06-08
 
 ### Added

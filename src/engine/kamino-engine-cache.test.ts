@@ -6,6 +6,7 @@ import { KLEND_PROGRAM_ID, MAIN_KAMINO_MARKET, TOKEN_PROGRAM_ID } from '../const
 import { InstrAccountHeaderModel, RootStateModel, TokenStateModel } from '../structure_models';
 import { Instrument } from '../types';
 import { Engine } from './index';
+import { vanillaObligationPda } from './kamino-instructions';
 
 const encoder = getAddressEncoder();
 
@@ -188,6 +189,27 @@ function reserveAccountInfo(lendingMarket?: Address): Map<Address, { value: any 
 }
 
 describe('Engine Kamino reserve and context cache', () => {
+  it('builds update-obligations instruction through Engine without instrId', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const accountInfo = new Map<Address, { value: any }>([
+      [obligation, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligationBuffer()) } }],
+    ]);
+    const engine = setupEngine(mockRpc({ accountInfo }));
+
+    const ix = await engine.kaminoUpdateObligationsInstruction();
+
+    expect(ix.programAddress).toBe(KLEND_PROGRAM_ID);
+    expect(ix.accounts!.map((account) => account.address)).toEqual([
+      MAIN_KAMINO_MARKET,
+      obligation,
+      COLL_RESERVE,
+      DEBT_RESERVE,
+    ]);
+  });
+
   it('caches getKaminoReserveByMint by default market and mint', async () => {
     const rpc = mockRpc({
       programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)]],
@@ -543,9 +565,9 @@ describe('Engine Kamino reserve and context cache', () => {
 
     await engine.getKaminoReserveByMint({ mint: ASSET_MINT });
 
-    await expect(
-      engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS),
-    ).rejects.toThrow(/Collateral reserve liquidity mint/);
+    await expect(engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS)).rejects.toThrow(
+      /Collateral reserve liquidity mint/,
+    );
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(1);
   });
 });

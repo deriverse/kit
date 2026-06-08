@@ -31,6 +31,7 @@ import {
   KaminoReserveByMintArgs,
   KaminoReserveContext,
   KaminoReserveInfo,
+  KaminoUpdateObligationsArgs,
   VmFinalizeActivateArgs,
 } from '../types';
 import {
@@ -57,6 +58,7 @@ import {
 export const KAMINO_REPAY_ALL_FLAG = 1;
 export const KAMINO_WITHDRAW_ALL_FLAG = 2;
 export const KAMINO_KEEP_OBLIGATION_ALIVE_FLAG = 4;
+export const KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR = Buffer.from([33, 132, 147, 228, 151, 192, 72, 89]);
 
 const NULL_ADDRESS = '11111111111111111111111111111111' as Address;
 const SYSVAR_RENT = 'SysvarRent111111111111111111111111111111111' as Address;
@@ -703,6 +705,57 @@ export async function buildKaminoInitObligationInstruction(
   };
 }
 
+function requireValidObligationBuffer(
+  obligation: Address,
+  info: { owner?: Address; programAddress?: Address; data: Base64EncodedDataResponse },
+): Buffer {
+  const buffer = dataToBuffer(info.data);
+  if (
+    accountOwner(info) !== KLEND_PROGRAM_ID ||
+    buffer.length < OBLIGATION_UNHEALTHY_BORROW_VALUE_SF_OFFSET + 16 ||
+    !buffer.subarray(0, 8).equals(OBLIGATION_DISCRIMINATOR)
+  ) {
+    throw new Error(`Invalid Kamino obligation layout: ${obligation}`);
+  }
+  return buffer;
+}
+
+function kaminoObligationReserveAccounts(buffer: Buffer): Address[] {
+  const reserves: Address[] = [];
+  for (let i = 0; i < 8; i++) {
+    addUniqueAddress(reserves, readAddress(buffer, OBLIGATION_DEPOSITS_OFFSET + i * OBLIGATION_COLLATERAL_SIZE));
+  }
+  for (let i = 0; i < 5; i++) {
+    addUniqueAddress(reserves, readAddress(buffer, OBLIGATION_BORROWS_OFFSET + i * OBLIGATION_LIQUIDITY_SIZE));
+  }
+  return reserves;
+}
+
+export async function buildKaminoUpdateObligationsInstruction(
+  ctx: KaminoInstructionContext,
+  args: KaminoUpdateObligationsArgs = {},
+): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimary(ctx);
+  const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+  const obligation = await vanillaObligationPda({ owner: clientPrimaryAccount, lendingMarket });
+  const accounts = [
+    { address: lendingMarket, role: AccountRole.READONLY },
+    { address: obligation, role: AccountRole.WRITABLE },
+  ];
+  const info = await ctx.rpc.getAccountInfo(obligation, { commitment: ctx.commitment, encoding: 'base64' }).send();
+  if (info.value != null) {
+    const buffer = requireValidObligationBuffer(obligation, info.value);
+    for (const reserve of kaminoObligationReserveAccounts(buffer)) {
+      accounts.push({ address: reserve, role: AccountRole.WRITABLE });
+    }
+  }
+  return {
+    accounts,
+    programAddress: KLEND_PROGRAM_ID,
+    data: KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR,
+  };
+}
+
 function kaminoChangeFlags(args: KaminoChangePositionArgs): number {
   let flags = 0;
   if (args.repayAll) flags |= KAMINO_REPAY_ALL_FLAG;
@@ -841,6 +894,7 @@ export async function kaminoLookupTableAddresses(
   args: KaminoLookupTableAddressesArgs,
   _kaminoCtx: KaminoContext,
 ): Promise<KaminoLookupTableAddressesResponse> {
+  void _kaminoCtx;
   const instr = requireInstrument(ctx, args.instrId);
   const marketLut = kaminoMarketLut(args.lendingMarket);
   const clientLut = ctx.clientLutAddress;

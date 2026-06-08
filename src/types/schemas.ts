@@ -330,6 +330,12 @@ const KaminoInitObligationArgsSchema = z
   })
   .strict();
 
+const KaminoUpdateObligationsArgsSchema = z
+  .object({
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
 const KaminoChangePositionArgsSchema = z
   .object({
     instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
@@ -465,6 +471,7 @@ export {
   GetKaminoContextArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
+  KaminoUpdateObligationsArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,

@@ -10,6 +10,7 @@ import {
   KaminoInitObligationArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoObligationExistsArgsSchema,
+  KaminoUpdateObligationsArgsSchema,
   GetKaminoClientStateArgsSchema,
 } from './schemas';
 
@@ -121,6 +122,14 @@ describe('Zod Schemas', () => {
       expect(KaminoInitInstrumentArgsSchema.safeParse({ instrId: 1, side: 0, reserve: ADDRESS }).success).toBe(false);
       expect(KaminoObligationExistsArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
       expect(GetKaminoClientStateArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
+      expect(KaminoUpdateObligationsArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
+      expect(KaminoUpdateObligationsArgsSchema.safeParse({ obligation: ADDRESS }).success).toBe(false);
+      expect(KaminoUpdateObligationsArgsSchema.safeParse({ reserveAccounts: [ADDRESS] }).success).toBe(false);
+    });
+
+    it('accepts only optional lendingMarket for update-obligations args', () => {
+      expect(KaminoUpdateObligationsArgsSchema.safeParse({}).success).toBe(true);
+      expect(KaminoUpdateObligationsArgsSchema.safeParse({ lendingMarket: ADDRESS }).success).toBe(true);
     });
 
     it('rejects extraReserves in change-position args', () => {

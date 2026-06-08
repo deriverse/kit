@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.63] - 2026-06-08
+
+### Added
+
+- **Kamino update obligations**: Added `kaminoUpdateObligationsInstruction({ lendingMarket? })` to build the KLend `refreshObligation` instruction by deriving the obligation PDA and reserve accounts automatically.
+
 ## [1.0.62] - 2026-06-08
 
 ### Changed

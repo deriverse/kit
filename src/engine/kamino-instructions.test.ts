@@ -426,7 +426,7 @@ describe('Kamino account order', () => {
     const kctx = fakeKaminoContext();
     const ix = await buildKaminoChangePositionInstruction(
       ctx,
-      { instrId: 1, collateralDelta: 1, borrowDelta: -2 },
+      { instrId: 1, assetIsCollateral: true, collateralDelta: 1, borrowDelta: -2 },
       kctx,
     );
 
@@ -443,7 +443,76 @@ describe('Kamino account order', () => {
       COLL_RESERVE,
     ]);
     expect(ix.accounts![0].role).toBe(AccountRole.WRITABLE_SIGNER);
+    expect(ix.accounts![4].role).toBe(AccountRole.WRITABLE);
     expect(ix.accounts![ix.accounts!.length - 2].address).toBe(KLEND_PROGRAM_ID);
+  });
+
+  it('swaps change-position reserve clusters when asset is the debt side', async () => {
+    const ctx = context();
+    const assetCollateralFarm = 'AssetCollFarm111111111111111111111111' as Address;
+    const assetLiquidityFarm = 'AssetLiqFarm1111111111111111111111111' as Address;
+    const crncyCollateralFarm = 'CrncyCollFarm111111111111111111111111' as Address;
+    const crncyLiquidityFarm = 'CrncyLiqFarm1111111111111111111111111' as Address;
+    const kctx = fakeKaminoContext(null, {
+      assetCollateral: assetCollateralFarm,
+      assetLiquidity: assetLiquidityFarm,
+      crncyCollateral: crncyCollateralFarm,
+      crncyLiquidity: crncyLiquidityFarm,
+    });
+    (kctx.collateralReserve as any).oracles = {
+      pyth: 'AssetPyth1111111111111111111111111111' as Address,
+      switchboardPrice: 'AssetSbPrice111111111111111111111111' as Address,
+      switchboardTwap: 'AssetSbTwap1111111111111111111111111' as Address,
+      scope: 'AssetScope11111111111111111111111111' as Address,
+    };
+    (kctx.debtReserve as any).oracles = {
+      pyth: 'CrncyPyth1111111111111111111111111111' as Address,
+      switchboardPrice: 'CrncySbPrice111111111111111111111111' as Address,
+      switchboardTwap: 'CrncySbTwap1111111111111111111111111' as Address,
+      scope: 'CrncyScope11111111111111111111111111' as Address,
+    };
+
+    const ix = await buildKaminoChangePositionInstruction(
+      ctx,
+      { instrId: 1, assetIsCollateral: false, collateralDelta: 1, borrowDelta: -2 },
+      kctx,
+    );
+    const addresses = ix.accounts!.map((account) => account.address);
+
+    expect(addresses.slice(8, 24)).toEqual([
+      DEBT_RESERVE,
+      CRNCY_MINT,
+      kctx.debtReserve.liquiditySupply,
+      kctx.debtReserve.collateralMint,
+      kctx.debtReserve.collateralSupply,
+      kctx.debtReserve.clientAta,
+      kctx.debtReserve.vault,
+      kctx.debtReserve.tokenProgram,
+      kctx.debtReserve.tokenProgram,
+      COLL_RESERVE,
+      ASSET_MINT,
+      kctx.collateralReserve.liquiditySupply,
+      kctx.collateralReserve.feeVault,
+      kctx.collateralReserve.clientAta,
+      kctx.collateralReserve.vault,
+      kctx.collateralReserve.tokenProgram,
+    ]);
+    expect(addresses.slice(24, 32)).toEqual([
+      kctx.debtReserve.oracles.pyth,
+      kctx.debtReserve.oracles.switchboardPrice,
+      kctx.debtReserve.oracles.switchboardTwap,
+      kctx.debtReserve.oracles.scope,
+      kctx.collateralReserve.oracles.pyth,
+      kctx.collateralReserve.oracles.switchboardPrice,
+      kctx.collateralReserve.oracles.switchboardTwap,
+      kctx.collateralReserve.oracles.scope,
+    ]);
+    expect(addresses.slice(32, 36)).toEqual([
+      `${crncyCollateralFarm}Obl` as Address,
+      crncyCollateralFarm,
+      `${assetLiquidityFarm}Obl` as Address,
+      assetLiquidityFarm,
+    ]);
   });
 
   it('inserts client VM account in the processor position when VM is active', async () => {
@@ -451,7 +520,7 @@ describe('Kamino account order', () => {
     const kctx = fakeKaminoContext(VM_ACCOUNT);
     const ix = await buildKaminoChangePositionInstruction(
       ctx,
-      { instrId: 1, collateralDelta: 1, borrowDelta: 0 },
+      { instrId: 1, assetIsCollateral: true, collateralDelta: 1, borrowDelta: 0 },
       kctx,
     );
 
@@ -549,12 +618,12 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.61', () => {
+  it('bumps package metadata to 1.0.62', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.61');
-    expect(packageLock.version).toBe('1.0.61');
-    expect(packageLock.packages[''].version).toBe('1.0.61');
+    expect(packageJson.version).toBe('1.0.62');
+    expect(packageLock.version).toBe('1.0.62');
+    expect(packageLock.packages[''].version).toBe('1.0.62');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

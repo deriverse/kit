@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.62] - 2026-06-08
+
+### Changed
+
+- **Kamino change position**: Added required `assetIsCollateral` to `kaminoChangePositionInstruction` args and use it to select collateral/debt reserve ordering, delta scaling, oracle ordering, and farm slots.
+- **Kamino change position accounts**: Marked the instrument account writable for `kaminoChangePositionInstruction`.
+
 ## [1.0.61] - 2026-06-07
 
 ### Added

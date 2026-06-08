@@ -23,6 +23,12 @@ const ALT_MARKET = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const OTHER_CLIENT_PRIMARY = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'SysvarRent111111111111111111111111111111111' as Address;
 const OBLIGATION_OVERRIDE = 'Sysvar1nstructions1111111111111111111111111' as Address;
+const CHANGE_POSITION_ARGS = {
+  instrId: 1,
+  assetIsCollateral: true,
+  collateralDelta: 1,
+  borrowDelta: 0,
+};
 
 function dataResponse(buffer: Buffer): Base64EncodedDataResponse {
   return [buffer.toString('base64'), 'base64'] as unknown as Base64EncodedDataResponse;
@@ -248,8 +254,8 @@ describe('Engine Kamino reserve and context cache', () => {
     const engine = setupEngine(rpc);
 
     await engine.refreshKaminoContext({ instrId: 1 });
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
     expect(reserveReads(rpc)).toBe(0);
@@ -261,7 +267,7 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     await engine.kaminoInitInstrumentInstruction({ instrId: 1 });
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
@@ -279,7 +285,7 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     await engine.getKaminoClientState({ instrId: 1, obligation: OBLIGATION });
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
@@ -318,7 +324,7 @@ describe('Engine Kamino reserve and context cache', () => {
     const engine = setupEngine(rpc);
 
     const result = await engine.getCachedKaminoClientState({ instrId: 1, obligation: OBLIGATION });
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(result.exists).toBe(true);
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
@@ -342,7 +348,7 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     const result = await engine.getCachedKaminoClientState({
       instrId: 1,
       lendingMarket: ALT_MARKET,
@@ -458,9 +464,9 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     engine.clientPrimaryAccount = OTHER_CLIENT_PRIMARY;
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
     expect(reserveReads(rpc)).toBe(2);
@@ -477,14 +483,12 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     await engine.kaminoChangePositionInstruction({
-      instrId: 1,
-      collateralDelta: 1,
-      borrowDelta: 0,
+      ...CHANGE_POSITION_ARGS,
       lendingMarket: ALT_MARKET,
     });
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(4);
     expect(reserveReads(rpc)).toBe(0);
@@ -501,9 +505,9 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     await engine.initialize();
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(4);
   });
@@ -515,11 +519,11 @@ describe('Engine Kamino reserve and context cache', () => {
     });
     const engine = setupEngine(rpc);
 
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
     await engine.setSigner(SIGNER);
     engine.clientPrimaryAccount = CLIENT_PRIMARY;
     engine.clientLutAddress = CLIENT_LUT;
-    await engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 });
+    await engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS);
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
     expect(reserveReads(rpc)).toBe(2);
@@ -540,7 +544,7 @@ describe('Engine Kamino reserve and context cache', () => {
     await engine.getKaminoReserveByMint({ mint: ASSET_MINT });
 
     await expect(
-      engine.kaminoChangePositionInstruction({ instrId: 1, collateralDelta: 1, borrowDelta: 0 }),
+      engine.kaminoChangePositionInstruction(CHANGE_POSITION_ARGS),
     ).rejects.toThrow(/Collateral reserve liquidity mint/);
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(1);
   });

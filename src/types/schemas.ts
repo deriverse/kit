@@ -333,6 +333,9 @@ const KaminoInitObligationArgsSchema = z
 const KaminoChangePositionArgsSchema = z
   .object({
     instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    assetIsCollateral: z
+      .boolean()
+      .meta({ description: 'Whether the instrument asset mint is the Kamino collateral side' }),
     collateralDelta: signedAmount.meta({ description: 'Signed collateral change' }),
     borrowDelta: signedAmount.meta({ description: 'Signed borrow change' }),
     customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),

@@ -126,12 +126,39 @@ describe('Zod Schemas', () => {
     it('rejects extraReserves in change-position args', () => {
       const result = KaminoChangePositionArgsSchema.safeParse({
         instrId: 1,
+        assetIsCollateral: true,
         collateralDelta: 0,
         borrowDelta: 0,
         extraReserves: [ADDRESS],
       });
 
       expect(result.success).toBe(false);
+    });
+
+    it('requires explicit assetIsCollateral in change-position args', () => {
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          collateralDelta: 0,
+          borrowDelta: 0,
+        }).success,
+      ).toBe(false);
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: true,
+          collateralDelta: 0,
+          borrowDelta: 0,
+        }).success,
+      ).toBe(true);
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: false,
+          collateralDelta: 0,
+          borrowDelta: 0,
+        }).success,
+      ).toBe(true);
     });
   });
 });

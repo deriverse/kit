@@ -742,8 +742,12 @@ export async function buildKaminoChangePositionInstruction(
 ): Promise<Instruction> {
   validateChangeFlags(args);
   const instr = requireInstrument(ctx, args.instrId);
-  const collateralDelta = args.collateralDelta * tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers);
-  const borrowDelta = args.borrowDelta * tokenDec(ctx.tokens, instr.header.crncyTokenId, ctx.uiNumbers);
+  const collateralReserve = args.assetIsCollateral ? kaminoCtx.collateralReserve : kaminoCtx.debtReserve;
+  const debtReserve = args.assetIsCollateral ? kaminoCtx.debtReserve : kaminoCtx.collateralReserve;
+  const collateralTokenId = args.assetIsCollateral ? instr.header.assetTokenId : instr.header.crncyTokenId;
+  const debtTokenId = args.assetIsCollateral ? instr.header.crncyTokenId : instr.header.assetTokenId;
+  const collateralDelta = args.collateralDelta * tokenDec(ctx.tokens, collateralTokenId, ctx.uiNumbers);
+  const borrowDelta = args.borrowDelta * tokenDec(ctx.tokens, debtTokenId, ctx.uiNumbers);
 
   const accounts = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
@@ -753,45 +757,45 @@ export async function buildKaminoChangePositionInstruction(
   ];
   appendOptionalVmAccount(accounts, kaminoCtx);
   accounts.push(
-    { address: kaminoCtx.instrAccount, role: AccountRole.READONLY },
+    { address: kaminoCtx.instrAccount, role: AccountRole.WRITABLE },
     { address: kaminoCtx.obligation, role: AccountRole.WRITABLE },
     { address: kaminoCtx.lendingMarket, role: AccountRole.READONLY },
     { address: kaminoCtx.lendingMarketAuthority, role: AccountRole.READONLY },
-    { address: kaminoCtx.collateralReserve.address, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.liquidityMint, role: AccountRole.READONLY },
-    { address: kaminoCtx.collateralReserve.liquiditySupply, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.collateralMint, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.collateralSupply, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.clientAta, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.vault, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.collateralReserve.tokenProgram, role: AccountRole.READONLY },
-    { address: kaminoCtx.collateralReserve.tokenProgram, role: AccountRole.READONLY },
-    { address: kaminoCtx.debtReserve.address, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.liquidityMint, role: AccountRole.READONLY },
-    { address: kaminoCtx.debtReserve.liquiditySupply, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.feeVault, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.clientAta, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.vault, role: AccountRole.WRITABLE },
-    { address: kaminoCtx.debtReserve.tokenProgram, role: AccountRole.READONLY },
+    { address: collateralReserve.address, role: AccountRole.WRITABLE },
+    { address: collateralReserve.liquidityMint, role: AccountRole.READONLY },
+    { address: collateralReserve.liquiditySupply, role: AccountRole.WRITABLE },
+    { address: collateralReserve.collateralMint, role: AccountRole.WRITABLE },
+    { address: collateralReserve.collateralSupply, role: AccountRole.WRITABLE },
+    { address: collateralReserve.clientAta, role: AccountRole.WRITABLE },
+    { address: collateralReserve.vault, role: AccountRole.WRITABLE },
+    { address: collateralReserve.tokenProgram, role: AccountRole.READONLY },
+    { address: collateralReserve.tokenProgram, role: AccountRole.READONLY },
+    { address: debtReserve.address, role: AccountRole.WRITABLE },
+    { address: debtReserve.liquidityMint, role: AccountRole.READONLY },
+    { address: debtReserve.liquiditySupply, role: AccountRole.WRITABLE },
+    { address: debtReserve.feeVault, role: AccountRole.WRITABLE },
+    { address: debtReserve.clientAta, role: AccountRole.WRITABLE },
+    { address: debtReserve.vault, role: AccountRole.WRITABLE },
+    { address: debtReserve.tokenProgram, role: AccountRole.READONLY },
   );
-  appendOracleAccounts(accounts, kaminoCtx.collateralReserve);
-  appendOracleAccounts(accounts, kaminoCtx.debtReserve);
+  appendOracleAccounts(accounts, collateralReserve);
+  appendOracleAccounts(accounts, debtReserve);
   accounts.push(
     {
-      address: kaminoCtx.collateralReserve.obligationFarm,
-      role: reserveMetaRole(kaminoCtx.collateralReserve.hasFarm),
+      address: collateralReserve.collateralFarm.obligationFarm,
+      role: reserveMetaRole(collateralReserve.collateralFarm.hasFarm),
     },
     {
-      address: kaminoCtx.collateralReserve.reserveFarmState,
-      role: reserveMetaRole(kaminoCtx.collateralReserve.hasFarm),
+      address: collateralReserve.collateralFarm.reserveFarmState,
+      role: reserveMetaRole(collateralReserve.collateralFarm.hasFarm),
     },
     {
-      address: kaminoCtx.debtReserve.obligationFarm,
-      role: reserveMetaRole(kaminoCtx.debtReserve.hasFarm),
+      address: debtReserve.liquidityFarm.obligationFarm,
+      role: reserveMetaRole(debtReserve.liquidityFarm.hasFarm),
     },
     {
-      address: kaminoCtx.debtReserve.reserveFarmState,
-      role: reserveMetaRole(kaminoCtx.debtReserve.hasFarm),
+      address: debtReserve.liquidityFarm.reserveFarmState,
+      role: reserveMetaRole(debtReserve.liquidityFarm.hasFarm),
     },
     { address: FARMS_PROGRAM_ID, role: AccountRole.READONLY },
     { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },

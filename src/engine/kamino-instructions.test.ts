@@ -20,6 +20,7 @@ import {
   buildKaminoContext,
   buildKaminoInitInstrumentInstruction,
   buildKaminoInitObligationInstruction,
+  buildKaminoRefreshReservesInstruction,
   buildKaminoUpdateObligationsInstruction,
   decodeKaminoReserveData,
   buildVmAddKaminoInstruction,
@@ -32,6 +33,7 @@ import {
   kaminoObligationExists,
   KaminoInstructionContext,
   KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR,
+  KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR,
   userMetadataPda,
   vanillaObligationPda,
 } from './kamino-instructions';
@@ -757,6 +759,70 @@ describe('Kamino account order', () => {
     expect(ix.accounts!.slice(2).every((account) => account.role === AccountRole.WRITABLE)).toBe(true);
   });
 
+  it('builds refresh-reserves batch data with default and explicit skipPriceUpdates', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [obligation, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligationBuffer()) } }],
+        [
+          COLL_RESERVE,
+          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } },
+        ],
+        [
+          DEBT_RESERVE,
+          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } },
+        ],
+      ]),
+    });
+
+    const defaultIx = await buildKaminoRefreshReservesInstruction(context(rpc), {});
+    const skipIx = await buildKaminoRefreshReservesInstruction(context(rpc), { skipPriceUpdates: true });
+
+    expect(defaultIx.programAddress).toBe(KLEND_PROGRAM_ID);
+    expect(defaultIx.data).toEqual(Buffer.concat([KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR, Buffer.from([0])]));
+    expect(skipIx.data).toEqual(Buffer.concat([KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR, Buffer.from([1])]));
+  });
+
+  it('builds refresh-reserves batch account order from obligation reserves and reserve oracles', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const collReserveData = reserveBuffer({
+      liquidityMint: ASSET_MINT,
+      farmCollateral: FARM_COLL,
+      farmDebt: FARM_DEBT,
+    });
+    const debtReserveData = reserveBuffer({ liquidityMint: CRNCY_MINT });
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [obligation, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligationBuffer()) } }],
+        [COLL_RESERVE, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(collReserveData) } }],
+        [DEBT_RESERVE, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(debtReserveData) } }],
+      ]),
+    });
+
+    const ix = await buildKaminoRefreshReservesInstruction(context(rpc), {});
+
+    expect(ix.accounts).toEqual([
+      { address: COLL_RESERVE, role: AccountRole.WRITABLE },
+      { address: MAIN_KAMINO_MARKET, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: DEBT_RESERVE, role: AccountRole.WRITABLE },
+      { address: MAIN_KAMINO_MARKET, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+      { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
+    ]);
+  });
+
   it('dedupes update-obligations reserve accounts while preserving first-seen order', async () => {
     const obligation = await vanillaObligationPda({
       owner: CLIENT_PRIMARY,
@@ -774,6 +840,70 @@ describe('Kamino account order', () => {
     expect(ix.accounts!.map((account) => account.address).slice(2)).toEqual([COLL_RESERVE, DEBT_RESERVE]);
   });
 
+  it('dedupes refresh-reserves batch accounts while preserving first-seen order', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const buffer = obligationReserveListBuffer(
+      [DEBT_RESERVE, COLL_RESERVE, DEBT_RESERVE],
+      [COLL_RESERVE, DEBT_RESERVE],
+    );
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [obligation, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(buffer) } }],
+        [
+          COLL_RESERVE,
+          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } },
+        ],
+        [
+          DEBT_RESERVE,
+          { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } },
+        ],
+      ]),
+    });
+
+    const ix = await buildKaminoRefreshReservesInstruction(context(rpc), {});
+
+    expect(ix.accounts!.map((account) => account.address).filter((_, index) => index % 6 === 0)).toEqual([
+      DEBT_RESERVE,
+      COLL_RESERVE,
+    ]);
+  });
+
+  it('uses a custom lending market when deriving refresh-reserves accounts', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: OBLIGATION,
+    });
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [
+          obligation,
+          {
+            value: {
+              owner: KLEND_PROGRAM_ID,
+              data: dataResponse(obligationReserveListBuffer([COLL_RESERVE], [])),
+            },
+          },
+        ],
+        [
+          COLL_RESERVE,
+          {
+            value: {
+              owner: KLEND_PROGRAM_ID,
+              data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, lendingMarket: OBLIGATION })),
+            },
+          },
+        ],
+      ]),
+    });
+
+    const ix = await buildKaminoRefreshReservesInstruction(context(rpc), { lendingMarket: OBLIGATION });
+
+    expect(ix.accounts!.map((account) => account.address).slice(0, 2)).toEqual([COLL_RESERVE, OBLIGATION]);
+  });
+
   it('throws on invalid update-obligations obligation layout', async () => {
     const obligation = await vanillaObligationPda({
       owner: CLIENT_PRIMARY,
@@ -789,15 +919,56 @@ describe('Kamino account order', () => {
       /Invalid Kamino obligation layout/,
     );
   });
+
+  it('throws on invalid refresh-reserves obligation layout', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [obligation, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(Buffer.alloc(64)) } }],
+      ]),
+    });
+
+    await expect(buildKaminoRefreshReservesInstruction(context(rpc), {})).rejects.toThrow(
+      /Invalid Kamino obligation layout/,
+    );
+  });
+
+  it('throws on invalid refresh-reserves reserve layout', async () => {
+    const obligation = await vanillaObligationPda({
+      owner: CLIENT_PRIMARY,
+      lendingMarket: MAIN_KAMINO_MARKET,
+    });
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [
+          obligation,
+          {
+            value: {
+              owner: KLEND_PROGRAM_ID,
+              data: dataResponse(obligationReserveListBuffer([COLL_RESERVE], [])),
+            },
+          },
+        ],
+        [COLL_RESERVE, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(Buffer.alloc(6000)) } }],
+      ]),
+    });
+
+    await expect(buildKaminoRefreshReservesInstruction(context(rpc), {})).rejects.toThrow(
+      /Invalid Kamino reserve discriminator/,
+    );
+  });
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.65', () => {
+  it('bumps package metadata to 1.0.66', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.65');
-    expect(packageLock.version).toBe('1.0.65');
-    expect(packageLock.packages[''].version).toBe('1.0.65');
+    expect(packageJson.version).toBe('1.0.66');
+    expect(packageLock.version).toBe('1.0.66');
+    expect(packageLock.packages[''].version).toBe('1.0.66');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

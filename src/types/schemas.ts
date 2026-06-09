@@ -336,6 +336,13 @@ const KaminoUpdateObligationsArgsSchema = z
   })
   .strict();
 
+const KaminoRefreshReservesArgsSchema = z
+  .object({
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+    skipPriceUpdates: z.boolean().optional().meta({ description: 'Skip reserve price updates' }),
+  })
+  .strict();
+
 const KaminoChangePositionArgsSchema = z
   .object({
     instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
@@ -472,6 +479,7 @@ export {
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
   KaminoUpdateObligationsArgsSchema,
+  KaminoRefreshReservesArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,

@@ -56,6 +56,7 @@ import {
   KaminoInitInstrumentArgs,
   KaminoInitObligationArgs,
   KaminoUpdateObligationsArgs,
+  KaminoRefreshReservesArgs,
   KaminoChangePositionArgs,
   KaminoLookupTableAddressesArgs,
   KaminoObligationExistsArgs,
@@ -101,6 +102,7 @@ import {
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
   KaminoUpdateObligationsArgsSchema,
+  KaminoRefreshReservesArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
@@ -208,6 +210,7 @@ import {
   buildKaminoContext,
   buildKaminoInitInstrumentInstruction,
   buildKaminoInitObligationInstruction,
+  buildKaminoRefreshReservesInstruction,
   buildKaminoUpdateObligationsInstruction,
   buildVmAddKaminoInstruction,
   buildVmRemoveKaminoInstruction,
@@ -1202,6 +1205,12 @@ export class Engine {
     const parsed = KaminoUpdateObligationsArgsSchema.parse(args);
     await this.requireClient();
     return buildKaminoUpdateObligationsInstruction(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async kaminoRefreshReservesInstruction(args: KaminoRefreshReservesArgs = {}): Promise<Instruction> {
+    const parsed = KaminoRefreshReservesArgsSchema.parse(args);
+    await this.requireClient();
+    return buildKaminoRefreshReservesInstruction(this.getKaminoInstructionContext(), parsed);
   }
 
   async kaminoInitInstrumentInstruction(args: KaminoInitInstrumentArgs): Promise<Instruction> {

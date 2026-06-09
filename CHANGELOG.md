@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.66] - 2026-06-09
+
+### Added
+
+- **Kamino refresh reserves**: Added `kaminoRefreshReservesInstruction({ lendingMarket?, skipPriceUpdates? })` to build a KLend `refresh_reserves_batch` instruction for all active obligation reserves before refreshing obligations.
+
 ## [1.0.65] - 2026-06-09
 
 ### Changed

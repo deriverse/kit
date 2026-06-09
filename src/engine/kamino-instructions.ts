@@ -27,6 +27,7 @@ import {
   KaminoLookupTableAddressesArgs,
   KaminoLookupTableAddressesResponse,
   KaminoObligationExistsArgs,
+  KaminoRefreshReservesArgs,
   KaminoOracleAccounts,
   KaminoReserveByMintArgs,
   KaminoReserveContext,
@@ -59,6 +60,7 @@ export const KAMINO_REPAY_ALL_FLAG = 1;
 export const KAMINO_WITHDRAW_ALL_FLAG = 2;
 export const KAMINO_KEEP_OBLIGATION_ALIVE_FLAG = 4;
 export const KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR = Buffer.from([33, 132, 147, 228, 151, 192, 72, 89]);
+export const KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR = Buffer.from([144, 110, 26, 103, 162, 204, 252, 147]);
 
 const NULL_ADDRESS = '11111111111111111111111111111111' as Address;
 const SYSVAR_RENT = 'SysvarRent111111111111111111111111111111111' as Address;
@@ -764,6 +766,50 @@ function kaminoObligationReserveAccounts(buffer: Buffer): Address[] {
     addUniqueAddress(reserves, readAddress(buffer, OBLIGATION_BORROWS_OFFSET + i * OBLIGATION_LIQUIDITY_SIZE));
   }
   return reserves;
+}
+
+async function loadKaminoReserveForRefresh(
+  ctx: KaminoInstructionContext,
+  reserve: Address,
+): Promise<KaminoReserveInfo> {
+  const info = await ctx.rpc.getAccountInfo(reserve, { commitment: ctx.commitment, encoding: 'base64' }).send();
+  if (info.value == null || accountOwner(info.value) !== KLEND_PROGRAM_ID) {
+    throw new Error(`Kamino reserve not found: ${reserve}`);
+  }
+  return decodeKaminoReserveData(reserve, info.value.data);
+}
+
+export async function buildKaminoRefreshReservesInstruction(
+  ctx: KaminoInstructionContext,
+  args: KaminoRefreshReservesArgs = {},
+): Promise<Instruction> {
+  const clientPrimaryAccount = requireClientPrimary(ctx);
+  const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+  const obligation = await vanillaObligationPda({ owner: clientPrimaryAccount, lendingMarket });
+  const info = await ctx.rpc.getAccountInfo(obligation, { commitment: ctx.commitment, encoding: 'base64' }).send();
+  if (info.value == null) {
+    throw new Error(`Kamino obligation not found: ${obligation}`);
+  }
+  const buffer = requireValidObligationBuffer(obligation, info.value);
+  const reserves = await Promise.all(
+    kaminoObligationReserveAccounts(buffer).map((reserve) => loadKaminoReserveForRefresh(ctx, reserve)),
+  );
+  const accounts = reserves.flatMap((reserve) => [
+    { address: reserve.address, role: AccountRole.WRITABLE },
+    { address: reserve.lendingMarket, role: AccountRole.READONLY },
+    { address: reserve.oracles.pyth, role: AccountRole.READONLY },
+    { address: reserve.oracles.switchboardPrice, role: AccountRole.READONLY },
+    { address: reserve.oracles.switchboardTwap, role: AccountRole.READONLY },
+    { address: reserve.oracles.scope, role: AccountRole.READONLY },
+  ]);
+  return {
+    accounts,
+    programAddress: KLEND_PROGRAM_ID,
+    data: Buffer.concat([
+      KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR,
+      Buffer.from([args.skipPriceUpdates === true ? 1 : 0]),
+    ]),
+  };
 }
 
 export async function buildKaminoUpdateObligationsInstruction(

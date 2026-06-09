@@ -10,6 +10,7 @@ import {
   KaminoInitObligationArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoObligationExistsArgsSchema,
+  KaminoRefreshReservesArgsSchema,
   KaminoUpdateObligationsArgsSchema,
   GetKaminoClientStateArgsSchema,
 } from './schemas';
@@ -125,11 +126,22 @@ describe('Zod Schemas', () => {
       expect(KaminoUpdateObligationsArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
       expect(KaminoUpdateObligationsArgsSchema.safeParse({ obligation: ADDRESS }).success).toBe(false);
       expect(KaminoUpdateObligationsArgsSchema.safeParse({ reserveAccounts: [ADDRESS] }).success).toBe(false);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ obligation: ADDRESS }).success).toBe(false);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ reserveAccounts: [ADDRESS] }).success).toBe(false);
     });
 
     it('accepts only optional lendingMarket for update-obligations args', () => {
       expect(KaminoUpdateObligationsArgsSchema.safeParse({}).success).toBe(true);
       expect(KaminoUpdateObligationsArgsSchema.safeParse({ lendingMarket: ADDRESS }).success).toBe(true);
+    });
+
+    it('accepts optional lendingMarket and skipPriceUpdates for refresh-reserves args', () => {
+      expect(KaminoRefreshReservesArgsSchema.safeParse({}).success).toBe(true);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ lendingMarket: ADDRESS }).success).toBe(true);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ skipPriceUpdates: true }).success).toBe(true);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ skipPriceUpdates: 1 }).success).toBe(false);
+      expect(KaminoRefreshReservesArgsSchema.safeParse({ lendingMarket: ADDRESS, extra: true }).success).toBe(false);
     });
 
     it('rejects extraReserves in change-position args', () => {

@@ -81,6 +81,9 @@ function reserveBuffer(args: {
   loanToValuePct?: number;
   liquidationThresholdPct?: number;
   mintDecimals?: number;
+  totalAvailableAmount?: number;
+  borrowedAmount?: number;
+  collateralMintTotalSupply?: number;
 }): Buffer {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
@@ -90,11 +93,13 @@ function reserveBuffer(args: {
   writeAddress(buffer, 128, args.liquidityMint);
   writeAddress(buffer, 160, 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address);
   writeAddress(buffer, 192, 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address);
+  buffer.writeBigUInt64LE(BigInt(args.totalAvailableAmount ?? 100_000_000), 224);
+  writeU128(buffer, 232, BigInt(args.borrowedAmount ?? 23_456_000) << BigInt(60));
   writeU128(buffer, 248, sf(1.5));
   buffer.writeBigUInt64LE(BigInt(args.mintDecimals ?? 9), 272);
   writeAddress(buffer, 408, args.tokenProgram ?? TOKEN_PROGRAM_ID);
   writeAddress(buffer, 2560, 'AddressLookupTab1e1111111111111111111111111' as Address);
-  buffer.writeBigUInt64LE(BigInt(123_456), 2592);
+  buffer.writeBigUInt64LE(BigInt(args.collateralMintTotalSupply ?? 123_456_000), 2592);
   writeAddress(buffer, 2600, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
   buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(args.liquidationThresholdPct ?? 80, 4856 + 17);
@@ -247,7 +252,23 @@ function fakeKaminoContext(
       loanToValuePct: 70,
       liquidationThresholdPct: 80,
       mintDecimals: 9,
-      raw: { marketPriceSf: 1, borrowLimit: 1, depositLimit: 1 },
+      raw: {
+        marketPriceSf: 1,
+        totalAvailableAmount: 100_000_000,
+        borrowedAmountSf: 23_456_000,
+        borrowedAmountSfRaw: BigInt(23_456_000) << BigInt(60),
+        accumulatedProtocolFeesSf: 0,
+        accumulatedProtocolFeesSfRaw: BigInt(0),
+        accumulatedReferrerFeesSf: 0,
+        accumulatedReferrerFeesSfRaw: BigInt(0),
+        pendingReferrerFeesSf: 0,
+        pendingReferrerFeesSfRaw: BigInt(0),
+        collateralMintTotalSupply: 123_456_000,
+        totalLiquidity: 123_456_000,
+        totalLiquiditySfRaw: BigInt(123_456_000) << BigInt(60),
+        borrowLimit: 1,
+        depositLimit: 1,
+      },
       vault: `${address}Vault` as Address,
       clientAta: `${address}Ata` as Address,
       collateralFarm,
@@ -438,13 +459,61 @@ describe('Kamino context and services', () => {
     expect(result.exists).toBe(true);
     expect(result.obligation).toBe(OBLIGATION);
     expect(result.deposits[0].reserve).toBe(COLL_RESERVE);
+    expect(result.deposits[0].liquidityMint).toBe(ASSET_MINT);
+    expect(result.deposits[0].collateralMint).toBe(`${COLL_RESERVE}CMint`);
+    expect(result.deposits[0].tokenProgram).toBe(TOKEN_PROGRAM_ID);
+    expect(result.deposits[0].deriverseTokenId).toBe(1);
+    expect(result.deposits[0].depositedAmountRaw).toBe(100_000_000);
+    expect(result.deposits[0].collateralAmountRaw).toBe(100_000_000);
     expect(result.borrows[0].reserve).toBe(DEBT_RESERVE);
+    expect(result.borrows[0].liquidityMint).toBe(CRNCY_MINT);
+    expect(result.borrows[0].collateralMint).toBe(`${DEBT_RESERVE}CMint`);
+    expect(result.borrows[0].tokenProgram).toBe(TOKEN_PROGRAM_ID);
+    expect(result.borrows[0].deriverseTokenId).toBe(2);
     expect(result.totalDepositValue).toBe(150);
     expect(result.totalBorrowValue).toBe(50);
     expect(result.borrowLimit).toBe(105);
     expect(result.unhealthyBorrowValue).toBe(120);
     expect(result.healthFactor).toBe(2.4);
     expect(result.maxWithdrawEstimate?.amountRaw).toBeGreaterThan(0);
+    expect(result.maxWithdrawEstimate?.collateralAmountRaw).toBeGreaterThan(0);
+  });
+
+  it('converts Kamino obligation cToken collateral to underlying liquidity amount', async () => {
+    const rpc = mockRpc({
+      accountInfo: new Map([
+        [OBLIGATION, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligationBuffer()) } }],
+      ]),
+    });
+    const kctx = fakeKaminoContext();
+    kctx.collateralReserve.raw.collateralMintTotalSupply = 50_000_000;
+    kctx.collateralReserve.raw.totalLiquidity = 100_000_000;
+    kctx.collateralReserve.raw.totalLiquiditySfRaw = BigInt(100_000_000) << BigInt(60);
+
+    const result = await getKaminoClientState(context(rpc), { instrId: 1 }, kctx);
+
+    expect(result.deposits[0].collateralAmountRaw).toBe(100_000_000);
+    expect(result.deposits[0].depositedAmountRaw).toBe(200_000_000);
+    expect(result.deposits[0].depositedAmount).toBe(0.2);
+  });
+
+  it('uses reserve price fallback when raw borrow exists but aggregate borrow value is zero', async () => {
+    const obligation = obligationBuffer();
+    writeU128(obligation, 1208 + 104, BigInt(0));
+    writeU128(obligation, 2208, BigInt(0));
+    writeU128(obligation, 2224, BigInt(0));
+    const rpc = mockRpc({
+      accountInfo: new Map([[OBLIGATION, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(obligation) } }]]),
+    });
+
+    const result = await getKaminoClientState(context(rpc), { instrId: 1 }, fakeKaminoContext());
+
+    expect(result.borrows[0].borrowedAmountRaw).toBe(40_000_000);
+    expect(result.borrows[0].borrowMarketValue).toBe(0);
+    expect(result.totalBorrowValue).toBe(0.04);
+    expect(result.healthFactor).toBe(3000);
+    expect(result.liquidationBuffer).toBeCloseTo(119.96);
+    expect(result.raw.borrowedAssetsMarketValueSf).toBe(0);
   });
 });
 
@@ -723,12 +792,12 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.64', () => {
+  it('bumps package metadata to 1.0.65', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.64');
-    expect(packageLock.version).toBe('1.0.64');
-    expect(packageLock.packages[''].version).toBe('1.0.64');
+    expect(packageJson.version).toBe('1.0.65');
+    expect(packageLock.version).toBe('1.0.65');
+    expect(packageLock.packages[''].version).toBe('1.0.65');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

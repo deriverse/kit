@@ -295,6 +295,18 @@ export interface KaminoReserveInfo {
   mintDecimals: number;
   raw: {
     marketPriceSf: number;
+    totalAvailableAmount: number;
+    borrowedAmountSf: number;
+    borrowedAmountSfRaw: bigint;
+    accumulatedProtocolFeesSf: number;
+    accumulatedProtocolFeesSfRaw: bigint;
+    accumulatedReferrerFeesSf: number;
+    accumulatedReferrerFeesSfRaw: bigint;
+    pendingReferrerFeesSf: number;
+    pendingReferrerFeesSfRaw: bigint;
+    collateralMintTotalSupply: number;
+    totalLiquidity: number;
+    totalLiquiditySfRaw: bigint;
     borrowLimit: number;
     depositLimit: number;
   };
@@ -363,8 +375,14 @@ export interface KaminoInstrumentAccountsExistResponse {
 
 export interface KaminoClientReservePosition {
   reserve: Address;
+  liquidityMint: Address;
+  collateralMint: Address;
+  tokenProgram: Address;
+  deriverseTokenId: number | null;
   depositedAmount: number;
   depositedAmountRaw: number;
+  collateralAmount: number;
+  collateralAmountRaw: number;
   depositMarketValue: number;
   borrowedAmount: number;
   borrowedAmountRaw: number;
@@ -391,6 +409,7 @@ export interface KaminoClientStateResponse {
   maxWithdrawEstimate: {
     amount: number;
     amountRaw: number;
+    collateralAmountRaw: number;
     reserve: Address;
   } | null;
   raw: {

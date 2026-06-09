@@ -73,10 +73,16 @@ const RESERVE_FARM_DEBT_OFFSET = 96;
 const RESERVE_LIQUIDITY_MINT_OFFSET = 128;
 const RESERVE_LIQUIDITY_SUPPLY_OFFSET = 160;
 const RESERVE_FEE_VAULT_OFFSET = 192;
+const RESERVE_TOTAL_AVAILABLE_AMOUNT_OFFSET = 224;
+const RESERVE_BORROWED_AMOUNT_SF_OFFSET = 232;
 const RESERVE_MARKET_PRICE_SF_OFFSET = 248;
 const RESERVE_MINT_DECIMALS_OFFSET = 272;
+const RESERVE_ACCUMULATED_PROTOCOL_FEES_SF_OFFSET = 344;
+const RESERVE_ACCUMULATED_REFERRER_FEES_SF_OFFSET = 360;
+const RESERVE_PENDING_REFERRER_FEES_SF_OFFSET = 376;
 const RESERVE_TOKEN_PROGRAM_OFFSET = 408;
 const RESERVE_COLLATERAL_MINT_OFFSET = 2560;
+const RESERVE_COLLATERAL_MINT_TOTAL_SUPPLY_OFFSET = 2592;
 const RESERVE_COLLATERAL_SUPPLY_OFFSET = 2600;
 const RESERVE_CONFIG_OFFSET = 4856;
 const RESERVE_LOAN_TO_VALUE_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 16;
@@ -146,6 +152,11 @@ function sfToNumber(value: bigint): number {
 function sfToIntegerCeil(value: bigint): number {
   if (value === BigInt(0)) return 0;
   return Number((value + SF_ONE - BigInt(1)) >> SF_FRACTIONAL_BITS);
+}
+
+function sfToIntegerFloor(value: bigint): number {
+  if (value <= BigInt(0)) return 0;
+  return Number(value >> SF_FRACTIONAL_BITS);
 }
 
 function isDefaultAddress(value: Address | null | undefined): boolean {
@@ -308,6 +319,18 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
   const tokenProgram = readAddress(buffer, RESERVE_TOKEN_PROGRAM_OFFSET);
   const farmCollateral = readAddress(buffer, RESERVE_FARM_COLLATERAL_OFFSET);
   const farmDebt = readAddress(buffer, RESERVE_FARM_DEBT_OFFSET);
+  const totalAvailableAmount = readU64(buffer, RESERVE_TOTAL_AVAILABLE_AMOUNT_OFFSET);
+  const borrowedAmountSf = readU128(buffer, RESERVE_BORROWED_AMOUNT_SF_OFFSET);
+  const accumulatedProtocolFeesSf = readU128(buffer, RESERVE_ACCUMULATED_PROTOCOL_FEES_SF_OFFSET);
+  const accumulatedReferrerFeesSf = readU128(buffer, RESERVE_ACCUMULATED_REFERRER_FEES_SF_OFFSET);
+  const pendingReferrerFeesSf = readU128(buffer, RESERVE_PENDING_REFERRER_FEES_SF_OFFSET);
+  const collateralMintTotalSupply = readU64(buffer, RESERVE_COLLATERAL_MINT_TOTAL_SUPPLY_OFFSET);
+  const totalLiquiditySf =
+    BigInt(totalAvailableAmount) * SF_ONE +
+    borrowedAmountSf -
+    accumulatedProtocolFeesSf -
+    accumulatedReferrerFeesSf -
+    pendingReferrerFeesSf;
   const oracles: KaminoOracleAccounts = {
     pyth: oracleOrSentinel(readAddress(buffer, RESERVE_PYTH_PRICE_OFFSET)),
     switchboardPrice: oracleOrSentinel(readAddress(buffer, RESERVE_SWITCHBOARD_PRICE_OFFSET)),
@@ -332,6 +355,18 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
     mintDecimals: readU64(buffer, RESERVE_MINT_DECIMALS_OFFSET),
     raw: {
       marketPriceSf: sfToNumber(readU128(buffer, RESERVE_MARKET_PRICE_SF_OFFSET)),
+      totalAvailableAmount,
+      borrowedAmountSf: sfToNumber(borrowedAmountSf),
+      borrowedAmountSfRaw: borrowedAmountSf,
+      accumulatedProtocolFeesSf: sfToNumber(accumulatedProtocolFeesSf),
+      accumulatedProtocolFeesSfRaw: accumulatedProtocolFeesSf,
+      accumulatedReferrerFeesSf: sfToNumber(accumulatedReferrerFeesSf),
+      accumulatedReferrerFeesSfRaw: accumulatedReferrerFeesSf,
+      pendingReferrerFeesSf: sfToNumber(pendingReferrerFeesSf),
+      pendingReferrerFeesSfRaw: pendingReferrerFeesSf,
+      collateralMintTotalSupply,
+      totalLiquidity: sfToNumber(totalLiquiditySf),
+      totalLiquiditySfRaw: totalLiquiditySf,
       borrowLimit: readU64(buffer, RESERVE_BORROW_LIMIT_OFFSET),
       depositLimit: readU64(buffer, RESERVE_DEPOSIT_LIMIT_OFFSET),
     },
@@ -1054,31 +1089,71 @@ export async function kaminoInstrumentAccountsExist(
   };
 }
 
+function reserveInfo(context: KaminoContext, reserve: Address): KaminoReserveInfo | null {
+  if (reserve === context.collateralReserve.address) return context.collateralReserve;
+  if (reserve === context.debtReserve.address) return context.debtReserve;
+  return context.extraReserves.find((entry) => entry.address === reserve) ?? null;
+}
+
 function reserveDecimals(context: KaminoContext, reserve: Address): number {
-  if (reserve === context.collateralReserve.address) return context.collateralReserve.mintDecimals;
-  if (reserve === context.debtReserve.address) return context.debtReserve.mintDecimals;
-  const extra = context.extraReserves.find((entry) => entry.address === reserve);
-  return extra?.mintDecimals ?? 0;
+  return reserveInfo(context, reserve)?.mintDecimals ?? 0;
+}
+
+function deriverseTokenId(ctx: KaminoInstructionContext | null, mint: Address): number | null {
+  if (ctx == null) return null;
+  for (const [id, token] of ctx.tokens) {
+    if (token.address === mint) return id;
+  }
+  return null;
+}
+
+function collateralToLiquidityRaw(reserve: KaminoReserveInfo | null, collateralAmountRaw: number): number {
+  if (reserve == null || collateralAmountRaw === 0) return collateralAmountRaw;
+  const collateralSupply = reserve.raw.collateralMintTotalSupply;
+  const totalLiquiditySf = reserve.raw.totalLiquiditySfRaw;
+  if (collateralSupply === 0 || totalLiquiditySf <= BigInt(0)) return collateralAmountRaw;
+  const liquiditySf = (BigInt(collateralAmountRaw) * totalLiquiditySf) / BigInt(collateralSupply);
+  return sfToIntegerFloor(liquiditySf);
+}
+
+function positionMetadata(
+  ctx: KaminoInstructionContext | null,
+  reserve: KaminoReserveInfo | null,
+  reserveAddress: Address,
+) {
+  const liquidityMint = reserve?.liquidityMint ?? NULL_ADDRESS;
+  return {
+    reserve: reserveAddress,
+    liquidityMint,
+    collateralMint: reserve?.collateralMint ?? NULL_ADDRESS,
+    tokenProgram: reserve?.tokenProgram ?? TOKEN_PROGRAM_ID,
+    deriverseTokenId: deriverseTokenId(ctx, liquidityMint),
+  };
 }
 
 function decodeKaminoClientState(
   obligation: Address,
   buffer: Buffer,
   context: KaminoContext,
+  ctx: KaminoInstructionContext | null = null,
 ): KaminoClientStateResponse {
   const owner = readAddress(buffer, OBLIGATION_OWNER_OFFSET);
   const deposits = [];
   for (let i = 0; i < 8; i++) {
     const offset = OBLIGATION_DEPOSITS_OFFSET + i * OBLIGATION_COLLATERAL_SIZE;
     const reserve = readAddress(buffer, offset);
-    const amountRaw = readU64(buffer, offset + OBLIGATION_COLLATERAL_DEPOSITED_AMOUNT_OFFSET);
+    const collateralAmountRaw = readU64(buffer, offset + OBLIGATION_COLLATERAL_DEPOSITED_AMOUNT_OFFSET);
     const marketValue = sfToNumber(readU128(buffer, offset + OBLIGATION_COLLATERAL_MARKET_VALUE_OFFSET));
-    if (!isDefaultAddress(reserve) || amountRaw !== 0 || marketValue !== 0) {
+    if (!isDefaultAddress(reserve) || collateralAmountRaw !== 0 || marketValue !== 0) {
+      const info = reserveInfo(context, reserve);
       const decimals = reserveDecimals(context, reserve);
+      const depositedAmountRaw = collateralToLiquidityRaw(info, collateralAmountRaw);
       deposits.push({
-        reserve,
-        depositedAmount: amountRaw / 10 ** decimals,
-        depositedAmountRaw: amountRaw,
+        ...positionMetadata(ctx, info, reserve),
+        depositedAmount: depositedAmountRaw / 10 ** decimals,
+        depositedAmountRaw,
+        collateralAmount: collateralAmountRaw / 10 ** decimals,
+        collateralAmountRaw,
         depositMarketValue: marketValue,
         borrowedAmount: 0,
         borrowedAmountRaw: 0,
@@ -1095,11 +1170,14 @@ function decodeKaminoClientState(
     const amountRaw = sfToIntegerCeil(borrowedAmountSf);
     const marketValue = sfToNumber(readU128(buffer, offset + OBLIGATION_BORROW_MARKET_VALUE_SF_OFFSET));
     if (!isDefaultAddress(reserve) || amountRaw !== 0 || marketValue !== 0) {
+      const info = reserveInfo(context, reserve);
       const decimals = reserveDecimals(context, reserve);
       borrows.push({
-        reserve,
+        ...positionMetadata(ctx, info, reserve),
         depositedAmount: 0,
         depositedAmountRaw: 0,
+        collateralAmount: 0,
+        collateralAmountRaw: 0,
         depositMarketValue: 0,
         borrowedAmount: amountRaw / 10 ** decimals,
         borrowedAmountRaw: amountRaw,
@@ -1112,9 +1190,18 @@ function decodeKaminoClientState(
   const borrowFactorAdjustedDebtValue = sfToNumber(
     readU128(buffer, OBLIGATION_BORROW_FACTOR_ADJUSTED_DEBT_VALUE_SF_OFFSET),
   );
-  const totalBorrowValue = sfToNumber(readU128(buffer, OBLIGATION_BORROWED_ASSETS_MARKET_VALUE_SF_OFFSET));
+  const aggregateTotalBorrowValue = sfToNumber(readU128(buffer, OBLIGATION_BORROWED_ASSETS_MARKET_VALUE_SF_OFFSET));
   const borrowLimit = sfToNumber(readU128(buffer, OBLIGATION_ALLOWED_BORROW_VALUE_SF_OFFSET));
   const unhealthyBorrowValue = sfToNumber(readU128(buffer, OBLIGATION_UNHEALTHY_BORROW_VALUE_SF_OFFSET));
+  const fallbackBorrowValue = borrows.reduce((total, entry) => {
+    if (entry.borrowMarketValue > 0) return total + entry.borrowMarketValue;
+    const info = reserveInfo(context, entry.reserve);
+    return total + entry.borrowedAmount * (info?.raw.marketPriceSf ?? 0);
+  }, 0);
+  const totalBorrowValue =
+    aggregateTotalBorrowValue > 0 || fallbackBorrowValue === 0 ? aggregateTotalBorrowValue : fallbackBorrowValue;
+  const effectiveBorrowFactorAdjustedDebtValue =
+    borrowFactorAdjustedDebtValue > 0 || totalBorrowValue === 0 ? borrowFactorAdjustedDebtValue : totalBorrowValue;
 
   const collateralDeposit = deposits.find((entry) => entry.reserve === context.collateralReserve.address);
   let maxWithdrawEstimate: KaminoClientStateResponse['maxWithdrawEstimate'] = null;
@@ -1125,11 +1212,12 @@ function decodeKaminoClientState(
         amountRaw = collateralDeposit.depositedAmountRaw;
       } else if (collateralDeposit.depositMarketValue > 0) {
         const maxWithdrawValue =
-          borrowLimit <= borrowFactorAdjustedDebtValue
+          borrowLimit <= effectiveBorrowFactorAdjustedDebtValue
             ? 0
             : context.collateralReserve.loanToValuePct === 0
               ? collateralDeposit.depositMarketValue
-              : (borrowLimit - borrowFactorAdjustedDebtValue) / (context.collateralReserve.loanToValuePct / 100);
+              : (borrowLimit - effectiveBorrowFactorAdjustedDebtValue) /
+                (context.collateralReserve.loanToValuePct / 100);
         const withdrawValue = Math.min(maxWithdrawValue, collateralDeposit.depositMarketValue);
         amountRaw = Math.min(
           collateralDeposit.depositedAmountRaw,
@@ -1141,6 +1229,13 @@ function decodeKaminoClientState(
       reserve: context.collateralReserve.address,
       amountRaw,
       amount: amountRaw / 10 ** context.collateralReserve.mintDecimals,
+      collateralAmountRaw:
+        collateralDeposit.depositedAmountRaw === 0
+          ? 0
+          : Math.min(
+              collateralDeposit.collateralAmountRaw,
+              Math.floor((amountRaw / collateralDeposit.depositedAmountRaw) * collateralDeposit.collateralAmountRaw),
+            ),
     };
   }
 
@@ -1159,13 +1254,14 @@ function decodeKaminoClientState(
     borrowLimit,
     unhealthyBorrowValue,
     ltv: totalDepositValue === 0 ? null : totalBorrowValue / totalDepositValue,
-    healthFactor: totalBorrowValue === 0 ? null : unhealthyBorrowValue / totalBorrowValue,
-    liquidationBuffer: totalBorrowValue === 0 ? null : unhealthyBorrowValue - totalBorrowValue,
+    healthFactor: totalBorrowValue === 0 || unhealthyBorrowValue === 0 ? null : unhealthyBorrowValue / totalBorrowValue,
+    liquidationBuffer:
+      totalBorrowValue === 0 || unhealthyBorrowValue === 0 ? null : unhealthyBorrowValue - totalBorrowValue,
     maxWithdrawEstimate,
     raw: {
       owner,
       depositedValueSf: totalDepositValue,
-      borrowedAssetsMarketValueSf: totalBorrowValue,
+      borrowedAssetsMarketValueSf: aggregateTotalBorrowValue,
       borrowFactorAdjustedDebtValueSf: borrowFactorAdjustedDebtValue,
       allowedBorrowValueSf: borrowLimit,
       unhealthyBorrowValueSf: unhealthyBorrowValue,
@@ -1209,13 +1305,14 @@ export async function getKaminoClientState(
   ) {
     throw new Error(`Invalid Kamino obligation layout: ${obligation}`);
   }
-  return decodeKaminoClientState(obligation, buffer, context);
+  return decodeKaminoClientState(obligation, buffer, context, ctx);
 }
 
 export function getKaminoClientStateFromData(args: {
   obligation: Address;
   obligationData: Base64EncodedDataResponse;
   context: KaminoContext;
+  ctx?: KaminoInstructionContext;
 }): KaminoClientStateResponse {
   const buffer = dataToBuffer(args.obligationData);
   if (
@@ -1224,5 +1321,5 @@ export function getKaminoClientStateFromData(args: {
   ) {
     throw new Error(`Invalid Kamino obligation layout: ${args.obligation}`);
   }
-  return decodeKaminoClientState(args.obligation, buffer, args.context);
+  return decodeKaminoClientState(args.obligation, buffer, args.context, args.ctx ?? null);
 }

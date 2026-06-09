@@ -1294,6 +1294,7 @@ export class Engine {
       obligation: parsed.obligation ?? kaminoCtx.obligation,
       obligationData: parsed.obligationData,
       context: kaminoCtx,
+      ctx: this.getKaminoInstructionContext(),
     });
   }
 

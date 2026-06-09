@@ -48,7 +48,14 @@ function sf(value: number): bigint {
   return (BigInt(Math.floor(value * 1_000_000)) * (BigInt(1) << BigInt(60))) / BigInt(1_000_000);
 }
 
-function reserveBuffer(args: { lendingMarket?: Address; liquidityMint: Address; loanToValuePct?: number }): Buffer {
+function reserveBuffer(args: {
+  lendingMarket?: Address;
+  liquidityMint: Address;
+  loanToValuePct?: number;
+  totalAvailableAmount?: number;
+  borrowedAmount?: number;
+  collateralMintTotalSupply?: number;
+}): Buffer {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
   writeAddress(buffer, 32, args.lendingMarket ?? MAIN_KAMINO_MARKET);
@@ -57,11 +64,13 @@ function reserveBuffer(args: { lendingMarket?: Address; liquidityMint: Address; 
   writeAddress(buffer, 128, args.liquidityMint);
   writeAddress(buffer, 160, 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address);
   writeAddress(buffer, 192, 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address);
+  buffer.writeBigUInt64LE(BigInt(args.totalAvailableAmount ?? 100_000_000), 224);
+  writeU128(buffer, 232, BigInt(args.borrowedAmount ?? 23_456_000) << BigInt(60));
   writeU128(buffer, 248, sf(1.5));
   buffer.writeBigUInt64LE(BigInt(9), 272);
   writeAddress(buffer, 408, TOKEN_PROGRAM_ID);
   writeAddress(buffer, 2560, 'AddressLookupTab1e1111111111111111111111111' as Address);
-  buffer.writeBigUInt64LE(BigInt(123_456), 2592);
+  buffer.writeBigUInt64LE(BigInt(args.collateralMintTotalSupply ?? 123_456_000), 2592);
   writeAddress(buffer, 2600, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
   buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(80, 4856 + 17);

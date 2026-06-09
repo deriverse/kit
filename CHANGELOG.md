@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.65] - 2026-06-09
+
+### Changed
+
+- **Kamino client state**: Deposits now report underlying liquidity token amounts while preserving exact cToken collateral amounts in `collateralAmount` and `collateralAmountRaw`.
+- **Kamino position metadata**: Added liquidity mint, collateral mint, token program, and Deriverse token ID metadata to deposit and borrow entries.
+- **Kamino risk fields**: Added fallback borrow valuation from reserve price when raw debt exists but the aggregate borrow market value is zero.
+- **Kamino max withdraw**: `maxWithdrawEstimate` now reports underlying liquidity units and includes exact collateral raw amount.
+
 ## [1.0.64] - 2026-06-08
 
 ### Fixed

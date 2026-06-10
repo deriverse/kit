@@ -181,5 +181,51 @@ describe('Zod Schemas', () => {
         }).success,
       ).toBe(true);
     });
+
+    it('accepts repayAll and withdrawAll change-position flags with zero deltas', () => {
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: true,
+          collateralDelta: 0,
+          borrowDelta: 0,
+          repayAll: true,
+          withdrawAll: true,
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects non-zero deltas for all-position Kamino flags', () => {
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: true,
+          collateralDelta: 0,
+          borrowDelta: 1,
+          repayAll: true,
+        }).success,
+      ).toBe(false);
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: true,
+          collateralDelta: 1,
+          borrowDelta: 0,
+          withdrawAll: true,
+        }).success,
+      ).toBe(false);
+    });
+
+    it('rejects removed keepObligationAlive change-position flag', () => {
+      expect(
+        KaminoChangePositionArgsSchema.safeParse({
+          instrId: 1,
+          assetIsCollateral: true,
+          collateralDelta: 1,
+          borrowDelta: 0,
+          keepObligationAlive: true,
+        }).success,
+      ).toBe(false);
+    });
   });
 });

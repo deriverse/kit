@@ -354,7 +354,6 @@ const KaminoChangePositionArgsSchema = z
     customId: nonNegativeInt.optional().meta({ description: 'Custom ID' }),
     repayAll: z.boolean().optional(),
     withdrawAll: z.boolean().optional(),
-    keepObligationAlive: z.boolean().optional(),
     lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
   })
   .strict()
@@ -371,20 +370,6 @@ const KaminoChangePositionArgsSchema = z
         code: 'custom',
         path: ['collateralDelta'],
         message: 'withdrawAll requires collateralDelta to be 0',
-      });
-    }
-    if (args.keepObligationAlive && args.withdrawAll) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['keepObligationAlive'],
-        message: 'keepObligationAlive cannot be used together with withdrawAll',
-      });
-    }
-    if (args.keepObligationAlive && args.collateralDelta === 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['collateralDelta'],
-        message: 'keepObligationAlive requires collateralDelta to be non-zero',
       });
     }
   });

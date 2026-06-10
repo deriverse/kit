@@ -435,6 +435,8 @@ function createPerpOrderRevokeBuffer(
 
 function createKaminoChangePositionBuffer(args: {
   assetsIsCollateral: number;
+  withdrawAll?: number;
+  repayAll?: number;
   clientId: number;
   instrId: number;
   time: number;
@@ -445,7 +447,8 @@ function createKaminoChangePositionBuffer(args: {
   const buffer = Buffer.alloc(KaminoChangePositionReportModel.LENGTH);
   buffer.writeUInt8(LogType.kaminoChangePosition, KaminoChangePositionReportModel.OFFSET_TAG);
   buffer.writeUInt8(args.assetsIsCollateral, KaminoChangePositionReportModel.OFFSET_ASSETS_IS_COLLATERAL);
-  buffer.writeUInt16LE(0, 2);
+  buffer.writeUInt8(args.withdrawAll ?? 0, KaminoChangePositionReportModel.OFFSET_WITHDRAW_ALL);
+  buffer.writeUInt8(args.repayAll ?? 0, KaminoChangePositionReportModel.OFFSET_REPAY_ALL);
   buffer.writeUInt32LE(0, 4);
   buffer.writeUInt32LE(9, KaminoChangePositionReportModel.OFFSET_SEQ_NO);
   buffer.writeUInt32LE(args.clientId, KaminoChangePositionReportModel.OFFSET_CLIENT_ID);
@@ -1162,6 +1165,8 @@ describe('decodeTransactionLogs', () => {
 
       const buffer = createKaminoChangePositionBuffer({
         assetsIsCollateral: 1,
+        withdrawAll: 1,
+        repayAll: 0,
         clientId: 100,
         instrId: 1,
         time: 1700000000,
@@ -1176,6 +1181,8 @@ describe('decodeTransactionLogs', () => {
       const report = result[0] as KaminoChangePositionReportModel;
       expect(report.tag).toBe(LogType.kaminoChangePosition);
       expect(report.assetsIsCollateral).toBe(1);
+      expect(report.withdrawAll).toBe(1);
+      expect(report.repayAll).toBe(0);
       expect(report.seqNo).toBe(9);
       expect(report.clientId).toBe(100);
       expect(report.instrId).toBe(1);
@@ -1194,6 +1201,8 @@ describe('decodeTransactionLogs', () => {
 
       const buffer = createKaminoChangePositionBuffer({
         assetsIsCollateral: 0,
+        withdrawAll: 0,
+        repayAll: 1,
         clientId: 100,
         instrId: 1,
         time: 1700000000,
@@ -1206,6 +1215,8 @@ describe('decodeTransactionLogs', () => {
       const report = result[0] as KaminoChangePositionReportModel;
       expect(report.borrowDelta).toBe(4);
       expect(report.collateralDelta).toBe(-1.5);
+      expect(report.withdrawAll).toBe(0);
+      expect(report.repayAll).toBe(1);
       expect(report.customId).toBe(78);
     });
   });

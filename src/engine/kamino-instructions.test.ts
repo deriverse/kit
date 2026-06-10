@@ -56,6 +56,7 @@ const NULL_ADDRESS = '11111111111111111111111111111111' as Address;
 const USER_METADATA = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const VM_ACCOUNT = 'SysvarRent111111111111111111111111111111111' as Address;
+const SYSVAR_RENT_ADDRESS = 'SysvarRent111111111111111111111111111111111' as Address;
 
 function dataResponse(buffer: Buffer): Base64EncodedDataResponse {
   return [buffer.toString('base64'), 'base64'] as unknown as Base64EncodedDataResponse;
@@ -306,14 +307,24 @@ describe('Kamino instruction data', () => {
   });
 
   it('keeps KaminoChangePositionData at 32 bytes with flags in the second byte', () => {
-    const data = kaminoChangePositionData(85, 7, 9, -11, 13, 17);
+    const data = kaminoChangePositionData(85, 3, 9, -11, 13, 17);
     expect(data.length).toBe(32);
     expect(data[0]).toBe(85);
-    expect(data[1]).toBe(7);
+    expect(data[1]).toBe(3);
     expect(data.readUInt32LE(4)).toBe(9);
     expect(data.readBigInt64LE(8)).toBe(BigInt(-11));
     expect(data.readBigInt64LE(16)).toBe(BigInt(13));
     expect(data.readBigInt64LE(24)).toBe(BigInt(17));
+  });
+
+  it('encodes only repayAll and withdrawAll in change-position flags', async () => {
+    const ix = await buildKaminoChangePositionInstruction(
+      context(),
+      { instrId: 1, assetIsCollateral: true, collateralDelta: 0, borrowDelta: 0, repayAll: true, withdrawAll: true },
+      fakeKaminoContext(),
+    );
+
+    expect(ix.data![1]).toBe(3);
   });
 
   it('uses the main market LUT by default', () => {
@@ -530,19 +541,23 @@ describe('Kamino account order', () => {
     );
 
     expect(ix.programAddress).toBe(ctx.programId);
-    expect(ix.accounts!.map((account) => account.address).slice(0, 9)).toEqual([
+    expect(ix.accounts!.map((account) => account.address).slice(0, 11)).toEqual([
       SIGNER,
       ROOT,
       CLIENT_PRIMARY,
       SYSTEM_PROGRAM_ID,
       INSTR_ACCOUNT,
       OBLIGATION,
+      USER_METADATA,
+      SYSVAR_RENT_ADDRESS,
       MAIN_KAMINO_MARKET,
       kctx.lendingMarketAuthority,
       COLL_RESERVE,
     ]);
     expect(ix.accounts![0].role).toBe(AccountRole.WRITABLE_SIGNER);
     expect(ix.accounts![4].role).toBe(AccountRole.WRITABLE);
+    expect(ix.accounts![6].role).toBe(AccountRole.READONLY);
+    expect(ix.accounts![7].role).toBe(AccountRole.READONLY);
     expect(ix.accounts![ix.accounts!.length - 2].address).toBe(KLEND_PROGRAM_ID);
   });
 
@@ -578,7 +593,7 @@ describe('Kamino account order', () => {
     );
     const addresses = ix.accounts!.map((account) => account.address);
 
-    expect(addresses.slice(8, 24)).toEqual([
+    expect(addresses.slice(10, 26)).toEqual([
       DEBT_RESERVE,
       CRNCY_MINT,
       kctx.debtReserve.liquiditySupply,
@@ -596,7 +611,7 @@ describe('Kamino account order', () => {
       kctx.collateralReserve.vault,
       kctx.collateralReserve.tokenProgram,
     ]);
-    expect(addresses.slice(24, 32)).toEqual([
+    expect(addresses.slice(26, 34)).toEqual([
       kctx.debtReserve.oracles.pyth,
       kctx.debtReserve.oracles.switchboardPrice,
       kctx.debtReserve.oracles.switchboardTwap,
@@ -606,7 +621,7 @@ describe('Kamino account order', () => {
       kctx.collateralReserve.oracles.switchboardTwap,
       kctx.collateralReserve.oracles.scope,
     ]);
-    expect(addresses.slice(32, 36)).toEqual([
+    expect(addresses.slice(34, 38)).toEqual([
       `${crncyCollateralFarm}Obl` as Address,
       crncyCollateralFarm,
       `${assetLiquidityFarm}Obl` as Address,
@@ -630,6 +645,12 @@ describe('Kamino account order', () => {
       SYSTEM_PROGRAM_ID,
       VM_ACCOUNT,
       INSTR_ACCOUNT,
+    ]);
+    expect(ix.accounts!.map((account) => account.address).slice(6, 10)).toEqual([
+      OBLIGATION,
+      USER_METADATA,
+      SYSVAR_RENT_ADDRESS,
+      MAIN_KAMINO_MARKET,
     ]);
   });
 

@@ -58,7 +58,6 @@ import {
 
 export const KAMINO_REPAY_ALL_FLAG = 1;
 export const KAMINO_WITHDRAW_ALL_FLAG = 2;
-export const KAMINO_KEEP_OBLIGATION_ALIVE_FLAG = 4;
 export const KAMINO_REFRESH_OBLIGATION_DISCRIMINATOR = Buffer.from([33, 132, 147, 228, 151, 192, 72, 89]);
 export const KAMINO_REFRESH_RESERVES_BATCH_DISCRIMINATOR = Buffer.from([144, 110, 26, 103, 162, 204, 252, 147]);
 
@@ -841,7 +840,6 @@ function kaminoChangeFlags(args: KaminoChangePositionArgs): number {
   let flags = 0;
   if (args.repayAll) flags |= KAMINO_REPAY_ALL_FLAG;
   if (args.withdrawAll) flags |= KAMINO_WITHDRAW_ALL_FLAG;
-  if (args.keepObligationAlive) flags |= KAMINO_KEEP_OBLIGATION_ALIVE_FLAG;
   return flags;
 }
 
@@ -851,12 +849,6 @@ function validateChangeFlags(args: KaminoChangePositionArgs): void {
   }
   if (args.withdrawAll && args.collateralDelta !== 0) {
     throw new Error('withdrawAll requires collateralDelta to be 0');
-  }
-  if (args.keepObligationAlive && args.withdrawAll) {
-    throw new Error('keepObligationAlive cannot be used together with withdrawAll');
-  }
-  if (args.keepObligationAlive && args.collateralDelta === 0) {
-    throw new Error('keepObligationAlive requires collateralDelta to be non-zero');
   }
 }
 
@@ -893,6 +885,8 @@ export async function buildKaminoChangePositionInstruction(
   accounts.push(
     { address: kaminoCtx.instrAccount, role: AccountRole.WRITABLE },
     { address: kaminoCtx.obligation, role: AccountRole.WRITABLE },
+    { address: kaminoCtx.userMetadata, role: AccountRole.READONLY },
+    { address: SYSVAR_RENT, role: AccountRole.READONLY },
     { address: kaminoCtx.lendingMarket, role: AccountRole.READONLY },
     { address: kaminoCtx.lendingMarketAuthority, role: AccountRole.READONLY },
     { address: collateralReserve.address, role: AccountRole.WRITABLE },

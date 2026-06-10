@@ -55,6 +55,8 @@ export class KaminoChangePositionReportModel {
 
   static readonly OFFSET_TAG = 0;
   static readonly OFFSET_ASSETS_IS_COLLATERAL = 1;
+  static readonly OFFSET_WITHDRAW_ALL = 2;
+  static readonly OFFSET_REPAY_ALL = 3;
   static readonly OFFSET_SEQ_NO = 8;
   static readonly OFFSET_CLIENT_ID = 12;
   static readonly OFFSET_INSTR_ID = 16;
@@ -65,6 +67,8 @@ export class KaminoChangePositionReportModel {
 
   tag: number;
   assetsIsCollateral: number;
+  withdrawAll: number;
+  repayAll: number;
   seqNo: number;
   clientId: number;
   instrId: number;
@@ -77,7 +81,8 @@ export class KaminoChangePositionReportModel {
     let autoBuffer = new AutoBuffer(buffer, offset);
     result.tag = autoBuffer.readU8();
     result.assetsIsCollateral = autoBuffer.readU8();
-    autoBuffer.readU16();
+    result.withdrawAll = autoBuffer.readU8();
+    result.repayAll = autoBuffer.readU8();
     autoBuffer.readU32();
     result.seqNo = autoBuffer.readU32();
     result.clientId = autoBuffer.readU32();

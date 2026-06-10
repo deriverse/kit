@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.67] - 2026-06-10
+
+### Changed
+
+- **Kamino change position ABI**: Added `userMetadata` and rent sysvar accounts to `kaminoChangePositionInstruction` account ordering so the on-chain processor can recreate a closed obligation.
+- **Kamino logs**: Updated `KaminoChangePositionReportModel` to decode the new `withdrawAll` and `repayAll` log flags.
+
+### Removed
+
+- **Kamino change position args**: Removed the obsolete `keepObligationAlive` flag from `KaminoChangePositionArgs`.
+
 ## [1.0.66] - 2026-06-09
 
 ### Added

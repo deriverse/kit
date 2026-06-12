@@ -237,6 +237,7 @@ function fakeKaminoContext(
     const selectedFarm = selectedSide === 'collateral' ? collateralFarm : liquidityFarm;
     return {
       address,
+      lastUpdateSlot: BigInt(0),
       lendingMarket: MAIN_KAMINO_MARKET,
       liquidityMint: mint,
       liquiditySupply: `${address}Supply` as Address,
@@ -252,8 +253,10 @@ function fakeKaminoContext(
         switchboardTwap: KLEND_PROGRAM_ID,
         scope: KLEND_PROGRAM_ID,
       },
+      scopePriceChain: [0, 0, 0, 0],
       loanToValuePct: 70,
       liquidationThresholdPct: 80,
+      borrowFactorPct: BigInt(100),
       mintDecimals: 9,
       raw: {
         marketPriceSf: 1,

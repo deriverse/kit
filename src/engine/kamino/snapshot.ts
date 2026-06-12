@@ -12,6 +12,8 @@ import {
 } from './math';
 import { DecodedReserve, ObligationSnapshot, PositionView } from '../../types/kamino';
 
+import { Scope } from '@kamino-finance/scope-sdk';
+
 interface KaminoSnapshotContext {
   rpc: Rpc<SolanaRpcApiDevnet> | Rpc<SolanaRpcApiMainnet>;
   commitment: Commitment;
@@ -37,16 +39,35 @@ function buildPosition(
   };
 }
 
+
 async function snapshotObligation(ctx: KaminoSnapshotContext, obligationAddress: Address): Promise<ObligationSnapshot> {
   const obligation = await fetchObligationDecoded(ctx, obligationAddress);
   const allReservesAddresses = new Set<Address>([...obligation.depositReserves, ...obligation.borrowReserves]);
 
   const reserves = await fetchReservesDecoded(ctx, [...allReservesAddresses]);
 
+  const scopeFeeds = [...new Set([...reserves.values()].map((r) => r.oracles.scope))];
+
+  const scope = new Scope('devnet', ctx.rpc as any);
+  const feedInfo = await ctx.rpc.getAccountInfo(scopeFeeds[0], { encoding: 'base64', commitment: ctx.commitment }).send();
+  if (feedInfo.value) {
+    (scope as any)._config = { ...scope.config, programId: feedInfo.value.owner };
+  }
+  const oraclePricesByFeed = new Map(
+    (await scope.getOraclePrices(scopeFeeds as any)).map(([feed, prices]) => [feed as string, prices]),
+  );
+
   const slotResp = await ctx.rpc.getSlot({ commitment: ctx.commitment }).send();
   const currentSlot = BigInt(slotResp);
 
-  const mintPrices = new Map<string, number>(); // TODO: Sergei
+  const mintPrices = new Map<string, number>();
+  for (const reserve of reserves.values()) {
+    const prices = oraclePricesByFeed.get(reserve.oracles.scope as string);
+    const chain = reserve.oracles.scopePriceChain;
+    if (!prices || !Scope.isScopeChainValid(chain)) continue;
+    const { price } = Scope.getPriceFromScopeChain(chain, prices);
+    mintPrices.set(reserve.liquidity.mint, price.toNumber());
+  }
 
   let collateralUsd = 0;
   let borrowUsd = 0;

@@ -35,6 +35,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
+    "@kamino-finance/scope-sdk": "^10.2.2",
     "@solana-program/system": "^0.7.0",
     "@solana/kit": "2.1.0",
     "base64-arraybuffer": "^1.0.2",

@@ -95,6 +95,7 @@ interface DecodedReserve {
     switchboardPrice: Address;
     switchboardTwap: Address;
     scope: Address;
+    scopePriceChain: number[];
   };
 }
 

@@ -2,7 +2,7 @@ import { IAccountMeta, IInstruction } from '@solana/kit';
 
 export { InstrMask, AccountType, LogType } from './enums';
 
-export {
+export type {
   EngineArgs,
   InstrId,
   DepositArgs,
@@ -55,7 +55,7 @@ export {
   KaminoObligationExistsArgs,
 } from './engine-args';
 
-export {
+export type {
   LinePx,
   Instrument,
   Token,
@@ -74,7 +74,7 @@ export {
   GetClientDataResponse,
 } from './responses';
 
-export { LogMessage } from './log-message';
+export type { LogMessage } from './log-message';
 
 export {
   EngineArgsSchema,

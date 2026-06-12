@@ -30,6 +30,7 @@ const RESERVE_OFF = {
   cfgBorrowFactorPct: 5000,
 
   scopePriceFeed: 5104,
+  scopePriceChain: 5136,
   switchboardPriceAggregator: 5152,
   switchboardTwapAggregator: 5184,
   pythPrice: 5216,
@@ -76,6 +77,7 @@ function decodeReserve(reserveAddress: Address, raw: Buffer): DecodedReserve {
       switchboardPrice: readAddress(body, RESERVE_OFF.switchboardPriceAggregator),
       switchboardTwap: readAddress(body, RESERVE_OFF.switchboardTwapAggregator),
       scope: readAddress(body, RESERVE_OFF.scopePriceFeed),
+      scopePriceChain: [0, 1, 2, 3].map((i) => body.readUInt16LE(RESERVE_OFF.scopePriceChain + i * 2)),
     },
   };
 }

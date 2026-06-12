@@ -53,6 +53,7 @@ export {
   KaminoChangePositionArgs,
   KaminoLookupTableAddressesArgs,
   KaminoObligationExistsArgs,
+  SnapshotKaminoObligationArgs,
   KaminoAtaExistsArgs,
   KaminoInstrumentAccountsExistArgs,
   GetKaminoClientStateArgs,
@@ -88,6 +89,15 @@ export {
   KaminoClientReservePosition,
   KaminoClientStateResponse,
 } from './responses';
+
+export type {
+  DecodedObligation,
+  ObligationDeposit,
+  ObligationBorrow,
+  PositionView,
+  SnapshotTotals,
+  ObligationSnapshot,
+} from './kamino';
 
 export { LogMessage } from './log-message';
 
@@ -141,6 +151,7 @@ export {
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
+  SnapshotKaminoObligationArgsSchema,
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,

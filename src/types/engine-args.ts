@@ -49,6 +49,7 @@ import {
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
+  SnapshotKaminoObligationArgsSchema,
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,
@@ -105,6 +106,7 @@ export type KaminoRefreshReservesArgs = z.infer<typeof KaminoRefreshReservesArgs
 export type KaminoChangePositionArgs = z.infer<typeof KaminoChangePositionArgsSchema>;
 export type KaminoLookupTableAddressesArgs = z.infer<typeof KaminoLookupTableAddressesArgsSchema>;
 export type KaminoObligationExistsArgs = z.infer<typeof KaminoObligationExistsArgsSchema>;
+export type SnapshotKaminoObligationArgs = z.infer<typeof SnapshotKaminoObligationArgsSchema>;
 export type KaminoAtaExistsArgs = z.infer<typeof KaminoAtaExistsArgsSchema>;
 export type KaminoInstrumentAccountsExistArgs = z.infer<typeof KaminoInstrumentAccountsExistArgsSchema>;
 export type GetKaminoClientStateArgs = z.infer<typeof GetKaminoClientStateArgsSchema>;

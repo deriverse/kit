@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.68] - 2026-06-12
+
+### Added
+
+- **Kamino snapshot**:
+
 ## [1.0.67] - 2026-06-10
 
 ### Changed

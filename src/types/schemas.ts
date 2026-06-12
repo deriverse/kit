@@ -386,6 +386,16 @@ const KaminoObligationExistsArgsSchema = z
   })
   .strict();
 
+const SnapshotKaminoObligationArgsSchema = z
+  .object({
+    obligation: solanaAddress.meta({ description: 'Kamino obligation address' }),
+    cluster: z
+      .enum(['localnet', 'devnet', 'mainnet-beta'])
+      .optional()
+      .meta({ description: 'Solana cluster for Scope oracle prices' }),
+  })
+  .strict();
+
 const KaminoAtaExistsArgsSchema = z.object({
   mint: solanaAddress.meta({ description: 'Token mint' }),
   owner: solanaAddress.optional().meta({ description: 'ATA owner' }),
@@ -468,6 +478,7 @@ export {
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
+  SnapshotKaminoObligationArgsSchema,
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,

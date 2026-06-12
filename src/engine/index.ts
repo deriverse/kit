@@ -60,6 +60,8 @@ import {
   KaminoChangePositionArgs,
   KaminoLookupTableAddressesArgs,
   KaminoObligationExistsArgs,
+  SnapshotKaminoObligationArgs,
+  ObligationSnapshot,
   KaminoAtaExistsArgs,
   KaminoInstrumentAccountsExistArgs,
   GetKaminoClientStateArgs,
@@ -106,6 +108,7 @@ import {
   KaminoChangePositionArgsSchema,
   KaminoLookupTableAddressesArgsSchema,
   KaminoObligationExistsArgsSchema,
+  SnapshotKaminoObligationArgsSchema,
   KaminoAtaExistsArgsSchema,
   KaminoInstrumentAccountsExistArgsSchema,
   GetKaminoClientStateArgsSchema,
@@ -225,6 +228,7 @@ import {
   loadKaminoReserve,
   refreshKaminoContextReserveData,
 } from './kamino-instructions';
+import { snapshotObligation } from './kamino-snapshot';
 
 type Address = SolanaAddress<string>;
 
@@ -1249,6 +1253,14 @@ export class Engine {
     const parsed = KaminoObligationExistsArgsSchema.parse(args);
     await this.requireClient();
     return kaminoObligationExistsFn(this.getKaminoInstructionContext(), parsed);
+  }
+
+  async snapshotKaminoObligation(args: SnapshotKaminoObligationArgs): Promise<ObligationSnapshot> {
+    const parsed = SnapshotKaminoObligationArgsSchema.parse(args);
+    return snapshotObligation(
+      { rpc: this.rpc, commitment: this.commitment },
+      { obligation: parsed.obligation, cluster: parsed.cluster },
+    );
   }
 
   async kaminoAtaExists(args: KaminoAtaExistsArgs): Promise<boolean> {

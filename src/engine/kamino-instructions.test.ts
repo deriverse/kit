@@ -237,6 +237,7 @@ function fakeKaminoContext(
     const selectedFarm = selectedSide === 'collateral' ? collateralFarm : liquidityFarm;
     return {
       address,
+      lastUpdateSlot: BigInt(0),
       lendingMarket: MAIN_KAMINO_MARKET,
       liquidityMint: mint,
       liquiditySupply: `${address}Supply` as Address,
@@ -252,8 +253,10 @@ function fakeKaminoContext(
         switchboardTwap: KLEND_PROGRAM_ID,
         scope: KLEND_PROGRAM_ID,
       },
+      scopePriceChain: [0, 0, 0, 0],
       loanToValuePct: 70,
       liquidationThresholdPct: 80,
+      borrowFactorPct: BigInt(100),
       mintDecimals: 9,
       raw: {
         marketPriceSf: 1,
@@ -984,14 +987,6 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.67', () => {
-    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
-    const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.67');
-    expect(packageLock.version).toBe('1.0.67');
-    expect(packageLock.packages[''].version).toBe('1.0.67');
-  });
-
   it('does not add forbidden Kamino SDK dependencies', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const deps = {

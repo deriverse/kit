@@ -280,6 +280,7 @@ export interface KaminoOracleAccounts {
 
 export interface KaminoReserveInfo {
   address: Address;
+  lastUpdateSlot: bigint;
   lendingMarket: Address;
   liquidityMint: Address;
   liquiditySupply: Address;
@@ -290,8 +291,10 @@ export interface KaminoReserveInfo {
   farmCollateral: Address;
   farmDebt: Address;
   oracles: KaminoOracleAccounts;
+  scopePriceChain: number[];
   loanToValuePct: number;
   liquidationThresholdPct: number;
+  borrowFactorPct: bigint;
   mintDecimals: number;
   raw: {
     marketPriceSf: number;

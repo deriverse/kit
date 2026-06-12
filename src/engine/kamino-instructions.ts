@@ -66,8 +66,9 @@ const SYSVAR_RENT = 'SysvarRent111111111111111111111111111111111' as Address;
 const SYSVAR_INSTRUCTIONS = 'Sysvar1nstructions1111111111111111111111111' as Address;
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
-const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
+export const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
 
+const RESERVE_LAST_UPDATE_SLOT_OFFSET = 16;
 const RESERVE_LENDING_MARKET_OFFSET = 32;
 const RESERVE_FARM_COLLATERAL_OFFSET = 64;
 const RESERVE_FARM_DEBT_OFFSET = 96;
@@ -88,22 +89,24 @@ const RESERVE_COLLATERAL_SUPPLY_OFFSET = 2600;
 const RESERVE_CONFIG_OFFSET = 4856;
 const RESERVE_LOAN_TO_VALUE_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 16;
 const RESERVE_LIQUIDATION_THRESHOLD_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 17;
+const RESERVE_BORROW_FACTOR_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 152;
 const RESERVE_DEPOSIT_LIMIT_OFFSET = RESERVE_CONFIG_OFFSET + 160;
 const RESERVE_BORROW_LIMIT_OFFSET = RESERVE_CONFIG_OFFSET + 168;
 const RESERVE_SCOPE_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 80;
+const RESERVE_SCOPE_PRICE_CHAIN_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 112;
 const RESERVE_SWITCHBOARD_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 128;
 const RESERVE_SWITCHBOARD_TWAP_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 160;
 const RESERVE_PYTH_PRICE_OFFSET = RESERVE_CONFIG_OFFSET + 176 + 192;
 
-const OBLIGATION_OWNER_OFFSET = 64;
-const OBLIGATION_DEPOSITS_OFFSET = 96;
-const OBLIGATION_COLLATERAL_SIZE = 136;
-const OBLIGATION_COLLATERAL_DEPOSITED_AMOUNT_OFFSET = 32;
+export const OBLIGATION_OWNER_OFFSET = 64;
+export const OBLIGATION_DEPOSITS_OFFSET = 96;
+export const OBLIGATION_COLLATERAL_SIZE = 136;
+export const OBLIGATION_COLLATERAL_DEPOSITED_AMOUNT_OFFSET = 32;
 const OBLIGATION_COLLATERAL_MARKET_VALUE_OFFSET = 40;
 const OBLIGATION_DEPOSITED_VALUE_SF_OFFSET = 1192;
-const OBLIGATION_BORROWS_OFFSET = 1208;
-const OBLIGATION_LIQUIDITY_SIZE = 200;
-const OBLIGATION_BORROWED_AMOUNT_SF_OFFSET = 88;
+export const OBLIGATION_BORROWS_OFFSET = 1208;
+export const OBLIGATION_LIQUIDITY_SIZE = 200;
+export const OBLIGATION_BORROWED_AMOUNT_SF_OFFSET = 88;
 const OBLIGATION_BORROW_MARKET_VALUE_SF_OFFSET = 104;
 const OBLIGATION_BORROW_FACTOR_ADJUSTED_DEBT_VALUE_SF_OFFSET = 2208;
 const OBLIGATION_BORROWED_ASSETS_MARKET_VALUE_SF_OFFSET = 2224;
@@ -128,19 +131,19 @@ export interface KaminoInstructionContext extends AccountHelperContext {
   getKaminoReserveInfoByMint?: (args: KaminoReserveByMintArgs) => Promise<KaminoReserveInfo>;
 }
 
-function dataToBuffer(data: Base64EncodedDataResponse): Buffer {
+export function dataToBuffer(data: Base64EncodedDataResponse): Buffer {
   return Buffer.from(getBase64Encoder().encode(data[0]));
 }
 
-function readAddress(buffer: Buffer, offset: number): Address {
+export function readAddress(buffer: Buffer, offset: number): Address {
   return addressDecoder.decode(buffer.subarray(offset, offset + 32)) as Address;
 }
 
-function readU64(buffer: Buffer, offset: number): number {
+export function readU64(buffer: Buffer, offset: number): number {
   return Number(buffer.readBigUInt64LE(offset));
 }
 
-function readU128(buffer: Buffer, offset: number): bigint {
+export function readU128(buffer: Buffer, offset: number): bigint {
   const lo = buffer.readBigUInt64LE(offset);
   const hi = buffer.readBigUInt64LE(offset + 8);
   return lo + (hi << BigInt(64));
@@ -168,7 +171,7 @@ function oracleOrSentinel(value: Address): Address {
   return isDefaultAddress(value) ? KLEND_PROGRAM_ID : value;
 }
 
-function accountOwner(info: { owner?: Address; programAddress?: Address }): Address | undefined {
+export function accountOwner(info: { owner?: Address; programAddress?: Address }): Address | undefined {
   return info.owner ?? info.programAddress;
 }
 
@@ -339,8 +342,14 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
     scope: oracleOrSentinel(readAddress(buffer, RESERVE_SCOPE_PRICE_OFFSET)),
   };
 
+  const scopePriceChain: number[] = [];
+  for (let i = 0; i < 4; i++) {
+    scopePriceChain.push(buffer.readUInt16LE(RESERVE_SCOPE_PRICE_CHAIN_OFFSET + i * 2));
+  }
+
   return {
     address,
+    lastUpdateSlot: BigInt(readU64(buffer, RESERVE_LAST_UPDATE_SLOT_OFFSET)),
     lendingMarket,
     liquidityMint: readAddress(buffer, RESERVE_LIQUIDITY_MINT_OFFSET),
     liquiditySupply: readAddress(buffer, RESERVE_LIQUIDITY_SUPPLY_OFFSET),
@@ -351,8 +360,10 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
     farmCollateral,
     farmDebt,
     oracles,
+    scopePriceChain,
     loanToValuePct: buffer.readUint8(RESERVE_LOAN_TO_VALUE_PCT_OFFSET),
     liquidationThresholdPct: buffer.readUint8(RESERVE_LIQUIDATION_THRESHOLD_PCT_OFFSET),
+    borrowFactorPct: buffer.readBigUInt64LE(RESERVE_BORROW_FACTOR_PCT_OFFSET),
     mintDecimals: readU64(buffer, RESERVE_MINT_DECIMALS_OFFSET),
     raw: {
       marketPriceSf: sfToNumber(readU128(buffer, RESERVE_MARKET_PRICE_SF_OFFSET)),

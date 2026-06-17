@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.68] - 2026-06-17
+
+### Fixed
+
+- **Kamino reserve discovery**: Select the sole enabled reserve when a Kamino market has disabled duplicate reserves for the same liquidity mint.
+
 ## [1.0.67] - 2026-06-10
 
 ### Changed

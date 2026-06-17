@@ -465,11 +465,21 @@ export async function findKaminoReserveByMint(
   if (accounts.length === 0) {
     throw new Error(`Kamino reserve not found for mint ${args.mint}`);
   }
-  if (accounts.length > 1) {
-    throw new Error(`Multiple Kamino reserves found for mint ${args.mint}`);
+
+  const reserves = accounts.map((account) => decodeReserve(account.pubkey, dataToBuffer(account.account.data)));
+  if (reserves.length === 1) {
+    return reserves[0];
   }
 
-  return decodeReserve(accounts[0].pubkey, dataToBuffer(accounts[0].account.data));
+  const enabledReserves = reserves.filter((reserve) => reserve.raw.depositLimit > 0 || reserve.raw.borrowLimit > 0);
+  if (enabledReserves.length === 1) {
+    return enabledReserves[0];
+  }
+
+  const candidates = enabledReserves.length > 0 ? enabledReserves : reserves;
+  throw new Error(
+    `Multiple Kamino reserves found for mint ${args.mint}: ${candidates.map((reserve) => reserve.address).join(', ')}`,
+  );
 }
 
 async function resolveKaminoReserveByMint(

@@ -50,6 +50,7 @@ const ASSET_MINT = 'So11111111111111111111111111111111111111112' as Address;
 const CRNCY_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' as Address;
 const COLL_RESERVE = '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E' as Address;
 const DEBT_RESERVE = 'Es9vMFrzaCERmJfrF4H2FYD4KCoZTqtfQxXGCfCM8GgD' as Address;
+const DISABLED_DEBT_RESERVE = 'AWnKJ9dsiHcoDCThxE5E93ikDTAXkApoNwrKM2tp9KFJ' as Address;
 const FARM_COLL = 'FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr' as Address;
 const FARM_DEBT = 'Sysvar1nstructions1111111111111111111111111' as Address;
 const NULL_ADDRESS = '11111111111111111111111111111111' as Address;
@@ -87,6 +88,8 @@ function reserveBuffer(args: {
   totalAvailableAmount?: number;
   borrowedAmount?: number;
   collateralMintTotalSupply?: number;
+  depositLimit?: number;
+  borrowLimit?: number;
 }): Buffer {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
@@ -106,8 +109,8 @@ function reserveBuffer(args: {
   writeAddress(buffer, 2600, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
   buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(args.liquidationThresholdPct ?? 80, 4856 + 17);
-  buffer.writeBigUInt64LE(BigInt(1_000_000), 4856 + 160);
-  buffer.writeBigUInt64LE(BigInt(500_000), 4856 + 168);
+  buffer.writeBigUInt64LE(BigInt(args.depositLimit ?? 1_000_000), 4856 + 160);
+  buffer.writeBigUInt64LE(BigInt(args.borrowLimit ?? 500_000), 4856 + 168);
   writeAddress(buffer, 4856 + 176 + 80, '11111111111111111111111111111111' as Address);
   writeAddress(buffer, 4856 + 176 + 128, '11111111111111111111111111111111' as Address);
   writeAddress(buffer, 4856 + 176 + 160, '11111111111111111111111111111111' as Address);
@@ -362,6 +365,42 @@ describe('Kamino context and services', () => {
     expect(result.lendingMarket).toBe(MAIN_KAMINO_MARKET);
     expect(result.collateralReserve.address).toBe(COLL_RESERVE);
     expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+  });
+
+  it('selects the only enabled duplicate reserve for a mint', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [{ pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } }],
+        [
+          {
+            pubkey: DISABLED_DEBT_RESERVE,
+            account: {
+              data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT, depositLimit: 0, borrowLimit: 0 })),
+            },
+          },
+          { pubkey: DEBT_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } },
+        ],
+      ],
+    });
+
+    const result = await buildKaminoContext(context(rpc), { instrId: 1 });
+
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+  });
+
+  it('rejects genuinely ambiguous duplicate reserves for a mint', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [
+          { pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } },
+          { pubkey: DEBT_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } },
+        ],
+      ],
+    });
+
+    await expect(buildKaminoContext(context(rpc), { instrId: 1 })).rejects.toThrow(
+      /Multiple Kamino reserves found for mint/,
+    );
   });
 
   it('validates autoderived reserve mints', async () => {

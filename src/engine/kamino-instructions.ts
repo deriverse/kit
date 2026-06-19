@@ -67,6 +67,7 @@ const SYSVAR_INSTRUCTIONS = 'Sysvar1nstructions1111111111111111111111111' as Add
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
 const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
+const KAMINO_RESERVE_STATUS_ACTIVE = 0;
 const KAMINO_RESERVE_DOMINANCE_RATIO = 100;
 
 const RESERVE_LENDING_MARKET_OFFSET = 32;
@@ -87,6 +88,7 @@ const RESERVE_COLLATERAL_MINT_OFFSET = 2560;
 const RESERVE_COLLATERAL_MINT_TOTAL_SUPPLY_OFFSET = 2592;
 const RESERVE_COLLATERAL_SUPPLY_OFFSET = 2600;
 const RESERVE_CONFIG_OFFSET = 4856;
+const RESERVE_STATUS_OFFSET = RESERVE_CONFIG_OFFSET;
 const RESERVE_LOAN_TO_VALUE_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 16;
 const RESERVE_LIQUIDATION_THRESHOLD_PCT_OFFSET = RESERVE_CONFIG_OFFSET + 17;
 const RESERVE_DEPOSIT_LIMIT_OFFSET = RESERVE_CONFIG_OFFSET + 160;
@@ -356,6 +358,7 @@ function decodeReserve(address: Address, buffer: Buffer): KaminoReserveInfo {
     liquidationThresholdPct: buffer.readUint8(RESERVE_LIQUIDATION_THRESHOLD_PCT_OFFSET),
     mintDecimals: readU64(buffer, RESERVE_MINT_DECIMALS_OFFSET),
     raw: {
+      status: buffer.readUint8(RESERVE_STATUS_OFFSET),
       marketPriceSf: sfToNumber(readU128(buffer, RESERVE_MARKET_PRICE_SF_OFFSET)),
       totalAvailableAmount,
       borrowedAmountSf: sfToNumber(borrowedAmountSf),
@@ -466,6 +469,11 @@ function selectDominantKaminoReserve(reserves: KaminoReserveInfo[]): KaminoReser
   return null;
 }
 
+function selectSingleActiveKaminoReserve(reserves: KaminoReserveInfo[]): KaminoReserveInfo | null {
+  const activeReserves = reserves.filter((reserve) => reserve.raw.status === KAMINO_RESERVE_STATUS_ACTIVE);
+  return activeReserves.length === 1 ? activeReserves[0] : null;
+}
+
 export async function findKaminoReserveByMint(
   ctx: KaminoInstructionContext,
   args: KaminoReserveByMintArgs,
@@ -489,6 +497,11 @@ export async function findKaminoReserveByMint(
   const reserves = accounts.map((account) => decodeReserve(account.pubkey, dataToBuffer(account.account.data)));
   if (reserves.length === 1) {
     return reserves[0];
+  }
+
+  const activeReserve = selectSingleActiveKaminoReserve(reserves);
+  if (activeReserve !== null) {
+    return activeReserve;
   }
 
   const enabledReserves = reserves.filter((reserve) => reserve.raw.depositLimit > 0 || reserve.raw.borrowLimit > 0);

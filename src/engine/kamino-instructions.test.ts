@@ -58,6 +58,8 @@ const USER_METADATA = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
 const VM_ACCOUNT = 'SysvarRent111111111111111111111111111111111' as Address;
 const SYSVAR_RENT_ADDRESS = 'SysvarRent111111111111111111111111111111111' as Address;
+const KAMINO_RESERVE_STATUS_ACTIVE = 0;
+const KAMINO_RESERVE_STATUS_HIDDEN = 2;
 
 function dataResponse(buffer: Buffer): Base64EncodedDataResponse {
   return [buffer.toString('base64'), 'base64'] as unknown as Base64EncodedDataResponse;
@@ -90,6 +92,7 @@ function reserveBuffer(args: {
   collateralMintTotalSupply?: number;
   depositLimit?: number;
   borrowLimit?: number;
+  status?: number;
 }): Buffer {
   const buffer = Buffer.alloc(6000);
   Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]).copy(buffer, 0);
@@ -107,6 +110,7 @@ function reserveBuffer(args: {
   writeAddress(buffer, 2560, 'AddressLookupTab1e1111111111111111111111111' as Address);
   buffer.writeBigUInt64LE(BigInt(args.collateralMintTotalSupply ?? 123_456_000), 2592);
   writeAddress(buffer, 2600, 'BPFLoaderUpgradeab1e11111111111111111111111' as Address);
+  buffer.writeUint8(args.status ?? KAMINO_RESERVE_STATUS_ACTIVE, 4856);
   buffer.writeUint8(args.loanToValuePct ?? 70, 4856 + 16);
   buffer.writeUint8(args.liquidationThresholdPct ?? 80, 4856 + 17);
   buffer.writeBigUInt64LE(BigInt(args.depositLimit ?? 1_000_000), 4856 + 160);
@@ -259,6 +263,7 @@ function fakeKaminoContext(
       liquidationThresholdPct: 80,
       mintDecimals: 9,
       raw: {
+        status: KAMINO_RESERVE_STATUS_ACTIVE,
         marketPriceSf: 1,
         totalAvailableAmount: 100_000_000,
         borrowedAmountSf: 23_456_000,
@@ -345,9 +350,13 @@ describe('Kamino instruction data', () => {
 
 describe('Kamino reserve decoding', () => {
   it('decodes collateral supply vault after collateral mint total supply', () => {
-    const result = decodeKaminoReserveData(COLL_RESERVE, dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })));
+    const result = decodeKaminoReserveData(
+      COLL_RESERVE,
+      dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, status: KAMINO_RESERVE_STATUS_HIDDEN })),
+    );
 
     expect(result.collateralSupply).toBe('BPFLoaderUpgradeab1e11111111111111111111111');
+    expect(result.raw.status).toBe(KAMINO_RESERVE_STATUS_HIDDEN);
   });
 });
 
@@ -375,7 +384,14 @@ describe('Kamino context and services', () => {
           {
             pubkey: DISABLED_DEBT_RESERVE,
             account: {
-              data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT, depositLimit: 0, borrowLimit: 0 })),
+              data: dataResponse(
+                reserveBuffer({
+                  liquidityMint: CRNCY_MINT,
+                  depositLimit: 0,
+                  borrowLimit: 0,
+                  status: KAMINO_RESERVE_STATUS_HIDDEN,
+                }),
+              ),
             },
           },
           { pubkey: DEBT_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })) } },
@@ -388,7 +404,7 @@ describe('Kamino context and services', () => {
     expect(result.debtReserve.address).toBe(DEBT_RESERVE);
   });
 
-  it('selects the dominant duplicate reserve when another candidate has small caps', async () => {
+  it('selects the active duplicate reserve when another candidate is hidden', async () => {
     const rpc = mockRpc({
       programAccounts: [
         [{ pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } }],
@@ -403,6 +419,7 @@ describe('Kamino context and services', () => {
                   borrowedAmount: 0,
                   depositLimit: 100_000_000_000,
                   borrowLimit: 100_000_000_000,
+                  status: KAMINO_RESERVE_STATUS_HIDDEN,
                 }),
               ),
             },
@@ -417,6 +434,51 @@ describe('Kamino context and services', () => {
                   borrowedAmount: 93_000_000_000_000,
                   depositLimit: 1_000_000_000_000_000,
                   borrowLimit: 700_000_000_000_000,
+                  status: KAMINO_RESERVE_STATUS_ACTIVE,
+                }),
+              ),
+            },
+          },
+        ],
+      ],
+    });
+
+    const result = await buildKaminoContext(context(rpc), { instrId: 1 });
+
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+  });
+
+  it('falls back to the dominant duplicate reserve when status does not disambiguate', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [{ pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } }],
+        [
+          {
+            pubkey: DISABLED_DEBT_RESERVE,
+            account: {
+              data: dataResponse(
+                reserveBuffer({
+                  liquidityMint: CRNCY_MINT,
+                  totalAvailableAmount: 1_100_000,
+                  borrowedAmount: 0,
+                  depositLimit: 100_000_000_000,
+                  borrowLimit: 100_000_000_000,
+                  status: KAMINO_RESERVE_STATUS_HIDDEN,
+                }),
+              ),
+            },
+          },
+          {
+            pubkey: DEBT_RESERVE,
+            account: {
+              data: dataResponse(
+                reserveBuffer({
+                  liquidityMint: CRNCY_MINT,
+                  totalAvailableAmount: 21_000_000_000_000,
+                  borrowedAmount: 93_000_000_000_000,
+                  depositLimit: 1_000_000_000_000_000,
+                  borrowLimit: 700_000_000_000_000,
+                  status: KAMINO_RESERVE_STATUS_HIDDEN,
                 }),
               ),
             },
@@ -1065,12 +1127,12 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.69', () => {
+  it('bumps package metadata to 1.0.70', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.69');
-    expect(packageLock.version).toBe('1.0.69');
-    expect(packageLock.packages[''].version).toBe('1.0.69');
+    expect(packageJson.version).toBe('1.0.70');
+    expect(packageLock.version).toBe('1.0.70');
+    expect(packageLock.packages[''].version).toBe('1.0.70');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

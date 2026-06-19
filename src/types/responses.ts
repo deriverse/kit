@@ -294,6 +294,7 @@ export interface KaminoReserveInfo {
   liquidationThresholdPct: number;
   mintDecimals: number;
   raw: {
+    status?: number;
     marketPriceSf: number;
     totalAvailableAmount: number;
     borrowedAmountSf: number;

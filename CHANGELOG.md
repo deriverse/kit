@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.70] - 2026-06-19
+
+### Fixed
+
+- **Kamino reserve discovery**: Prefer active Kamino reserves over hidden duplicates for the same mint, with a dominance fallback when status does not disambiguate.
+
 ## [1.0.69] - 2026-06-19
 
 ### Fixed

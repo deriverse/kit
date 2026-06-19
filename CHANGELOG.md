@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.69] - 2026-06-19
+
+### Fixed
+
+- **Kamino reserve discovery**: Select a dominant reserve when a duplicate Kamino reserve has nonzero but much smaller liquidity and caps for the same mint.
+
 ## [1.0.68] - 2026-06-17
 
 ### Fixed

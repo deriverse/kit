@@ -67,6 +67,7 @@ const SYSVAR_INSTRUCTIONS = 'Sysvar1nstructions1111111111111111111111111' as Add
 
 const RESERVE_DISCRIMINATOR = Buffer.from([43, 242, 204, 202, 26, 247, 59, 127]);
 const OBLIGATION_DISCRIMINATOR = Buffer.from([168, 206, 141, 106, 88, 76, 172, 167]);
+const KAMINO_RESERVE_DOMINANCE_RATIO = 100;
 
 const RESERVE_LENDING_MARKET_OFFSET = 32;
 const RESERVE_FARM_COLLATERAL_OFFSET = 64;
@@ -446,6 +447,25 @@ function validateReserveForMint(
   }
 }
 
+function kaminoReserveSelectionScore(reserve: KaminoReserveInfo): number {
+  return Math.max(reserve.raw.totalLiquidity, reserve.raw.depositLimit, reserve.raw.borrowLimit);
+}
+
+function selectDominantKaminoReserve(reserves: KaminoReserveInfo[]): KaminoReserveInfo | null {
+  const [first, second] = [...reserves].sort((a, b) => kaminoReserveSelectionScore(b) - kaminoReserveSelectionScore(a));
+  if (first == null) {
+    return null;
+  }
+
+  const firstScore = kaminoReserveSelectionScore(first);
+  const secondScore = second == null ? 0 : kaminoReserveSelectionScore(second);
+  if (firstScore > 0 && (secondScore === 0 || firstScore >= secondScore * KAMINO_RESERVE_DOMINANCE_RATIO)) {
+    return first;
+  }
+
+  return null;
+}
+
 export async function findKaminoReserveByMint(
   ctx: KaminoInstructionContext,
   args: KaminoReserveByMintArgs,
@@ -477,6 +497,11 @@ export async function findKaminoReserveByMint(
   }
 
   const candidates = enabledReserves.length > 0 ? enabledReserves : reserves;
+  const dominantReserve = selectDominantKaminoReserve(candidates);
+  if (dominantReserve !== null) {
+    return dominantReserve;
+  }
+
   throw new Error(
     `Multiple Kamino reserves found for mint ${args.mint}: ${candidates.map((reserve) => reserve.address).join(', ')}`,
   );

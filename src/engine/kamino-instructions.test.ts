@@ -388,6 +388,48 @@ describe('Kamino context and services', () => {
     expect(result.debtReserve.address).toBe(DEBT_RESERVE);
   });
 
+  it('selects the dominant duplicate reserve when another candidate has small caps', async () => {
+    const rpc = mockRpc({
+      programAccounts: [
+        [{ pubkey: COLL_RESERVE, account: { data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })) } }],
+        [
+          {
+            pubkey: DISABLED_DEBT_RESERVE,
+            account: {
+              data: dataResponse(
+                reserveBuffer({
+                  liquidityMint: CRNCY_MINT,
+                  totalAvailableAmount: 1_100_000,
+                  borrowedAmount: 0,
+                  depositLimit: 100_000_000_000,
+                  borrowLimit: 100_000_000_000,
+                }),
+              ),
+            },
+          },
+          {
+            pubkey: DEBT_RESERVE,
+            account: {
+              data: dataResponse(
+                reserveBuffer({
+                  liquidityMint: CRNCY_MINT,
+                  totalAvailableAmount: 21_000_000_000_000,
+                  borrowedAmount: 93_000_000_000_000,
+                  depositLimit: 1_000_000_000_000_000,
+                  borrowLimit: 700_000_000_000_000,
+                }),
+              ),
+            },
+          },
+        ],
+      ],
+    });
+
+    const result = await buildKaminoContext(context(rpc), { instrId: 1 });
+
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+  });
+
   it('rejects genuinely ambiguous duplicate reserves for a mint', async () => {
     const rpc = mockRpc({
       programAccounts: [
@@ -1023,12 +1065,12 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.67', () => {
+  it('bumps package metadata to 1.0.69', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.67');
-    expect(packageLock.version).toBe('1.0.67');
-    expect(packageLock.packages[''].version).toBe('1.0.67');
+    expect(packageJson.version).toBe('1.0.69');
+    expect(packageLock.version).toBe('1.0.69');
+    expect(packageLock.packages[''].version).toBe('1.0.69');
   });
 
   it('does not add forbidden Kamino SDK dependencies', () => {

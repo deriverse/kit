@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   NewSpotOrderArgsSchema,
+  NewPerpOrderArgsSchema,
+  PerpQuotesReplaceArgsSchema,
   DepositArgsSchema,
   PerpChangeLeverageArgsSchema,
   PerpBuySeatArgsSchema,
@@ -14,6 +16,7 @@ import {
   KaminoUpdateObligationsArgsSchema,
   GetKaminoClientStateArgsSchema,
 } from './schemas';
+import { OrderType } from '../structure_models';
 
 const ADDRESS = 'So11111111111111111111111111111111111111112';
 
@@ -112,6 +115,58 @@ describe('Zod Schemas', () => {
         orderType: 1,
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('orderType validation', () => {
+    const orderTypeValues = Object.values(OrderType).filter((value): value is number => typeof value === 'number');
+    const maxOrderType = Math.max(...orderTypeValues);
+
+    it('accepts every OrderType enum value for new spot orders', () => {
+      for (const orderType of orderTypeValues) {
+        const result = NewSpotOrderArgsSchema.safeParse({ instrId: 1, price: 100, qty: 10, side: 0, orderType });
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it('accepts every OrderType enum value for new perp orders', () => {
+      for (const orderType of orderTypeValues) {
+        const result = NewPerpOrderArgsSchema.safeParse({ instrId: 1, price: 100, qty: 10, side: 0, orderType });
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it('accepts the makerOnly (post-only) order type that was previously rejected', () => {
+      expect(
+        NewSpotOrderArgsSchema.safeParse({
+          instrId: 1,
+          price: 100,
+          qty: 10,
+          side: 0,
+          orderType: OrderType.makerOnly,
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects order types above the OrderType enum range', () => {
+      const result = NewSpotOrderArgsSchema.safeParse({
+        instrId: 1,
+        price: 100,
+        qty: 10,
+        side: 0,
+        orderType: maxOrderType + 1,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('validates quotes-replace order types against the same range', () => {
+      const orders = [{ newPrice: 1, newQty: 1, oldId: 0, side: 0 }];
+      expect(
+        SpotQuotesReplaceArgsSchema.safeParse({ instrId: 1, orderType: OrderType.makerOnly, orders }).success,
+      ).toBe(true);
+      expect(PerpQuotesReplaceArgsSchema.safeParse({ instrId: 1, orderType: maxOrderType + 1, orders }).success).toBe(
+        false,
+      );
     });
   });
 

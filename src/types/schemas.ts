@@ -1,11 +1,17 @@
 import { z } from 'zod';
 import { Address, Base64EncodedDataResponse, Commitment } from '@solana/kit';
+import { OrderType } from '../structure_models';
 
 const nonNegativeInt = z.int().nonnegative({ error: 'Must be a non-negative integer' });
 const positiveNumber = z.number().positive({ error: 'Must be a positive number' });
 const signedAmount = z.number().finite({ error: 'Must be a finite number' });
 const side = z.int().min(0).max(1, { error: 'Side must be 0 (Bid) or 1 (Ask)' });
-const orderType = z.int().min(0).max(1, { error: 'Order type must be 0 (Limit) or 1 (Market)' });
+const ORDER_TYPE_VALUES = Object.values(OrderType).filter((value): value is number => typeof value === 'number');
+const MAX_ORDER_TYPE = Math.max(...ORDER_TYPE_VALUES);
+const orderType = z
+  .int()
+  .min(0)
+  .max(MAX_ORDER_TYPE, { error: `Order type must be between 0 (Limit) and ${MAX_ORDER_TYPE}` });
 const iocFlag = z.int().min(0).max(1, { error: 'IOC flag must be 0 (No) or 1 (Yes)' });
 const solanaAddress = z.custom<Address>((val) => typeof val === 'string', { error: 'Must be a valid Solana address' });
 const commitment = z.custom<Commitment>((val) => typeof val === 'string', {
@@ -53,7 +59,9 @@ const NewSpotOrderArgsSchema = z.object({
   ioc: iocFlag
     .optional()
     .meta({ description: 'Immediate Or Cancel. If true no new open order after this instruction execution' }),
-  orderType: orderType.optional().meta({ description: '0 - Limit, 1 - Market' }),
+  orderType: orderType
+    .optional()
+    .meta({ description: '0 - Limit, 1 - Market, 2 - MarginCall, 3 - MakerOnly, 4 - MakerPriceDeviation' }),
   side: side.meta({ description: '0 - Bid, 1 - Ask' }),
   edgePrice: positiveNumber.optional(),
 });
@@ -71,7 +79,7 @@ const QuoteOrderSchema = z.object({
 const SpotQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
-  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  orderType: orderType.optional().meta({ description: 'Order type, see OrderType enum' }),
   bailOnOrderNotFound: z.boolean().optional().meta({
     description: 'If true, fail the instruction when an order to cancel is not found',
   }),
@@ -130,7 +138,9 @@ const NewPerpOrderArgsSchema = z.object({
   ioc: iocFlag
     .optional()
     .meta({ description: 'Immediate Or Cancel. If true no new open order after this instruction execution' }),
-  orderType: orderType.optional().meta({ description: '0 - Limit, 1 - Market' }),
+  orderType: orderType
+    .optional()
+    .meta({ description: '0 - Limit, 1 - Market, 2 - MarginCall, 3 - MakerOnly, 4 - MakerPriceDeviation' }),
   qty: positiveNumber.meta({ description: 'Order quantity' }),
   price: positiveNumber.meta({ description: 'Order price' }),
   leverage: z.int().min(1).max(100, { error: 'Leverage must be between 1 and 100' }).optional(),
@@ -141,7 +151,7 @@ const NewPerpOrderArgsSchema = z.object({
 const PerpQuotesReplaceArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
-  orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+  orderType: orderType.optional().meta({ description: 'Order type, see OrderType enum' }),
   bailOnOrderNotFound: z.boolean().optional().meta({
     description: 'If true, fail the instruction when an order to cancel is not found',
   }),

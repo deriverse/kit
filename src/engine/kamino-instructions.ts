@@ -777,7 +777,6 @@ export async function buildKaminoInitObligationInstruction(
     { address: userMetadata, role: AccountRole.WRITABLE },
     { address: obligation, role: AccountRole.WRITABLE },
     { address: lendingMarket, role: AccountRole.READONLY },
-    { address: args.referrerUserMetadata ?? KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: KLEND_PROGRAM_ID, role: AccountRole.READONLY },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
     { address: SYSVAR_RENT, role: AccountRole.READONLY },

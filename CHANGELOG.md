@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.71] - 2026-06-23
+
+### Changed
+
+- **Kamino init obligation ABI**: Removed the referrer user metadata account from `buildKaminoInitObligationInstruction` account ordering to match the current protocol-v1 instruction layout.
+
 ## [1.0.70] - 2026-06-19
 
 ### Fixed

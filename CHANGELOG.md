@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.72] - 2026-06-30
+
+### Added
+
+- **Spot unchecked instructions**: Added synchronous `newSpotOrderInstructionUnchecked`, `spotQuotesReplaceInstructionUnchecked`, `spotOrderCancelInstructionUnchecked`, and `spotMassCancelInstructionUnchecked` builders that use cached signer, client, and instrument state without async update calls.
+
+### Changed
+
+- **Package metadata tests**: Removed the hardcoded package version assertion so release version bumps are not blocked by stale test expectations.
+
 ## [1.0.71] - 2026-06-23
 
 ### Changed

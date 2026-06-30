@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Address, AccountRole } from '@solana/kit';
 import {
+  CachedSpotAccountMetas,
   SpotInstructionContext,
   buildNewSpotOrderInstruction,
+  buildNewSpotOrderInstructionUnchecked,
   buildSpotLpInstruction,
+  buildSpotQuotesReplaceInstructionUnchecked,
   buildSpotOrderCancelInstruction,
+  buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
+  buildSpotMassCancelInstructionUnchecked,
 } from './spot-instructions';
 import { TokenStateModel, InstrAccountHeaderModel } from '../structure_models';
 import {
   Instrument,
   NewSpotOrderArgs,
   SpotLpArgs,
+  SpotQuotesReplaceArgs,
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
 } from '../types';
@@ -58,6 +64,7 @@ vi.mock('./context-builders', () => ({
 }));
 
 vi.mock('./utils', () => ({
+  buildQuotesMask: vi.fn().mockReturnValue(0),
   findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
   getLookupTableAddress: vi.fn().mockResolvedValue('MockLUT1111111111111111111111111' as Address),
   perpSeatReserve: vi.fn().mockReturnValue(0),
@@ -112,12 +119,44 @@ function createMockSpotContext(overrides: Partial<SpotInstructionContext> = {}):
     uiNumbers: true,
     signer: 'SignerAddress111111111111111111' as Address,
     rootAccount: 'RootAccount1111111111111111111111' as Address,
+    communityAccount: 'CommunityAccount11111111111111111' as Address,
     clientPrimaryAccount: 'ClientPrimary11111111111111111' as Address,
     clientCommunityAccount: 'ClientCommunity111111111111111' as Address,
     refClientPrimaryAccount: null,
     refClientCommunityAccount: null,
     privateMode: false,
     ...overrides,
+  };
+}
+
+function createCachedSpotAccountMetas(): CachedSpotAccountMetas {
+  return {
+    spotContext: [
+      { address: 'CachedSpot0111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot1111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot2111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot3111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot4111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot5111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot6111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedSpot7111111111111111111111' as Address, role: AccountRole.WRITABLE },
+    ],
+    spotBidContext: [
+      { address: 'CachedBid01111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedBid11111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedBid21111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedBid31111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedBid41111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedBid51111111111111111111111' as Address, role: AccountRole.WRITABLE },
+    ],
+    spotAskContext: [
+      { address: 'CachedAsk01111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedAsk11111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedAsk21111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedAsk31111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedAsk41111111111111111111111' as Address, role: AccountRole.WRITABLE },
+      { address: 'CachedAsk51111111111111111111111' as Address, role: AccountRole.WRITABLE },
+    ],
   };
 }
 
@@ -213,6 +252,89 @@ describe('spot instruction builders', () => {
       expect(instruction).toBeDefined();
       expect(instruction.programAddress).toBe(ctx.programId);
       expect(instruction.data![0]).toBe(15); // spotMassCancel instruction tag
+    });
+  });
+
+  describe('unchecked spot instruction builders', () => {
+    it('builds unchecked new spot order with cached account ordering', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: NewSpotOrderArgs = { instrId: 1, side: 0, price: 100, qty: 10 };
+
+      const instruction = buildNewSpotOrderInstructionUnchecked(ctx, args, instr, cachedAccounts);
+
+      expect(instruction.data![0]).toBe(12);
+      expect(instruction.accounts![0].address).toBe(ctx.signer);
+      expect(instruction.accounts![1].address).toBe(ctx.rootAccount);
+      expect(instruction.accounts![2].address).toBe(ctx.clientPrimaryAccount);
+      expect(instruction.accounts![3].address).toBe(ctx.clientCommunityAccount);
+      expect(instruction.accounts![4].address).toBe(cachedAccounts.spotContext[0].address);
+      expect(instruction.accounts![12].address).toBe(ctx.communityAccount);
+    });
+
+    it('builds unchecked spot quotes replace with cached account ordering', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceArgs = {
+        instrId: 1,
+        orders: [{ newPrice: 99, newQty: 10, oldId: 1, side: 0 }],
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionUnchecked(ctx, args, instr, cachedAccounts);
+
+      expect(instruction.data![0]).toBe(34);
+      expect(instruction.accounts![0].address).toBe(ctx.signer);
+      expect(instruction.accounts![2].address).toBe(ctx.clientPrimaryAccount);
+      expect(instruction.accounts![3].address).toBe(ctx.clientCommunityAccount);
+      expect(instruction.accounts![4].address).toBe(cachedAccounts.spotContext[0].address);
+      expect(instruction.accounts![12].address).toBe(ctx.communityAccount);
+    });
+
+    it('enforces the unchecked spot quotes replace order limit', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const orders = Array.from({ length: 13 }, (_, index) => ({
+        newPrice: 99 + index,
+        newQty: 10,
+        oldId: index,
+        side: index % 2,
+      }));
+
+      expect(() =>
+        buildSpotQuotesReplaceInstructionUnchecked(ctx, { instrId: 1, orders }, instr, cachedAccounts),
+      ).toThrow('Exceeded orders limit of 12');
+    });
+
+    it('builds unchecked spot order cancel with side-specific cached context', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotOrderCancelArgs = { instrId: 1, side: 1, orderId: 12345 };
+
+      const instruction = buildSpotOrderCancelInstructionUnchecked(ctx, args, instr, cachedAccounts);
+
+      expect(instruction.data![0]).toBe(13);
+      expect(instruction.accounts![0].address).toBe(ctx.signer);
+      expect(instruction.accounts![2].address).toBe(ctx.clientPrimaryAccount);
+      expect(instruction.accounts![3].address).toBe(cachedAccounts.spotAskContext[0].address);
+    });
+
+    it('builds unchecked spot mass cancel with cached account ordering', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotMassCancelArgs = { instrId: 1 };
+
+      const instruction = buildSpotMassCancelInstructionUnchecked(ctx, args, instr, cachedAccounts);
+
+      expect(instruction.data![0]).toBe(15);
+      expect(instruction.accounts![0].address).toBe(ctx.signer);
+      expect(instruction.accounts![2].address).toBe(ctx.clientPrimaryAccount);
+      expect(instruction.accounts![3].address).toBe(cachedAccounts.spotContext[0].address);
+      expect(instruction.accounts![11].address).toBe(ctx.communityAccount);
     });
   });
 });

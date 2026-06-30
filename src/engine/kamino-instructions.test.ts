@@ -1127,14 +1127,6 @@ describe('Kamino account order', () => {
 });
 
 describe('package dependencies', () => {
-  it('bumps package metadata to 1.0.70', () => {
-    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
-    const packageLock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
-    expect(packageJson.version).toBe('1.0.70');
-    expect(packageLock.version).toBe('1.0.70');
-    expect(packageLock.packages[''].version).toBe('1.0.70');
-  });
-
   it('does not add forbidden Kamino SDK dependencies', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
     const deps = {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Address } from '@solana/kit';
+import { Address, AccountRole } from '@solana/kit';
 import { Engine } from './index';
 import { PROGRAM_ID, VERSION } from '../constants';
 import { TokenStateModel, InstrAccountHeaderModel, RootStateModel } from '../structure_models';
@@ -68,20 +68,40 @@ vi.mock('./spot-instructions', () => ({
     accounts: [],
     data: new Uint8Array([10]),
   }),
+  buildNewSpotOrderInstructionUnchecked: vi.fn().mockReturnValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([110]),
+  }),
   buildSpotQuotesReplaceInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
     data: new Uint8Array([11]),
+  }),
+  buildSpotQuotesReplaceInstructionUnchecked: vi.fn().mockReturnValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([111]),
   }),
   buildSpotOrderCancelInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
     data: new Uint8Array([12]),
   }),
+  buildSpotOrderCancelInstructionUnchecked: vi.fn().mockReturnValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([112]),
+  }),
   buildSpotMassCancelInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
     data: new Uint8Array([13]),
+  }),
+  buildSpotMassCancelInstructionUnchecked: vi.fn().mockReturnValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([113]),
   }),
   SpotInstructionContext: {},
 }));
@@ -146,6 +166,7 @@ vi.mock('./perp-instructions', () => ({
 // Mock context-builders
 vi.mock('./context-builders', () => ({
   getSpotContext: vi.fn().mockResolvedValue([]),
+  getSpotOneSidedContext: vi.fn().mockResolvedValue([]),
   getPerpContext: vi.fn().mockResolvedValue([]),
 }));
 
@@ -157,11 +178,16 @@ vi.mock('./logs-decoder', () => ({
 // Import mocked modules for assertions
 import { buildDepositInstruction, buildWithdrawInstruction, buildNewInstrumentInstructions, buildSwapInstruction, buildNewRefLinkInstruction } from './instructions';
 import {
+  CachedSpotAccountMetas,
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
+  buildNewSpotOrderInstructionUnchecked,
   buildSpotQuotesReplaceInstruction,
+  buildSpotQuotesReplaceInstructionUnchecked,
   buildSpotOrderCancelInstruction,
+  buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
+  buildSpotMassCancelInstructionUnchecked,
 } from './spot-instructions';
 
 import {
@@ -222,6 +248,14 @@ function createMockInstrumentsMap(): Map<number, any> {
   return map;
 }
 
+function createCachedSpotAccountMetas(): CachedSpotAccountMetas {
+  return {
+    spotContext: [{ address: 'CachedSpotContext111111111111111' as Address, role: AccountRole.WRITABLE }],
+    spotBidContext: [{ address: 'CachedSpotBidContext111111111111' as Address, role: AccountRole.WRITABLE }],
+    spotAskContext: [{ address: 'CachedSpotAskContext111111111111' as Address, role: AccountRole.WRITABLE }],
+  };
+}
+
 // Helper to create mock tokens map
 function createMockTokensMap(): Map<number, TokenStateModel> {
   const map = new Map();
@@ -254,6 +288,7 @@ async function setupEngineWithClient(): Promise<{ engine: Engine; mockRpc: Retur
 
   // Mock updateInstrData to avoid RPC calls
   vi.spyOn(engine, 'updateInstrData').mockResolvedValue(undefined);
+  (engine as any).spotAccountMetasByInstrId.set(1, createCachedSpotAccountMetas());
 
   return { engine, mockRpc };
 }
@@ -531,6 +566,142 @@ describe('Engine instruction methods', () => {
       await engine.spotMassCancelInstruction({ instrId: 1 });
 
       expect(buildSpotMassCancelInstruction).toHaveBeenCalled();
+    });
+  });
+
+  describe('unchecked spot instruction methods', () => {
+    it('newSpotOrderInstructionUnchecked returns a synchronous instruction without update or client RPC checks', async () => {
+      const { engine, mockRpc } = await setupEngineWithClient();
+      const args = { instrId: 1, side: 0, price: 100, qty: 10 };
+
+      const result = engine.newSpotOrderInstructionUnchecked(args);
+
+      expect(result.data![0]).toBe(110);
+      expect(buildNewSpotOrderInstructionUnchecked).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientPrimaryAccount: 'MockClientPrimary1111111111111111',
+          clientCommunityAccount: 'MockClientCommunity11111111111111',
+        }),
+        args,
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(engine.updateInstrData as any).not.toHaveBeenCalled();
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled();
+    });
+
+    it('spotQuotesReplaceInstructionUnchecked returns a synchronous instruction without update or client RPC checks', async () => {
+      const { engine, mockRpc } = await setupEngineWithClient();
+      const args = {
+        instrId: 1,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
+      };
+
+      const result = engine.spotQuotesReplaceInstructionUnchecked(args);
+
+      expect(result.data![0]).toBe(111);
+      expect(buildSpotQuotesReplaceInstructionUnchecked).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientPrimaryAccount: 'MockClientPrimary1111111111111111',
+          clientCommunityAccount: 'MockClientCommunity11111111111111',
+        }),
+        args,
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(engine.updateInstrData as any).not.toHaveBeenCalled();
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled();
+    });
+
+    it('spotOrderCancelInstructionUnchecked returns a synchronous instruction without update or client RPC checks', async () => {
+      const { engine, mockRpc } = await setupEngineWithClient();
+      const args = { instrId: 1, orderId: 12345, side: 0 };
+
+      const result = engine.spotOrderCancelInstructionUnchecked(args);
+
+      expect(result.data![0]).toBe(112);
+      expect(buildSpotOrderCancelInstructionUnchecked).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientPrimaryAccount: 'MockClientPrimary1111111111111111',
+        }),
+        args,
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(engine.updateInstrData as any).not.toHaveBeenCalled();
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled();
+    });
+
+    it('spotMassCancelInstructionUnchecked returns a synchronous instruction without update or client RPC checks', async () => {
+      const { engine, mockRpc } = await setupEngineWithClient();
+      const args = { instrId: 1 };
+
+      const result = engine.spotMassCancelInstructionUnchecked(args);
+
+      expect(result.data![0]).toBe(113);
+      expect(buildSpotMassCancelInstructionUnchecked).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientPrimaryAccount: 'MockClientPrimary1111111111111111',
+        }),
+        args,
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(engine.updateInstrData as any).not.toHaveBeenCalled();
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled();
+    });
+
+    it('throws when unchecked spot instruction signer is missing', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).signer = null;
+
+      expect(() => engine.newSpotOrderInstructionUnchecked({ instrId: 1, side: 0, price: 100, qty: 10 })).toThrow(
+        'Wallet is not connected',
+      );
+    });
+
+    it('throws when unchecked spot instruction cached client primary account is missing', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).clientPrimaryAccount = null;
+
+      expect(() => engine.newSpotOrderInstructionUnchecked({ instrId: 1, side: 0, price: 100, qty: 10 })).toThrow(
+        'Client primary account not found',
+      );
+    });
+
+    it('throws when unchecked spot instruction cached client community account is missing', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).clientCommunityAccount = null;
+
+      expect(() => engine.spotQuotesReplaceInstructionUnchecked({
+        instrId: 1,
+        orders: [{ newPrice: 99, newQty: 10, oldId: 1, side: 0 }],
+      })).toThrow('Client community account not found');
+    });
+
+    it('throws when unchecked spot instruction instrument is missing', async () => {
+      const { engine } = await setupEngineWithClient();
+
+      expect(() => engine.spotMassCancelInstructionUnchecked({ instrId: 999 })).toThrow('Instrument not found');
+    });
+
+    it('throws when unchecked spot instruction data is not loaded', async () => {
+      const { engine } = await setupEngineWithClient();
+      engine.instruments.get(1)!.header.mapsAddress = undefined as any;
+
+      expect(() => engine.spotMassCancelInstructionUnchecked({ instrId: 1 })).toThrow('Spot instrument data not loaded');
+    });
+
+    it('throws when unchecked spot instruction cached context is not loaded', async () => {
+      const { engine } = await setupEngineWithClient();
+      (engine as any).spotAccountMetasByInstrId.clear();
+
+      expect(() => engine.spotOrderCancelInstructionUnchecked({ instrId: 1, orderId: 12345, side: 0 })).toThrow(
+        'Spot instrument context not loaded',
+      );
     });
   });
 

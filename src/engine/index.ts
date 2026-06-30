@@ -154,7 +154,11 @@ import {
   findClientCommunityAccount,
   AccountHelperContext,
 } from './account-helpers';
-import { getSpotContext as getSpotContextFn, getPerpContext as getPerpContextFn } from './context-builders';
+import {
+  getSpotContext as getSpotContextFn,
+  getSpotOneSidedContext as getSpotOneSidedContextFn,
+  getPerpContext as getPerpContextFn,
+} from './context-builders';
 import { tokenDec } from './utils';
 import {
   ClientQueryContext,
@@ -172,11 +176,16 @@ import {
   buildNewRefLinkInstruction,
 } from './instructions';
 import {
+  CachedSpotAccountMetas,
   buildSpotLpInstruction,
   buildNewSpotOrderInstruction,
+  buildNewSpotOrderInstructionUnchecked,
   buildSpotQuotesReplaceInstruction,
+  buildSpotQuotesReplaceInstructionUnchecked,
   buildSpotOrderCancelInstruction,
+  buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
+  buildSpotMassCancelInstructionUnchecked,
 } from './spot-instructions';
 import {
   buildUpgradeToPerpInstructions,
@@ -261,6 +270,7 @@ export class Engine {
   private refClientPrimaryAccount: Address | null = null;
   private refClientCommunityAccount: Address | null = null;
   private uiNumbers: boolean;
+  private spotAccountMetasByInstrId = new Map<number, CachedSpotAccountMetas>();
 
   /**
    * @param rpc @solana/kit rpc
@@ -309,6 +319,7 @@ export class Engine {
       uiNumbers: this.uiNumbers,
       signer: this.signer,
       rootAccount: this.rootAccount,
+      communityAccount: this.communityAccount,
       clientPrimaryAccount: this.clientPrimaryAccount,
       clientCommunityAccount: this.clientCommunityAccount,
       refClientPrimaryAccount: this.refClientPrimaryAccount,
@@ -413,6 +424,42 @@ export class Engine {
     return instr;
   }
 
+  private async cacheSpotAccountMetas(instr: Instrument): Promise<void> {
+    const ctx = this.getAccountHelperContext();
+    const [spotContext, spotBidContext, spotAskContext] = await Promise.all([
+      getSpotContextFn(ctx, instr.header),
+      getSpotOneSidedContextFn(ctx, instr.header, 0),
+      getSpotOneSidedContextFn(ctx, instr.header, 1),
+    ]);
+    this.spotAccountMetasByInstrId.set(instr.header.instrId, {
+      spotContext,
+      spotBidContext,
+      spotAskContext,
+    });
+  }
+
+  private getUncheckedSpotInstructionContext(communityAccountRequired: boolean) {
+    const ctx = this.getSpotInstructionContext();
+    if (ctx.clientPrimaryAccount === null) {
+      throw new Error('Client primary account not found');
+    }
+    if (communityAccountRequired && ctx.clientCommunityAccount === null) {
+      throw new Error('Client community account not found');
+    }
+    return ctx;
+  }
+
+  private requireCachedSpotAccountMetas(instr: Instrument): CachedSpotAccountMetas {
+    if (instr.header.mapsAddress == undefined) {
+      throw new Error('Spot instrument data not loaded');
+    }
+    const cachedAccounts = this.spotAccountMetasByInstrId.get(instr.header.instrId);
+    if (cachedAccounts === undefined) {
+      throw new Error('Spot instrument context not loaded');
+    }
+    return cachedAccounts;
+  }
+
   private async checkClient(): Promise<boolean> {
     if (this.signer === null) {
       throw new Error('Wallet not connected');
@@ -466,6 +513,7 @@ export class Engine {
   async initialize(): Promise<boolean> {
     this.kaminoReserveAddressesByMarketMint.clear();
     this.kaminoContextsByClientInstrMarket.clear();
+    this.spotAccountMetasByInstrId.clear();
     try {
       this.drvsAuthority = (await getProgramDerivedAddress({ programAddress: this.programId, seeds: ['ndxnt'] }))[0];
       const ctx = this.getAccountHelperContext();
@@ -558,6 +606,7 @@ export class Engine {
       perpBids: [],
       perpAsks: [],
     });
+    await this.cacheSpotAccountMetas(this.requireInstrument(instrAccountHeaderModel.instrId));
   }
 
   async setSigner(signer: Address) {
@@ -823,6 +872,7 @@ export class Engine {
       perpBids: perpBids,
       perpAsks: perpAsks,
     });
+    await this.cacheSpotAccountMetas(this.requireInstrument(header.instrId));
   }
 
   // ============================================
@@ -901,11 +951,27 @@ export class Engine {
     return buildNewSpotOrderInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
+  newSpotOrderInstructionUnchecked(args: NewSpotOrderArgs): Instruction {
+    NewSpotOrderArgsSchema.parse(args);
+    const ctx = this.getUncheckedSpotInstructionContext(true);
+    const instr = this.requireInstrument(args.instrId);
+    const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
+    return buildNewSpotOrderInstructionUnchecked(ctx, args, instr, cachedAccounts);
+  }
+
   async spotQuotesReplaceInstruction(args: SpotQuotesReplaceArgs): Promise<Instruction> {
     SpotQuotesReplaceArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotQuotesReplaceInstruction(this.getSpotInstructionContext(), args, instr);
+  }
+
+  spotQuotesReplaceInstructionUnchecked(args: SpotQuotesReplaceArgs): Instruction {
+    SpotQuotesReplaceArgsSchema.parse(args);
+    const ctx = this.getUncheckedSpotInstructionContext(true);
+    const instr = this.requireInstrument(args.instrId);
+    const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
+    return buildSpotQuotesReplaceInstructionUnchecked(ctx, args, instr, cachedAccounts);
   }
 
   async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<Instruction> {
@@ -915,11 +981,33 @@ export class Engine {
     return buildSpotOrderCancelInstruction(this.getSpotInstructionContext(), args, instr);
   }
 
+  spotOrderCancelInstructionUnchecked(args: SpotOrderCancelArgs): Instruction {
+    SpotOrderCancelArgsSchema.parse(args);
+    const ctx = this.getUncheckedSpotInstructionContext(false);
+    const instr = this.requireInstrument(args.instrId);
+    if (instr.header.assetTokenId == 0 && ctx.clientCommunityAccount === null) {
+      throw new Error('Client community account not found');
+    }
+    const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
+    return buildSpotOrderCancelInstructionUnchecked(ctx, args, instr, cachedAccounts);
+  }
+
   async spotMassCancelInstruction(args: SpotMassCancelArgs): Promise<Instruction> {
     SpotMassCancelArgsSchema.parse(args);
     await this.requireClient();
     const instr = await this.getSpotInstrumentWithUpdate(args.instrId);
     return buildSpotMassCancelInstruction(this.getSpotInstructionContext(), args, instr);
+  }
+
+  spotMassCancelInstructionUnchecked(args: SpotMassCancelArgs): Instruction {
+    SpotMassCancelArgsSchema.parse(args);
+    const ctx = this.getUncheckedSpotInstructionContext(false);
+    const instr = this.requireInstrument(args.instrId);
+    if (instr.header.assetTokenId == 0 && ctx.clientCommunityAccount === null) {
+      throw new Error('Client community account not found');
+    }
+    const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
+    return buildSpotMassCancelInstructionUnchecked(ctx, args, instr, cachedAccounts);
   }
 
   async swapInstruction(args: SwapArgs): Promise<Instruction> {

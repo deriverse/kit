@@ -105,6 +105,17 @@ describe('Zod Schemas', () => {
   describe('SpotQuotesReplaceV2ArgsSchema', () => {
     const order = { newPrice: 100, newQty: 20, oldId: 1, side: 0 };
 
+    it('accepts fractional UI price and quantity ticks', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 0.000001,
+          quantityTick: 0.001,
+          orders: [order],
+        }).success,
+      ).toBe(true);
+    });
+
     it('accepts 1 to 32 tick-based orders', () => {
       expect(
         SpotQuotesReplaceV2ArgsSchema.safeParse({
@@ -175,6 +186,27 @@ describe('Zod Schemas', () => {
           orders: [order],
         }).success,
       ).toBe(false);
+    });
+
+    it('rejects non-finite and negative UI ticks', () => {
+      for (const invalidTick of [Number.NaN, Number.POSITIVE_INFINITY, -0.001]) {
+        expect(
+          SpotQuotesReplaceV2ArgsSchema.safeParse({
+            instrId: 1,
+            priceTick: invalidTick,
+            quantityTick: 0.001,
+            orders: [order],
+          }).success,
+        ).toBe(false);
+        expect(
+          SpotQuotesReplaceV2ArgsSchema.safeParse({
+            instrId: 1,
+            priceTick: 0.000001,
+            quantityTick: invalidTick,
+            orders: [order],
+          }).success,
+        ).toBe(false);
+      }
     });
 
     it('allows an omitted or zero price tick for maker price deviation orders', () => {

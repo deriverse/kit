@@ -102,11 +102,11 @@ const SpotQuotesReplaceV2ArgsSchema = z
     massCancel: z.boolean().optional().meta({
       description: 'If true, cancel all existing orders before placing new quotes',
     }),
-    priceTick: z.int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional().meta({
-      description: 'Price tick in contract fixed-point units; omitted for maker price deviation orders',
+    priceTick: z.number().finite().nonnegative().optional().meta({
+      description: 'Price tick in UI units; omitted for maker price deviation orders',
     }),
-    quantityTick: z.int().positive().max(Number.MAX_SAFE_INTEGER).meta({
-      description: 'Quantity tick in contract fixed-point units',
+    quantityTick: z.number().finite().positive().meta({
+      description: 'Quantity tick in UI asset units',
     }),
     orders: z
       .array(QuoteOrderV2Schema)
@@ -129,7 +129,7 @@ const SpotQuotesReplaceV2ArgsSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['priceTick'],
-        message: 'Price tick must be a positive integer',
+        message: 'Price tick must be a positive number',
       });
     }
 

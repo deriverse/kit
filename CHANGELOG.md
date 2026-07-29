@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.74] - 2026-07-29
+
+### Fixed
+
+- **Spot quotes replace v2 ticks**: Accept UI `priceTick` and `quantityTick` values and encode them into contract fixed-point units inside `spotQuotesReplaceInstructionV2Unchecked`.
+
 ## [1.0.73] - 2026-07-29
 
 ### Added

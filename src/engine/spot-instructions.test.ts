@@ -70,7 +70,7 @@ vi.mock('./utils', () => ({
   findAssociatedTokenAddress: vi.fn().mockResolvedValue('MockATA1111111111111111111111111' as Address),
   getLookupTableAddress: vi.fn().mockResolvedValue('MockLUT1111111111111111111111111' as Address),
   perpSeatReserve: vi.fn().mockReturnValue(0),
-  tokenDec: vi.fn().mockReturnValue(1000000000), // 10^9
+  tokenDec: vi.fn().mockImplementation((_tokens, _tokenId, uiNumbers) => (uiNumbers ? 1000000000 : 1)),
 }));
 
 // Helper to create a mock token
@@ -319,8 +319,8 @@ describe('spot instruction builders', () => {
         bump: 7,
         orderType: 3,
         bailOnOrderNotFound: true,
-        priceTick: 1000,
-        quantityTick: 25,
+        priceTick: 0.000001,
+        quantityTick: 0.001,
         orders: [
           { newPrice: 11, newQty: 12, oldId: 101, side: 0 },
           { newPrice: 21, newQty: 22, oldId: 202, side: 1 },
@@ -341,7 +341,7 @@ describe('spot instruction builders', () => {
       expect(data.readUInt8(13)).toBe(0);
       expect(data.readUInt16LE(14)).toBe(0);
       expect(data.readBigInt64LE(16)).toBe(BigInt(1000));
-      expect(data.readBigInt64LE(24)).toBe(BigInt(25));
+      expect(data.readBigInt64LE(24)).toBe(BigInt(1000000));
       expect(data.readUInt32LE(32)).toBe(11);
       expect(data.readUInt32LE(36)).toBe(12);
       expect(data.readUInt32LE(40)).toBe(21);
@@ -362,8 +362,8 @@ describe('spot instruction builders', () => {
       const args: SpotQuotesReplaceV2Args = {
         instrId: 1,
         massCancel: true,
-        priceTick: 1000,
-        quantityTick: 25,
+        priceTick: 0.000001,
+        quantityTick: 0.001,
         orders: [
           { newPrice: 11, newQty: 12, oldId: 101, side: 0 },
           { newPrice: 21, newQty: 22, oldId: 202, side: 1 },
@@ -386,7 +386,7 @@ describe('spot instruction builders', () => {
       const args: SpotQuotesReplaceV2Args = {
         instrId: 1,
         orderType: 4,
-        quantityTick: 25,
+        quantityTick: 0.001,
         orders: [{ newPrice: 50, newQty: 12, oldId: 0, side: 0 }],
       };
 
@@ -404,8 +404,8 @@ describe('spot instruction builders', () => {
       const cachedAccounts = createCachedSpotAccountMetas();
       const args: SpotQuotesReplaceV2Args = {
         instrId: 1,
-        priceTick: 1000,
-        quantityTick: 25,
+        priceTick: 0.000001,
+        quantityTick: 0.001,
         orders: Array.from({ length: 32 }, (_, index) => ({
           newPrice: index,
           newQty: index,
@@ -417,6 +417,53 @@ describe('spot instruction builders', () => {
       const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
 
       expect(Buffer.from(instruction.data!).readUInt32LE(4)).toBe(0x80000000);
+    });
+
+    it('encodes raw contract ticks without scaling when uiNumbers is false', () => {
+      const ctx = createMockSpotContext({ uiNumbers: false });
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceV2Args = {
+        instrId: 1,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: [{ newPrice: 11, newQty: 12, oldId: 0, side: 0 }],
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
+      const data = Buffer.from(instruction.data!);
+
+      expect(data.readBigInt64LE(16)).toBe(BigInt(1000));
+      expect(data.readBigInt64LE(24)).toBe(BigInt(25));
+    });
+
+    it('rejects UI ticks that cannot be encoded as positive safe integers', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const baseArgs: SpotQuotesReplaceV2Args = {
+        instrId: 1,
+        priceTick: 0.000001,
+        quantityTick: 0.001,
+        orders: [{ newPrice: 11, newQty: 12, oldId: 0, side: 0 }],
+      };
+
+      expect(() =>
+        buildSpotQuotesReplaceInstructionV2Unchecked(
+          ctx,
+          { ...baseArgs, priceTick: Number.MIN_VALUE },
+          instr,
+          cachedAccounts,
+        ),
+      ).toThrow('Price tick must resolve to a positive safe integer');
+      expect(() =>
+        buildSpotQuotesReplaceInstructionV2Unchecked(
+          ctx,
+          { ...baseArgs, quantityTick: Number.MAX_VALUE },
+          instr,
+          cachedAccounts,
+        ),
+      ).toThrow('Quantity tick must resolve to a positive safe integer');
     });
 
     it('enforces the unchecked spot quotes replace v2 order limit', () => {

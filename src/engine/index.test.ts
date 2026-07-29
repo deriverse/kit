@@ -626,8 +626,8 @@ describe('Engine instruction methods', () => {
       const { engine, mockRpc } = await setupEngineWithClient();
       const args = {
         instrId: 1,
-        priceTick: 1000,
-        quantityTick: 25,
+        priceTick: 0.000001,
+        quantityTick: 0.001,
         orders: [
           { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
           { newPrice: 101, newQty: 10, oldId: 2, side: 1 },

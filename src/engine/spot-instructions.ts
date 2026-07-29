@@ -60,6 +60,14 @@ function requireCommunityAccount(ctx: { communityAccount?: Address }): Address {
   return ctx.communityAccount;
 }
 
+function encodeContractTick(value: number, unitsPerUi: number, label: string): number {
+  const encoded = Math.round(value * unitsPerUi);
+  if (!Number.isSafeInteger(encoded) || encoded <= 0) {
+    throw new RangeError(`${label} must resolve to a positive safe integer in contract units`);
+  }
+  return encoded;
+}
+
 export interface CachedSpotAccountMetas {
   spotContext: AccountMeta[];
   spotBidContext: AccountMeta[];
@@ -341,6 +349,15 @@ function buildSpotQuotesReplaceInstructionV2Unchecked(
 
   const massCancel = args.massCancel ?? false;
   const config = (massCancel ? 0x1 : 0) | (args.bailOnOrderNotFound ? 0x2 : 0);
+  const priceTick =
+    args.priceTick === undefined || args.priceTick === 0
+      ? 0
+      : encodeContractTick(args.priceTick, ctx.uiNumbers ? DF : 1, 'Price tick');
+  const quantityTick = encodeContractTick(
+    args.quantityTick,
+    tokenDec(ctx.tokens, instr.header.assetTokenId, ctx.uiNumbers),
+    'Quantity tick',
+  );
   const headerBuf = spotQuotesReplaceDataV2(
     88,
     args.bump ?? 0,
@@ -349,8 +366,8 @@ function buildSpotQuotesReplaceInstructionV2Unchecked(
     quotesSides,
     args.instrId,
     args.orders.length,
-    args.priceTick ?? 0,
-    args.quantityTick,
+    priceTick,
+    quantityTick,
   );
 
   const ordersBuf = Buffer.alloc(args.orders.length * 8);

@@ -6,6 +6,7 @@ import {
   SpotLpArgs,
   NewSpotOrderArgs,
   SpotQuotesReplaceArgs,
+  SpotQuotesReplaceV2Args,
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
   Instruction,
@@ -22,6 +23,7 @@ import {
   spotLpData,
   newSpotOrderData,
   spotQuotesReplaceData,
+  spotQuotesReplaceDataV2,
   spotOrderCancelData,
   spotMassCancelData,
 } from '../instruction_models';
@@ -314,6 +316,90 @@ function buildSpotQuotesReplaceInstructionUnchecked(
 }
 
 /**
+ * Build unchecked spot quotes replace v2 instruction from cached accounts
+ */
+function buildSpotQuotesReplaceInstructionV2Unchecked(
+  ctx: SpotInstructionContext,
+  args: SpotQuotesReplaceV2Args,
+  instr: Instrument,
+  cachedAccounts: CachedSpotAccountMetas,
+): Instruction {
+  if (args.orders.length === 0) {
+    throw new Error('At least one order is required for spot quotes replace v2 instruction');
+  }
+
+  if (args.orders.length > 32) {
+    throw new Error('Exceeded orders limit of 32 for spot quotes replace v2 instruction');
+  }
+
+  let quotesSides = 0;
+  for (let i = 0; i < args.orders.length; i++) {
+    if (args.orders[i].side === 1) {
+      quotesSides += 2 ** i;
+    }
+  }
+
+  const massCancel = args.massCancel ?? false;
+  const config = (massCancel ? 0x1 : 0) | (args.bailOnOrderNotFound ? 0x2 : 0);
+  const headerBuf = spotQuotesReplaceDataV2(
+    88,
+    args.bump ?? 0,
+    args.orderType ?? 0,
+    config,
+    quotesSides,
+    args.instrId,
+    args.orders.length,
+    args.priceTick ?? 0,
+    args.quantityTick,
+  );
+
+  const ordersBuf = Buffer.alloc(args.orders.length * 8);
+  for (let i = 0; i < args.orders.length; i++) {
+    const offset = i * 8;
+    ordersBuf.writeUint32LE(args.orders[i].newPrice, offset);
+    ordersBuf.writeUint32LE(args.orders[i].newQty, offset + 4);
+  }
+
+  let buf: Buffer;
+  if (massCancel) {
+    buf = Buffer.concat([headerBuf, ordersBuf]);
+  } else {
+    const oldIdsBuf = Buffer.alloc(args.orders.length * 8);
+    for (let i = 0; i < args.orders.length; i++) {
+      oldIdsBuf.writeBigInt64LE(BigInt(args.orders[i].oldId), i * 8);
+    }
+    buf = Buffer.concat([headerBuf, ordersBuf, oldIdsBuf]);
+  }
+
+  const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
+  const clientCommunityAccount = requireClientCommunityAccount(ctx);
+  const communityAccount = requireCommunityAccount(ctx);
+
+  let keys = [
+    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
+    { address: ctx.rootAccount, role: AccountRole.READONLY },
+    { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
+    { address: clientCommunityAccount, role: AccountRole.WRITABLE },
+    ...cachedAccounts.spotContext,
+    {
+      address: communityAccount,
+      role: instr.header.assetTokenId == 0 ? AccountRole.WRITABLE : AccountRole.READONLY,
+    },
+    { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
+  ];
+
+  if (ctx.refClientPrimaryAccount != null) {
+    keys.push({ address: ctx.refClientPrimaryAccount, role: AccountRole.WRITABLE });
+  }
+
+  if (ctx.refClientCommunityAccount != null) {
+    keys.push({ address: ctx.refClientCommunityAccount, role: AccountRole.WRITABLE });
+  }
+
+  return { accounts: keys, programAddress: ctx.programId, data: buf };
+}
+
+/**
  * Build spot order cancel instruction
  */
 async function buildSpotOrderCancelInstruction(
@@ -472,6 +558,7 @@ export {
   buildNewSpotOrderInstructionUnchecked,
   buildSpotQuotesReplaceInstruction,
   buildSpotQuotesReplaceInstructionUnchecked,
+  buildSpotQuotesReplaceInstructionV2Unchecked,
   buildSpotOrderCancelInstruction,
   buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,

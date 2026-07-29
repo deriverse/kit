@@ -7,6 +7,7 @@ import {
   buildNewSpotOrderInstructionUnchecked,
   buildSpotLpInstruction,
   buildSpotQuotesReplaceInstructionUnchecked,
+  buildSpotQuotesReplaceInstructionV2Unchecked,
   buildSpotOrderCancelInstruction,
   buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
@@ -18,6 +19,7 @@ import {
   NewSpotOrderArgs,
   SpotLpArgs,
   SpotQuotesReplaceArgs,
+  SpotQuotesReplaceV2Args,
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
 } from '../types';
@@ -306,6 +308,152 @@ describe('spot instruction builders', () => {
       expect(() =>
         buildSpotQuotesReplaceInstructionUnchecked(ctx, { instrId: 1, orders }, instr, cachedAccounts),
       ).toThrow('Exceeded orders limit of 12');
+    });
+
+    it('encodes unchecked spot quotes replace v2 ABI and old IDs', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceV2Args = {
+        instrId: 0x01020304,
+        bump: 7,
+        orderType: 3,
+        bailOnOrderNotFound: true,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: [
+          { newPrice: 11, newQty: 12, oldId: 101, side: 0 },
+          { newPrice: 21, newQty: 22, oldId: 202, side: 1 },
+        ],
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
+      const data = Buffer.from(instruction.data!);
+
+      expect(data.length).toBe(64);
+      expect(data.readUInt8(0)).toBe(88);
+      expect(data.readUInt8(1)).toBe(7);
+      expect(data.readUInt8(2)).toBe(3);
+      expect(data.readUInt8(3)).toBe(0x2);
+      expect(data.readUInt32LE(4)).toBe(0b10);
+      expect(data.readUInt32LE(8)).toBe(0x01020304);
+      expect(data.readUInt8(12)).toBe(2);
+      expect(data.readUInt8(13)).toBe(0);
+      expect(data.readUInt16LE(14)).toBe(0);
+      expect(data.readBigInt64LE(16)).toBe(BigInt(1000));
+      expect(data.readBigInt64LE(24)).toBe(BigInt(25));
+      expect(data.readUInt32LE(32)).toBe(11);
+      expect(data.readUInt32LE(36)).toBe(12);
+      expect(data.readUInt32LE(40)).toBe(21);
+      expect(data.readUInt32LE(44)).toBe(22);
+      expect(data.readBigInt64LE(48)).toBe(BigInt(101));
+      expect(data.readBigInt64LE(56)).toBe(BigInt(202));
+      expect(instruction.accounts![0].address).toBe(ctx.signer);
+      expect(instruction.accounts![2].address).toBe(ctx.clientPrimaryAccount);
+      expect(instruction.accounts![3].address).toBe(ctx.clientCommunityAccount);
+      expect(instruction.accounts![4].address).toBe(cachedAccounts.spotContext[0].address);
+      expect(instruction.accounts![12].address).toBe(ctx.communityAccount);
+    });
+
+    it('omits old IDs for unchecked spot quotes replace v2 mass cancel', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceV2Args = {
+        instrId: 1,
+        massCancel: true,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: [
+          { newPrice: 11, newQty: 12, oldId: 101, side: 0 },
+          { newPrice: 21, newQty: 22, oldId: 202, side: 1 },
+        ],
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
+      const data = Buffer.from(instruction.data!);
+
+      expect(data.length).toBe(48);
+      expect(data.readUInt8(3)).toBe(0x1);
+      expect(data.readUInt32LE(32)).toBe(11);
+      expect(data.readUInt32LE(40)).toBe(21);
+    });
+
+    it('encodes zero price tick for maker price deviation orders', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceV2Args = {
+        instrId: 1,
+        orderType: 4,
+        quantityTick: 25,
+        orders: [{ newPrice: 50, newQty: 12, oldId: 0, side: 0 }],
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
+      const data = Buffer.from(instruction.data!);
+
+      expect(data.readUInt8(2)).toBe(4);
+      expect(data.readUInt8(3)).toBe(0);
+      expect(data.readBigInt64LE(16)).toBe(BigInt(0));
+    });
+
+    it('supports the 32nd ask bit in unchecked spot quotes replace v2', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args: SpotQuotesReplaceV2Args = {
+        instrId: 1,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: Array.from({ length: 32 }, (_, index) => ({
+          newPrice: index,
+          newQty: index,
+          oldId: index,
+          side: index === 31 ? 1 : 0,
+        })),
+      };
+
+      const instruction = buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
+
+      expect(Buffer.from(instruction.data!).readUInt32LE(4)).toBe(0x80000000);
+    });
+
+    it('enforces the unchecked spot quotes replace v2 order limit', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args = {
+        instrId: 1,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: Array.from({ length: 33 }, (_, index) => ({
+          newPrice: index,
+          newQty: index,
+          oldId: index,
+          side: 0,
+        })),
+      } as SpotQuotesReplaceV2Args;
+
+      expect(() => buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts)).toThrow(
+        'Exceeded orders limit of 32',
+      );
+    });
+
+    it('rejects empty unchecked spot quotes replace v2 orders', () => {
+      const ctx = createMockSpotContext();
+      const instr = ctx.instruments.get(1)!;
+      const cachedAccounts = createCachedSpotAccountMetas();
+      const args = {
+        instrId: 1,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: [],
+      } as SpotQuotesReplaceV2Args;
+
+      expect(() => buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts)).toThrow(
+        'At least one order is required',
+      );
     });
 
     it('builds unchecked spot order cancel with side-specific cached context', () => {

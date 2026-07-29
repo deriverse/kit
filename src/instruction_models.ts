@@ -209,6 +209,32 @@ export function spotQuotesReplaceData(tag: number, bump: number, orderType: numb
   return buf;
 }
 
+export function spotQuotesReplaceDataV2(
+  tag: number,
+  bump: number,
+  orderType: number,
+  config: number,
+  quotesSides: number,
+  instrId: number,
+  quotesAmount: number,
+  priceTick: number,
+  quantityTick: number,
+): Buffer {
+  let buf = Buffer.alloc(32);
+  buf.writeUint8(tag, 0);
+  buf.writeUint8(bump, 1);
+  buf.writeUint8(orderType, 2);
+  buf.writeUint8(config, 3);
+  buf.writeUint32LE(quotesSides, 4);
+  buf.writeUint32LE(instrId, 8);
+  buf.writeUint8(quotesAmount, 12);
+  buf.writeUint8(0, 13);
+  buf.writeUint16LE(0, 14);
+  buf.writeBigInt64LE(BigInt(priceTick), 16);
+  buf.writeBigInt64LE(BigInt(quantityTick), 24);
+  return buf;
+}
+
 export function perpQuotesReplaceData(tag: number, bump: number, orderType: number, bailOnOrderNotFound: number, mask: number, instrId: number): Buffer {
   let buf = Buffer.alloc(16);
   buf.writeUint8(tag, 0);

@@ -83,6 +83,11 @@ vi.mock('./spot-instructions', () => ({
     accounts: [],
     data: new Uint8Array([111]),
   }),
+  buildSpotQuotesReplaceInstructionV2Unchecked: vi.fn().mockReturnValue({
+    programAddress: 'MockProgram1111111111111111111111111' as Address,
+    accounts: [],
+    data: new Uint8Array([114]),
+  }),
   buildSpotOrderCancelInstruction: vi.fn().mockResolvedValue({
     programAddress: 'MockProgram1111111111111111111111111' as Address,
     accounts: [],
@@ -184,6 +189,7 @@ import {
   buildNewSpotOrderInstructionUnchecked,
   buildSpotQuotesReplaceInstruction,
   buildSpotQuotesReplaceInstructionUnchecked,
+  buildSpotQuotesReplaceInstructionV2Unchecked,
   buildSpotOrderCancelInstruction,
   buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
@@ -604,6 +610,34 @@ describe('Engine instruction methods', () => {
 
       expect(result.data![0]).toBe(111);
       expect(buildSpotQuotesReplaceInstructionUnchecked).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientPrimaryAccount: 'MockClientPrimary1111111111111111',
+          clientCommunityAccount: 'MockClientCommunity11111111111111',
+        }),
+        args,
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(engine.updateInstrData as any).not.toHaveBeenCalled();
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled();
+    });
+
+    it('spotQuotesReplaceInstructionV2Unchecked returns a synchronous instruction without update or client RPC checks', async () => {
+      const { engine, mockRpc } = await setupEngineWithClient();
+      const args = {
+        instrId: 1,
+        priceTick: 1000,
+        quantityTick: 25,
+        orders: [
+          { newPrice: 99, newQty: 10, oldId: 1, side: 0 },
+          { newPrice: 101, newQty: 10, oldId: 2, side: 1 },
+        ],
+      };
+
+      const result = engine.spotQuotesReplaceInstructionV2Unchecked(args);
+
+      expect(result.data![0]).toBe(114);
+      expect(buildSpotQuotesReplaceInstructionV2Unchecked).toHaveBeenCalledWith(
         expect.objectContaining({
           clientPrimaryAccount: 'MockClientPrimary1111111111111111',
           clientCommunityAccount: 'MockClientCommunity11111111111111',

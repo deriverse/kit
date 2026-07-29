@@ -6,6 +6,7 @@ import {
   WithdrawArgsSchema,
   NewSpotOrderArgsSchema,
   SpotQuotesReplaceArgsSchema,
+  SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,
@@ -61,6 +62,9 @@ export type DepositArgs = z.infer<typeof DepositArgsSchema>;
 export type WithdrawArgs = z.infer<typeof WithdrawArgsSchema>;
 export type NewSpotOrderArgs = z.infer<typeof NewSpotOrderArgsSchema>;
 export type SpotQuotesReplaceArgs = z.infer<typeof SpotQuotesReplaceArgsSchema>;
+type InferredSpotQuotesReplaceV2Args = z.infer<typeof SpotQuotesReplaceV2ArgsSchema>;
+export type SpotQuotesReplaceV2Args = Omit<InferredSpotQuotesReplaceV2Args, 'orderType' | 'priceTick'> &
+  ({ orderType: 4; priceTick?: 0 } | { orderType?: number; priceTick: number });
 export type SwapArgs = z.infer<typeof SwapArgsSchema>;
 export type SpotOrderCancelArgs = z.infer<typeof SpotOrderCancelArgsSchema>;
 export type SpotMassCancelArgs = z.infer<typeof SpotMassCancelArgsSchema>;

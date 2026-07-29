@@ -28,6 +28,7 @@ import {
   DepositArgs,
   WithdrawArgs,
   SpotQuotesReplaceArgs,
+  SpotQuotesReplaceV2Args,
   SpotOrderCancelArgs,
   SpotMassCancelArgs,
   InstrId,
@@ -74,6 +75,7 @@ import {
   WithdrawArgsSchema,
   NewSpotOrderArgsSchema,
   SpotQuotesReplaceArgsSchema,
+  SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,
@@ -182,6 +184,7 @@ import {
   buildNewSpotOrderInstructionUnchecked,
   buildSpotQuotesReplaceInstruction,
   buildSpotQuotesReplaceInstructionUnchecked,
+  buildSpotQuotesReplaceInstructionV2Unchecked,
   buildSpotOrderCancelInstruction,
   buildSpotOrderCancelInstructionUnchecked,
   buildSpotMassCancelInstruction,
@@ -972,6 +975,14 @@ export class Engine {
     const instr = this.requireInstrument(args.instrId);
     const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
     return buildSpotQuotesReplaceInstructionUnchecked(ctx, args, instr, cachedAccounts);
+  }
+
+  spotQuotesReplaceInstructionV2Unchecked(args: SpotQuotesReplaceV2Args): Instruction {
+    SpotQuotesReplaceV2ArgsSchema.parse(args);
+    const ctx = this.getUncheckedSpotInstructionContext(true);
+    const instr = this.requireInstrument(args.instrId);
+    const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
+    return buildSpotQuotesReplaceInstructionV2Unchecked(ctx, args, instr, cachedAccounts);
   }
 
   async spotOrderCancelInstruction(args: SpotOrderCancelArgs): Promise<Instruction> {

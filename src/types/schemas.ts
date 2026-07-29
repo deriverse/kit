@@ -82,6 +82,66 @@ const SpotQuotesReplaceArgsSchema = z.object({
     .meta({ description: 'Quote orders to place/replace' }),
 });
 
+const u32TickCount = z.int().min(0).max(0xffffffff, { error: 'Tick count must fit in u32' });
+
+const QuoteOrderV2Schema = z.object({
+  newPrice: u32TickCount.meta({ description: 'New order price in price ticks' }),
+  newQty: u32TickCount.meta({ description: 'New order quantity in quantity ticks' }),
+  oldId: nonNegativeInt.meta({ description: 'Old order ID to cancel, zero means no action' }),
+  side: side.meta({ description: '0 - Bid, 1 - Ask' }),
+});
+
+const SpotQuotesReplaceV2ArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    bump: nonNegativeInt.optional().meta({ description: 'Bump' }),
+    orderType: nonNegativeInt.optional().meta({ description: 'Order type' }),
+    bailOnOrderNotFound: z.boolean().optional().meta({
+      description: 'If true, fail the instruction when an order to cancel is not found',
+    }),
+    massCancel: z.boolean().optional().meta({
+      description: 'If true, cancel all existing orders before placing new quotes',
+    }),
+    priceTick: z.int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional().meta({
+      description: 'Price tick in contract fixed-point units; omitted for maker price deviation orders',
+    }),
+    quantityTick: z.int().positive().max(Number.MAX_SAFE_INTEGER).meta({
+      description: 'Quantity tick in contract fixed-point units',
+    }),
+    orders: z
+      .array(QuoteOrderV2Schema)
+      .min(1)
+      .max(32, { error: 'Exceeded orders limit of 32' })
+      .meta({ description: 'Quote orders to place/replace' }),
+  })
+  .superRefine((args, ctx) => {
+    const makerPriceDeviation = args.orderType === 4;
+
+    if (makerPriceDeviation && args.priceTick !== undefined && args.priceTick !== 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['priceTick'],
+        message: 'Price tick must be omitted or zero for maker price deviation orders',
+      });
+    }
+
+    if (!makerPriceDeviation && (args.priceTick === undefined || args.priceTick === 0)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['priceTick'],
+        message: 'Price tick must be a positive integer',
+      });
+    }
+
+    if (args.massCancel && args.bailOnOrderNotFound) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['bailOnOrderNotFound'],
+        message: 'Mass cancel cannot be combined with bail on order not found',
+      });
+    }
+  });
+
 const SwapArgsSchema = z.object({
   assetMint: solanaAddress.meta({ description: 'Asset Token Mint' }),
   crncyMint: solanaAddress.meta({ description: 'Currency Token Mint' }),
@@ -425,6 +485,7 @@ export {
   WithdrawArgsSchema,
   NewSpotOrderArgsSchema,
   SpotQuotesReplaceArgsSchema,
+  SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,

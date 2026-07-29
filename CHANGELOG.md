@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.73] - 2026-07-29
+
+### Added
+
+- **Spot quotes replace v2**: Added the synchronous `spotQuotesReplaceInstructionV2Unchecked` builder with support for up to 32 tick-based quotes, optional mass cancellation, packed quote data, and maker-price-deviation handling.
+- **Spot quotes replace v2 validation**: Added exported `SpotQuotesReplaceV2Args` and `SpotQuotesReplaceV2ArgsSchema` APIs with tick, flag, order-count, and packed-value validation.
+
 ## [1.0.72] - 2026-06-30
 
 ### Added

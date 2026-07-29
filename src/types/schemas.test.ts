@@ -5,6 +5,7 @@ import {
   PerpChangeLeverageArgsSchema,
   PerpBuySeatArgsSchema,
   SpotQuotesReplaceArgsSchema,
+  SpotQuotesReplaceV2ArgsSchema,
   GetKaminoContextArgsSchema,
   KaminoChangePositionArgsSchema,
   KaminoInitObligationArgsSchema,
@@ -98,6 +99,145 @@ describe('Zod Schemas', () => {
     it('rejects empty orders array', () => {
       const result = SpotQuotesReplaceArgsSchema.safeParse({ instrId: 1, orders: [] });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('SpotQuotesReplaceV2ArgsSchema', () => {
+    const order = { newPrice: 100, newQty: 20, oldId: 1, side: 0 };
+
+    it('accepts 1 to 32 tick-based orders', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(true);
+
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: Array.from({ length: 32 }, (_, index) => ({ ...order, side: index % 2 })),
+        }).success,
+      ).toBe(true);
+    });
+
+    it('rejects empty and more than 32 orders', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: [],
+        }).success,
+      ).toBe(false);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: Array.from({ length: 33 }, () => order),
+        }).success,
+      ).toBe(false);
+    });
+
+    it('requires positive ticks outside maker price deviation mode', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(false);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 0,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(false);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          orders: [order],
+        }).success,
+      ).toBe(false);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 0,
+          orders: [order],
+        }).success,
+      ).toBe(false);
+    });
+
+    it('allows an omitted or zero price tick for maker price deviation orders', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          orderType: 4,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(true);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          orderType: 4,
+          priceTick: 0,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(true);
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          orderType: 4,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: [order],
+        }).success,
+      ).toBe(false);
+    });
+
+    it('rejects fractional and out-of-range u32 tick counts', () => {
+      for (const invalidPrice of [1.5, -1, 0x1_0000_0000]) {
+        expect(
+          SpotQuotesReplaceV2ArgsSchema.safeParse({
+            instrId: 1,
+            priceTick: 1000,
+            quantityTick: 10,
+            orders: [{ ...order, newPrice: invalidPrice }],
+          }).success,
+        ).toBe(false);
+      }
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          orders: [{ ...order, newQty: 0x1_0000_0000 }],
+        }).success,
+      ).toBe(false);
+    });
+
+    it('rejects mass cancel combined with bail on order not found', () => {
+      expect(
+        SpotQuotesReplaceV2ArgsSchema.safeParse({
+          instrId: 1,
+          priceTick: 1000,
+          quantityTick: 10,
+          massCancel: true,
+          bailOnOrderNotFound: true,
+          orders: [order],
+        }).success,
+      ).toBe(false);
     });
   });
 

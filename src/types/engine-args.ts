@@ -42,6 +42,7 @@ import {
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
+  SetInstrReserveArgsSchema,
   GetKaminoContextArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
@@ -101,6 +102,7 @@ export type VmAddWithdrawalAddressArgs = z.infer<typeof VmAddWithdrawalAddressAr
 export type VmRemoveWithdrawalAddressArgs = z.infer<typeof VmRemoveWithdrawalAddressArgsSchema>;
 export type VmDirectWithdrawArgs = z.infer<typeof VmDirectWithdrawArgsSchema>;
 export type KaminoReserveByMintArgs = z.infer<typeof KaminoReserveByMintArgsSchema>;
+export type SetInstrReserveArgs = z.infer<typeof SetInstrReserveArgsSchema>;
 export type GetKaminoContextArgs = z.infer<typeof GetKaminoContextArgsSchema>;
 export type KaminoInitInstrumentArgs = z.infer<typeof KaminoInitInstrumentArgsSchema>;
 export type KaminoInitObligationArgs = z.infer<typeof KaminoInitObligationArgsSchema>;

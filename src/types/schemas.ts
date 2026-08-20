@@ -369,6 +369,14 @@ const KaminoReserveByMintArgsSchema = z.object({
   lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
 });
 
+const SetInstrReserveArgsSchema = z
+  .object({
+    instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
+    reserve: solanaAddress.meta({ description: 'Kamino reserve address' }),
+    lendingMarket: solanaAddress.optional().meta({ description: 'Kamino lending market' }),
+  })
+  .strict();
+
 const GetKaminoContextArgsSchema = z
   .object({
     instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
@@ -521,6 +529,7 @@ export {
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
+  SetInstrReserveArgsSchema,
   GetKaminoContextArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,

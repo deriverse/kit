@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.75] - 2026-08-20
+
+### Added
+
+- **Kamino reserve preloading**: Added `setInstrAssetReserve({ instrId, reserve, lendingMarket? })` and `setInstrCrncyReserve({ instrId, reserve, lendingMarket? })` to validate and cache explicit reserve addresses before automatic reserve discovery.
+- **Kamino reserve validation**: Reject reserve preloading after the market-and-mint cache is populated, and validate the KLend owner, reserve layout, liquidity mint, and lending market through `getAccountInfo` without requiring `getProgramAccounts`.
+
 ## [1.0.74] - 2026-07-29
 
 ### Fixed

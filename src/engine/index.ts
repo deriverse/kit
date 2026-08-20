@@ -53,6 +53,7 @@ import {
   VmRemoveWithdrawalAddressArgs,
   VmDirectWithdrawArgs,
   KaminoReserveByMintArgs,
+  SetInstrReserveArgs,
   GetKaminoContextArgs,
   KaminoInitInstrumentArgs,
   KaminoInitObligationArgs,
@@ -100,6 +101,7 @@ import {
   VmRemoveWithdrawalAddressArgsSchema,
   VmDirectWithdrawArgsSchema,
   KaminoReserveByMintArgsSchema,
+  SetInstrReserveArgsSchema,
   GetKaminoContextArgsSchema,
   KaminoInitInstrumentArgsSchema,
   KaminoInitObligationArgsSchema,
@@ -236,6 +238,7 @@ import {
   kaminoObligationExists as kaminoObligationExistsFn,
   loadKaminoReserve,
   refreshKaminoContextReserveData,
+  validateKaminoReserveForMint,
 } from './kamino-instructions';
 
 type Address = SolanaAddress<string>;
@@ -1212,6 +1215,39 @@ export class Engine {
 
   private kaminoReserveCacheKey(args: KaminoReserveByMintArgs): string {
     return `${args.lendingMarket ?? MAIN_KAMINO_MARKET}:${args.mint}`;
+  }
+
+  private requireInstrReserveMint(instrId: number, side: 'asset' | 'currency'): Address {
+    const instr = this.requireInstrument(instrId);
+    const tokenId = side === 'asset' ? instr.header.assetTokenId : instr.header.crncyTokenId;
+    const token = this.tokens.get(tokenId);
+    if (token === undefined) {
+      throw new Error(`${side === 'asset' ? 'Asset' : 'Currency'} token not found`);
+    }
+    return token.address;
+  }
+
+  private async setInstrReserve(args: SetInstrReserveArgs, side: 'asset' | 'currency'): Promise<void> {
+    const mint = this.requireInstrReserveMint(args.instrId, side);
+    const lendingMarket = args.lendingMarket ?? MAIN_KAMINO_MARKET;
+    const key = this.kaminoReserveCacheKey({ mint, lendingMarket });
+    if (this.kaminoReserveAddressesByMarketMint.has(key)) {
+      throw new Error(`Kamino reserve is already cached for mint ${mint} in lending market ${lendingMarket}`);
+    }
+
+    const reserve = await loadKaminoReserve(this.getKaminoServiceContext(), args.reserve);
+    validateKaminoReserveForMint(reserve, mint, lendingMarket, side === 'asset' ? 'Asset' : 'Currency');
+    this.kaminoReserveAddressesByMarketMint.set(key, reserve.address);
+  }
+
+  async setInstrAssetReserve(args: SetInstrReserveArgs): Promise<void> {
+    const parsed = SetInstrReserveArgsSchema.parse(args);
+    return this.setInstrReserve(parsed, 'asset');
+  }
+
+  async setInstrCrncyReserve(args: SetInstrReserveArgs): Promise<void> {
+    const parsed = SetInstrReserveArgsSchema.parse(args);
+    return this.setInstrReserve(parsed, 'currency');
   }
 
   private async getCachedKaminoReserveAddressByMint(args: KaminoReserveByMintArgs): Promise<Address> {

@@ -407,9 +407,9 @@ export async function refreshKaminoContextReserveData(
   const instr = requireInstrument(ctx, context.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
   const collateralReserveInfo = decodeKaminoReserveData(context.collateralReserve.address, args.collateralReserveData);
-  validateReserveForMint(collateralReserveInfo, assetMint, context.lendingMarket, 'Collateral');
+  validateKaminoReserveForMint(collateralReserveInfo, assetMint, context.lendingMarket, 'Collateral');
   const debtReserveInfo = decodeKaminoReserveData(context.debtReserve.address, args.debtReserveData);
-  validateReserveForMint(debtReserveInfo, crncyMint, context.lendingMarket, 'Debt');
+  validateKaminoReserveForMint(debtReserveInfo, crncyMint, context.lendingMarket, 'Debt');
 
   const [collateralReserve, debtReserve] = await Promise.all([
     reserveContext({
@@ -436,7 +436,7 @@ export async function refreshKaminoContextReserveData(
   };
 }
 
-function validateReserveForMint(
+export function validateKaminoReserveForMint(
   reserve: KaminoReserveInfo,
   expectedMint: Address,
   lendingMarket: Address,
@@ -611,10 +611,10 @@ export async function buildKaminoContext(
   const userMetadata = await userMetadataPda(clientPrimaryAccount);
 
   const collateralReserveInfo = await resolveKaminoReserveByMint(ctx, { mint: assetMint, lendingMarket });
-  validateReserveForMint(collateralReserveInfo, assetMint, lendingMarket, 'Collateral');
+  validateKaminoReserveForMint(collateralReserveInfo, assetMint, lendingMarket, 'Collateral');
 
   const debtReserveInfo = await resolveKaminoReserveByMint(ctx, { mint: crncyMint, lendingMarket });
-  validateReserveForMint(debtReserveInfo, crncyMint, lendingMarket, 'Debt');
+  validateKaminoReserveForMint(debtReserveInfo, crncyMint, lendingMarket, 'Debt');
 
   const [lendingMarketAuthority, collateralReserve, debtReserve] = await Promise.all([
     lendingMarketAuthPda(lendingMarket),
@@ -707,8 +707,8 @@ export async function buildKaminoInitInstrumentInstruction(
 ): Promise<Instruction> {
   const instr = requireInstrument(ctx, args.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
-  validateReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
-  validateReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
+  validateKaminoReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
+  validateKaminoReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
 
   const accounts = [
     { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
@@ -1136,8 +1136,8 @@ export async function kaminoInstrumentAccountsExist(
 ): Promise<KaminoInstrumentAccountsExistResponse> {
   const instr = requireInstrument(ctx, args.instrId);
   const { assetMint, crncyMint } = instrumentMints(ctx, instr);
-  validateReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
-  validateReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
+  validateKaminoReserveForMint(kaminoCtx.collateralReserve, assetMint, kaminoCtx.lendingMarket, 'Collateral');
+  validateKaminoReserveForMint(kaminoCtx.debtReserve, crncyMint, kaminoCtx.lendingMarket, 'Debt');
   const [assetAta, crncyAta] = await Promise.all([
     clientPrimaryAta({
       clientPrimaryAccount: kaminoCtx.clientPrimaryAccount,

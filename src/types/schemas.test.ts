@@ -14,6 +14,7 @@ import {
   KaminoRefreshReservesArgsSchema,
   KaminoUpdateObligationsArgsSchema,
   GetKaminoClientStateArgsSchema,
+  SetInstrReserveArgsSchema,
 } from './schemas';
 
 const ADDRESS = 'So11111111111111111111111111111111111111112';
@@ -288,6 +289,16 @@ describe('Zod Schemas', () => {
   });
 
   describe('Kamino strict reserve inputs', () => {
+    it('validates instrument reserve setter args', () => {
+      expect(SetInstrReserveArgsSchema.safeParse({ instrId: 1, reserve: ADDRESS }).success).toBe(true);
+      expect(
+        SetInstrReserveArgsSchema.safeParse({ instrId: 1, reserve: ADDRESS, lendingMarket: ADDRESS }).success,
+      ).toBe(true);
+      expect(SetInstrReserveArgsSchema.safeParse({ instrId: 1 }).success).toBe(false);
+      expect(SetInstrReserveArgsSchema.safeParse({ instrId: -1, reserve: ADDRESS }).success).toBe(false);
+      expect(SetInstrReserveArgsSchema.safeParse({ instrId: 1, reserve: ADDRESS, extra: true }).success).toBe(false);
+    });
+
     it('rejects removed manual reserve fields', () => {
       expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, collateralReserve: ADDRESS }).success).toBe(false);
       expect(GetKaminoContextArgsSchema.safeParse({ instrId: 1, debtReserve: ADDRESS }).success).toBe(false);

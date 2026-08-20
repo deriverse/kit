@@ -21,6 +21,7 @@ const CRNCY_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' as Address;
 const COLL_RESERVE = '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E' as Address;
 const DEBT_RESERVE = 'Es9vMFrzaCERmJfrF4H2FYD4KCoZTqtfQxXGCfCM8GgD' as Address;
 const ALT_MARKET = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' as Address;
+const ALT_COLL_RESERVE = 'Sysvar1nstructions1111111111111111111111111' as Address;
 const OTHER_CLIENT_PRIMARY = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM' as Address;
 const OBLIGATION = 'SysvarRent111111111111111111111111111111111' as Address;
 const OBLIGATION_OVERRIDE = 'Sysvar1nstructions1111111111111111111111111' as Address;
@@ -116,9 +117,9 @@ function token(id: number, mint: Address, decimals = 9): TokenStateModel {
   return result;
 }
 
-function instrument(): Instrument {
+function instrument(instrId = 1): Instrument {
   const header = new InstrAccountHeaderModel();
-  header.instrId = 1;
+  header.instrId = instrId;
   header.assetTokenId = 1;
   header.crncyTokenId = 2;
   header.lutAddress = INSTR_LUT;
@@ -250,6 +251,110 @@ describe('Engine Kamino reserve and context cache', () => {
     await engine.getKaminoReserveByMint({ mint: ASSET_MINT, lendingMarket: ALT_MARKET });
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(3);
+  });
+
+  it('preloads both instrument reserves and builds context without reserve discovery', async () => {
+    const rpc = mockRpc({ accountInfo: reserveAccountInfo() });
+    const engine = setupEngine(rpc);
+
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE });
+    await engine.setInstrCrncyReserve({ instrId: 1, reserve: DEBT_RESERVE });
+    const result = await engine.refreshKaminoContext({ instrId: 1 });
+
+    expect(result.collateralReserve.address).toBe(COLL_RESERVE);
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+    expect(rpc.getProgramAccounts).not.toHaveBeenCalled();
+    expect(reserveReads(rpc)).toBe(4);
+  });
+
+  it('uses automatic discovery only for an instrument side that was not preloaded', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+      accountInfo: reserveAccountInfo(),
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE });
+    const result = await engine.refreshKaminoContext({ instrId: 1 });
+
+    expect(result.collateralReserve.address).toBe(COLL_RESERVE);
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+    expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(1);
+    expect(reserveReads(rpc)).toBe(2);
+  });
+
+  it('reuses preloaded reserves for another instrument with the same mints', async () => {
+    const rpc = mockRpc({ accountInfo: reserveAccountInfo() });
+    const engine = setupEngine(rpc);
+    engine.instruments.set(2, instrument(2));
+
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE });
+    await engine.setInstrCrncyReserve({ instrId: 1, reserve: DEBT_RESERVE });
+    const result = await engine.refreshKaminoContext({ instrId: 2 });
+
+    expect(result.instrId).toBe(2);
+    expect(result.collateralReserve.address).toBe(COLL_RESERVE);
+    expect(result.debtReserve.address).toBe(DEBT_RESERVE);
+    expect(rpc.getProgramAccounts).not.toHaveBeenCalled();
+  });
+
+  it('stores separate preloaded reserves for different lending markets', async () => {
+    const accountInfo = reserveAccountInfo();
+    accountInfo.set(ALT_COLL_RESERVE, {
+      value: {
+        owner: KLEND_PROGRAM_ID,
+        data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, lendingMarket: ALT_MARKET })),
+      },
+    });
+    const rpc = mockRpc({ accountInfo });
+    const engine = setupEngine(rpc);
+
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE });
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: ALT_COLL_RESERVE, lendingMarket: ALT_MARKET });
+
+    await expect(engine.getKaminoReserveByMint({ mint: ASSET_MINT })).resolves.toBe(COLL_RESERVE);
+    await expect(engine.getKaminoReserveByMint({ mint: ASSET_MINT, lendingMarket: ALT_MARKET })).resolves.toBe(
+      ALT_COLL_RESERVE,
+    );
+    expect(rpc.getProgramAccounts).not.toHaveBeenCalled();
+  });
+
+  it('rejects preloading a reserve after it was discovered without reading the supplied account', async () => {
+    const rpc = mockRpc({ programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)]] });
+    const engine = setupEngine(rpc);
+
+    await engine.getKaminoReserveByMint({ mint: ASSET_MINT });
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: ALT_COLL_RESERVE })).rejects.toThrow(
+      /Kamino reserve is already cached/,
+    );
+
+    expect(rpc.getAccountInfo).not.toHaveBeenCalled();
+  });
+
+  it('rejects repeated reserve preloading without another account read', async () => {
+    const rpc = mockRpc({ accountInfo: reserveAccountInfo() });
+    const engine = setupEngine(rpc);
+
+    await engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE });
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      /Kamino reserve is already cached/,
+    );
+
+    expect(rpc.getAccountInfo).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects reserve preloading after context creation without another account read', async () => {
+    const rpc = mockRpc({
+      programAccounts: [[reserveAccount(COLL_RESERVE, ASSET_MINT)], [reserveAccount(DEBT_RESERVE, CRNCY_MINT)]],
+    });
+    const engine = setupEngine(rpc);
+
+    await engine.refreshKaminoContext({ instrId: 1 });
+    await expect(engine.setInstrCrncyReserve({ instrId: 1, reserve: DEBT_RESERVE })).rejects.toThrow(
+      /Kamino reserve is already cached/,
+    );
+
+    expect(rpc.getAccountInfo).not.toHaveBeenCalled();
   });
 
   it('clears the reserve cache when initialize starts', async () => {
@@ -559,6 +664,109 @@ describe('Engine Kamino reserve and context cache', () => {
 
     expect(rpc.getProgramAccounts).toHaveBeenCalledTimes(2);
     expect(reserveReads(rpc)).toBe(2);
+  });
+
+  it('rejects reserve preloading for an unknown instrument or token before RPC reads', async () => {
+    const rpc = mockRpc({ accountInfo: reserveAccountInfo() });
+    const engine = setupEngine(rpc);
+
+    await expect(engine.setInstrAssetReserve({ instrId: 999, reserve: COLL_RESERVE })).rejects.toThrow(
+      'Instrument not found',
+    );
+    engine.tokens.delete(1);
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      'Asset token not found',
+    );
+
+    expect(rpc.getAccountInfo).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing or incorrectly owned preloaded reserve', async () => {
+    const missingRpc = mockRpc();
+    const missingEngine = setupEngine(missingRpc);
+    await expect(missingEngine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      `Kamino reserve not found: ${COLL_RESERVE}`,
+    );
+
+    const wrongOwnerRpc = mockRpc({
+      accountInfo: new Map([
+        [
+          COLL_RESERVE,
+          {
+            value: {
+              owner: TOKEN_PROGRAM_ID,
+              data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })),
+            },
+          },
+        ],
+      ]),
+    });
+    const wrongOwnerEngine = setupEngine(wrongOwnerRpc);
+    await expect(wrongOwnerEngine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      `Kamino reserve is not owned by KLend: ${COLL_RESERVE}`,
+    );
+  });
+
+  it('rejects invalid preloaded reserve layouts and discriminators', async () => {
+    const shortRpc = mockRpc({
+      accountInfo: new Map([
+        [COLL_RESERVE, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(Buffer.alloc(100)) } }],
+      ]),
+    });
+    await expect(setupEngine(shortRpc).setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      /Invalid Kamino reserve layout/,
+    );
+
+    const invalidDiscriminator = reserveBuffer({ liquidityMint: ASSET_MINT });
+    invalidDiscriminator[0] = 0;
+    const discriminatorRpc = mockRpc({
+      accountInfo: new Map([
+        [COLL_RESERVE, { value: { owner: KLEND_PROGRAM_ID, data: dataResponse(invalidDiscriminator) } }],
+      ]),
+    });
+    await expect(
+      setupEngine(discriminatorRpc).setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE }),
+    ).rejects.toThrow(/Invalid Kamino reserve discriminator/);
+  });
+
+  it('does not cache a preloaded reserve with a mismatched mint or lending market', async () => {
+    const accountInfo = new Map<Address, { value: any }>([
+      [
+        COLL_RESERVE,
+        {
+          value: {
+            owner: KLEND_PROGRAM_ID,
+            data: dataResponse(reserveBuffer({ liquidityMint: CRNCY_MINT })),
+          },
+        },
+      ],
+    ]);
+    const rpc = mockRpc({ accountInfo });
+    const engine = setupEngine(rpc);
+
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      /Asset reserve liquidity mint/,
+    );
+
+    accountInfo.set(COLL_RESERVE, {
+      value: {
+        owner: KLEND_PROGRAM_ID,
+        data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT, lendingMarket: ALT_MARKET })),
+      },
+    });
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).rejects.toThrow(
+      /Asset reserve lending market mismatch/,
+    );
+
+    accountInfo.set(COLL_RESERVE, {
+      value: {
+        owner: KLEND_PROGRAM_ID,
+        data: dataResponse(reserveBuffer({ liquidityMint: ASSET_MINT })),
+      },
+    });
+    await expect(engine.setInstrAssetReserve({ instrId: 1, reserve: COLL_RESERVE })).resolves.toBeUndefined();
+    await expect(engine.getKaminoReserveByMint({ mint: ASSET_MINT })).resolves.toBe(COLL_RESERVE);
+    expect(rpc.getProgramAccounts).not.toHaveBeenCalled();
   });
 
   it('validates reserve layout loaded from cached addresses', async () => {

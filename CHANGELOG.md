@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.76] - 2026-09-05
+
+### Fixed
+
+- **Withdraw account permissions**: Mark the signer writable to fund ATA creation with a separate transaction fee payer, the root account writable for DRVS withdrawals, and both spot maps and client infos accounts writable when collecting temporary spot balances.
+
 ## [1.0.75] - 2026-08-20
 
 ### Added

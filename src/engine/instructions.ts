@@ -153,11 +153,11 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
   const clientPrimaryAccount = requireClientPrimaryAccount(ctx);
 
   let keys = [
-    { address: ctx.signer, role: AccountRole.READONLY_SIGNER },
+    { address: ctx.signer, role: AccountRole.WRITABLE_SIGNER },
     { address: clientTokenAccount, role: AccountRole.WRITABLE },
     { address: token.programAddress, role: AccountRole.WRITABLE },
     { address: token.address, role: AccountRole.READONLY },
-    { address: ctx.rootAccount, role: AccountRole.READONLY },
+    { address: ctx.rootAccount, role: args.tokenId === 0 ? AccountRole.WRITABLE : AccountRole.READONLY },
     { address: await getTokenAccount(ctx, token.address), role: AccountRole.READONLY },
     { address: clientPrimaryAccount, role: AccountRole.WRITABLE },
     { address: SYSTEM_PROGRAM_ID, role: AccountRole.READONLY },
@@ -172,14 +172,14 @@ async function buildWithdrawInstruction(ctx: SpotInstructionContext, args: Withd
         throw new Error(`Instrument ${args.spot[i].instrId} not found`);
       }
       if (instr.header.assetTokenId == args.tokenId || instr.header.crncyTokenId == args.tokenId) {
-        keys.push({ address: instr.header.mapsAddress, role: AccountRole.READONLY });
+        keys.push({ address: instr.header.mapsAddress, role: AccountRole.WRITABLE });
         keys.push({
           address: await getInstrAccountByTag(ctx, {
             assetTokenId: instr.header.assetTokenId,
             crncyTokenId: instr.header.crncyTokenId,
             tag: AccountType.SPOT_CLIENT_INFOS,
           }),
-          role: AccountRole.READONLY,
+          role: AccountRole.WRITABLE,
         });
       }
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Address } from '@solana/kit';
+import { Address, AccountRole } from '@solana/kit';
 import { SpotInstructionContext } from './spot-instructions';
 import { buildDepositInstruction, buildWithdrawInstruction } from './instructions';
 import { TokenStateModel, InstrAccountHeaderModel } from '../structure_models';
@@ -163,6 +163,60 @@ describe('instruction builders', () => {
       const instruction = await buildWithdrawInstruction(ctx, args);
 
       expect(instruction.accounts!.length).toBeGreaterThan(11);
+    });
+
+    it('makes the signer writable without relying on transaction fee payer privileges', async () => {
+      const ctx = createMockSpotContext();
+      const instruction = await buildWithdrawInstruction(ctx, { tokenId: 1, amount: 50 });
+
+      expect(instruction.accounts![0]).toEqual({
+        address: ctx.signer,
+        role: AccountRole.WRITABLE_SIGNER,
+      });
+    });
+
+    it.each([
+      [0, AccountRole.WRITABLE],
+      [1, AccountRole.READONLY],
+    ])('sets the required root account permissions for token %i', async (tokenId, role) => {
+      const ctx = createMockSpotContext();
+      const instruction = await buildWithdrawInstruction(ctx, { tokenId, amount: 50 });
+
+      expect(instruction.accounts![4]).toEqual({ address: ctx.rootAccount, role });
+    });
+
+    it('makes every matching spot account pair writable and skips unrelated instruments', async () => {
+      const ctx = createMockSpotContext();
+      ctx.instruments.set(2, createMockInstrument(2, 2, 1));
+      ctx.instruments.set(3, createMockInstrument(3, 2, 0));
+      const instruction = await buildWithdrawInstruction(ctx, {
+        tokenId: 1,
+        amount: 50,
+        spot: [{ instrId: 1 }, { instrId: 3 }, { instrId: 2 }],
+      });
+
+      expect(instruction.accounts!.slice(10)).toEqual([
+        { address: ctx.instruments.get(1)!.header.mapsAddress, role: AccountRole.WRITABLE },
+        { address: 'MockInstrAccount1111111111111', role: AccountRole.WRITABLE },
+        { address: ctx.instruments.get(2)!.header.mapsAddress, role: AccountRole.WRITABLE },
+        { address: 'MockInstrAccount1111111111111', role: AccountRole.WRITABLE },
+      ]);
+    });
+
+    it('places DRVS community accounts after the spot account pairs', async () => {
+      const ctx = createMockSpotContext();
+      const instruction = await buildWithdrawInstruction(ctx, {
+        tokenId: 0,
+        amount: 50,
+        spot: [{ instrId: 1 }],
+      });
+
+      expect(instruction.accounts!.slice(10)).toEqual([
+        { address: ctx.instruments.get(1)!.header.mapsAddress, role: AccountRole.WRITABLE },
+        { address: 'MockInstrAccount1111111111111', role: AccountRole.WRITABLE },
+        { address: 'MockAccountByTag11111111111111', role: AccountRole.WRITABLE },
+        { address: 'MockClientCommunity111111111', role: AccountRole.WRITABLE },
+      ]);
     });
   });
 });

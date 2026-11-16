@@ -151,6 +151,19 @@ const SwapArgsSchema = z.object({
   minAmountOut: z.number().min(0, { error: 'Min amount out must be at least 0' }).optional(),
 });
 
+const PrepareOrcaSwapArgsSchema = z.object({
+  instrId: z.int().min(0).max(0xffffffff).meta({ description: 'Instrument ID' }),
+  whirlpool: solanaAddress.meta({ description: 'Orca Whirlpool address' }),
+});
+
+const OrcaSwapArgsSchema = PrepareOrcaSwapArgsSchema.extend({
+  price: z.number().finite().positive().meta({ description: 'Current pool price in UI currency per asset' }),
+  crncyInput: z.boolean().meta({ description: 'Swap currency into asset' }),
+  amount: z.number().finite().positive().meta({ description: 'Exact input amount' }),
+  minAmountOut: z.number().finite().nonnegative().meta({ description: 'Minimum output amount' }),
+  tickArrayCount: z.union([z.literal(3), z.literal(5)]),
+});
+
 const SpotOrderCancelArgsSchema = z.object({
   instrId: nonNegativeInt.meta({ description: 'Instrument ID' }),
   orderId: nonNegativeInt.meta({ description: 'Order ID to cancel' }),
@@ -495,6 +508,8 @@ export {
   SpotQuotesReplaceArgsSchema,
   SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
+  PrepareOrcaSwapArgsSchema,
+  OrcaSwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,
   SpotLpArgsSchema,

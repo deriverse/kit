@@ -1,3 +1,27 @@
+/** Orca exact-input swap, followed by an optional SupplementalTickArrays slice. */
+export function orcaSwapData(
+  tag: number,
+  inputCrncy: number,
+  instrId: number,
+  amount: number,
+  minAmountOut: number,
+  tickArrayCount: 3 | 5,
+): Buffer {
+  const supplemental = tickArrayCount === 5;
+  const buf = Buffer.alloc(supplemental ? 26 : 24);
+  buf.writeUInt8(tag, 0);
+  buf.writeUInt8(inputCrncy, 1);
+  buf.writeUInt8(supplemental ? 1 : 0, 2);
+  buf.writeUInt32LE(instrId, 4);
+  buf.writeBigInt64LE(BigInt(Math.round(amount)), 8);
+  buf.writeBigInt64LE(BigInt(Math.round(minAmountOut)), 16);
+  if (supplemental) {
+    buf.writeUInt8(6, 24);
+    buf.writeUInt8(2, 25);
+  }
+  return buf;
+}
+
 export function newOperatorData(tag: number, version: number): Buffer {
   let buf = Buffer.alloc(8);
   buf.writeUint8(tag, 0);

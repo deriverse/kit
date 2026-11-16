@@ -8,6 +8,8 @@ import {
   SpotQuotesReplaceArgsSchema,
   SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
+  PrepareOrcaSwapArgsSchema,
+  OrcaSwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,
   SpotLpArgsSchema,
@@ -67,6 +69,8 @@ type InferredSpotQuotesReplaceV2Args = z.infer<typeof SpotQuotesReplaceV2ArgsSch
 export type SpotQuotesReplaceV2Args = Omit<InferredSpotQuotesReplaceV2Args, 'orderType' | 'priceTick'> &
   ({ orderType: 4; priceTick?: 0 } | { orderType?: number; priceTick: number });
 export type SwapArgs = z.infer<typeof SwapArgsSchema>;
+export type PrepareOrcaSwapArgs = z.infer<typeof PrepareOrcaSwapArgsSchema>;
+export type OrcaSwapArgs = z.infer<typeof OrcaSwapArgsSchema>;
 export type SpotOrderCancelArgs = z.infer<typeof SpotOrderCancelArgsSchema>;
 export type SpotMassCancelArgs = z.infer<typeof SpotMassCancelArgsSchema>;
 export type SpotLpArgs = z.infer<typeof SpotLpArgsSchema>;

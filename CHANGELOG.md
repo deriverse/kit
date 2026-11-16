@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.77] - 2026-11-16
+
+### Added
+
+- **Orca swap**: Added `prepareOrcaSwap` to load and decode each Whirlpool once per engine, sharing concurrent preparations and retaining cached metadata across signer changes.
+- **Synchronous Orca instructions**: Added `orcaSwapInstruction` with a caller-supplied UI pool price, explicit minimum output, and a choice of 3 directional or 5 symmetric tick arrays. Supports Vault Mode and SPL Token/Token-2022 accounts without RPC requests during instruction construction.
+- **Orca swap logs**: Added `OrcaSwapReportModel` and `logsDecode` support for `LogType.orcaSwap = 49`, including input/output amount conversion according to `uiNumbers`.
+- **Orca public types**: Exported preparation and swap argument types, Zod schemas, the Whirlpool program ID, and the instruction data serializer.
+
 ## [1.0.76] - 2026-09-05
 
 ### Fixed

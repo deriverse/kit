@@ -21,6 +21,7 @@ export enum LogType {
   moveSpot = 32,
   vmDirectWithdraw = 47,
   kaminoChangePosition = 48,
+  orcaSwap = 49,
   perpDeposit = 3,
   perpWithdraw = 4,
   spotLpTrade = 7,
@@ -48,6 +49,42 @@ export enum LogType {
   swapOrder = 31,
   swapFees = 35,
   perpLossCoverage = 46,
+}
+
+export class OrcaSwapReportModel {
+  static readonly LENGTH = 40;
+  static readonly OFFSET_TAG = 0;
+  static readonly OFFSET_SIDE = 1;
+  static readonly OFFSET_TIME = 4;
+  static readonly OFFSET_CLIENT_ID = 8;
+  static readonly OFFSET_INSTR_ID = 12;
+  static readonly OFFSET_AMOUNT_IN = 16;
+  static readonly OFFSET_AMOUNT_OUT = 24;
+  static readonly OFFSET_SEQ_NO = 32;
+
+  tag: number;
+  side: number;
+  time: number;
+  clientId: number;
+  instrId: number;
+  amountIn: number;
+  amountOut: number;
+  seqNo: number;
+
+  static fromBuffer(buffer: Buffer, offset?: number): OrcaSwapReportModel {
+    const result = new OrcaSwapReportModel();
+    const data = new AutoBuffer(buffer, offset);
+    result.tag = data.readU8();
+    result.side = data.readU8();
+    data.readU16();
+    result.time = data.readU32();
+    result.clientId = data.readU32();
+    result.instrId = data.readU32();
+    result.amountIn = data.readI64();
+    result.amountOut = data.readI64();
+    result.seqNo = data.readI64();
+    return result;
+  }
 }
 
 export class KaminoChangePositionReportModel {

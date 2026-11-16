@@ -8,6 +8,7 @@ export {
   MAIN_KAMINO_MARKET_LUT,
   KLEND_PROGRAM_ID,
   FARMS_PROGRAM_ID,
+  ORCA_WHIRLPOOL_PROGRAM_ID,
 } from './constants';
 export { getSpotPriceStep, getPerpPriceStep } from './engine/utils';
 export * from './structure_models';

@@ -21,6 +21,7 @@ import {
   ChangePointsReportModel,
   MoveSpotAvailFundsReportModel,
   PlaceSwapOrderReportModel,
+  OrcaSwapReportModel,
   SellMarketSeatReportModel,
   SpotFeesReportModel,
   SpotFillOrderReportModel,
@@ -77,6 +78,7 @@ export type LogMessage =
   | BuyMarketSeatReportModel
   | SellMarketSeatReportModel
   | PlaceSwapOrderReportModel
+  | OrcaSwapReportModel
   | MoveSpotAvailFundsReportModel
   | ChangePointsReportModel
   | VmInitActivateReportModel

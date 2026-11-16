@@ -42,6 +42,8 @@ import {
   NewInstrumentArgs,
   PerpBuySeatArgs,
   SwapArgs,
+  PrepareOrcaSwapArgs,
+  OrcaSwapArgs,
   PerpSellSeatArgs,
   VmInitActivateArgs,
   VmFinalizeActivateArgs,
@@ -78,6 +80,8 @@ import {
   SpotQuotesReplaceArgsSchema,
   SpotQuotesReplaceV2ArgsSchema,
   SwapArgsSchema,
+  PrepareOrcaSwapArgsSchema,
+  OrcaSwapArgsSchema,
   SpotOrderCancelArgsSchema,
   SpotMassCancelArgsSchema,
   SpotLpArgsSchema,
@@ -128,6 +132,7 @@ import {
   VERSION,
   PROGRAM_ID,
   MAIN_KAMINO_MARKET,
+  ORCA_WHIRLPOOL_PROGRAM_ID,
   MARKET_DEPTH,
   dec,
   lpDec,
@@ -147,6 +152,14 @@ import {
 } from '../structure_models';
 
 import { decodeTransactionLogs } from './logs-decoder';
+import {
+  buildOrcaSwapInstruction,
+  decodeOrcaWhirlpool,
+  OrcaWhirlpool,
+  orcaInstrumentTokens,
+  validateOrcaPair,
+} from './orca-instructions';
+import { SyncPdaCache } from './sync-pda';
 import {
   getAccountByTag as getAccountByTagFn,
   getInstrAccountByTag as getInstrAccountByTagFn,
@@ -277,6 +290,9 @@ export class Engine {
   private refClientCommunityAccount: Address | null = null;
   private uiNumbers: boolean;
   private spotAccountMetasByInstrId = new Map<number, CachedSpotAccountMetas>();
+  private orcaWhirlpools = new Map<Address, OrcaWhirlpool>();
+  private orcaWhirlpoolLoads = new Map<Address, Promise<OrcaWhirlpool>>();
+  private orcaPdas = new SyncPdaCache();
 
   /**
    * @param rpc @solana/kit rpc
@@ -1022,6 +1038,62 @@ export class Engine {
     }
     const cachedAccounts = this.requireCachedSpotAccountMetas(instr);
     return buildSpotMassCancelInstructionUnchecked(ctx, args, instr, cachedAccounts);
+  }
+
+  /** Load immutable pool metadata once. This does not require a connected wallet. */
+  async prepareOrcaSwap(args: PrepareOrcaSwapArgs): Promise<void> {
+    PrepareOrcaSwapArgsSchema.parse(args);
+    const instr = this.requireInstrument(args.instrId);
+    const { asset, crncy } = orcaInstrumentTokens(this.tokens, instr);
+    const cached = this.orcaWhirlpools.get(args.whirlpool);
+    if (cached) {
+      validateOrcaPair(cached, asset, crncy);
+      return;
+    }
+    let pending = this.orcaWhirlpoolLoads.get(args.whirlpool);
+    if (!pending) {
+      pending = (async () => {
+        const info = await this.rpc
+          .getAccountInfo(args.whirlpool, { commitment: this.commitment, encoding: 'base64' })
+          .send();
+        if (!info.value) throw new Error(`Orca Whirlpool not found: ${args.whirlpool}`);
+        if (info.value.owner !== ORCA_WHIRLPOOL_PROGRAM_ID)
+          throw new Error(`Invalid Orca Whirlpool owner: ${args.whirlpool}`);
+        const pool = decodeOrcaWhirlpool(args.whirlpool, Buffer.from(info.value.data[0], 'base64'), this.orcaPdas);
+        this.orcaWhirlpools.set(args.whirlpool, pool);
+        return pool;
+      })();
+      this.orcaWhirlpoolLoads.set(args.whirlpool, pending);
+    }
+    try {
+      validateOrcaPair(await pending, asset, crncy);
+    } finally {
+      if (this.orcaWhirlpoolLoads.get(args.whirlpool) === pending) this.orcaWhirlpoolLoads.delete(args.whirlpool);
+    }
+  }
+
+  /** Synchronous, RPC-free builder. price is always UI currency/asset. */
+  orcaSwapInstruction(args: OrcaSwapArgs): Instruction {
+    OrcaSwapArgsSchema.parse(args);
+    if (this.signer === null) throw new Error('Wallet is not connected');
+    if (this.clientPrimaryAccount === null) throw new Error('Client primary account not found');
+    const pool = this.orcaWhirlpools.get(args.whirlpool);
+    if (!pool) throw new Error('Orca Whirlpool is not prepared; call prepareOrcaSwap first');
+    return buildOrcaSwapInstruction(
+      {
+        ...this.getAccountHelperContext(),
+        rootAccount: this.rootAccount,
+        signer: this.signer,
+        clientPrimaryAccount: this.clientPrimaryAccount,
+        clientVmActive: this.clientVmActive,
+        uiNumbers: this.uiNumbers,
+        tokens: this.tokens,
+      },
+      args,
+      this.requireInstrument(args.instrId),
+      pool,
+      this.orcaPdas,
+    );
   }
 
   async swapInstruction(args: SwapArgs): Promise<Instruction> {

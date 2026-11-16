@@ -30,6 +30,7 @@ import {
   PerpSocLossReportModel,
   PerpWithdrawReportModel,
   PlaceSwapOrderReportModel,
+  OrcaSwapReportModel,
   SellMarketSeatReportModel,
   SpotFeesReportModel,
   SpotFillOrderReportModel,
@@ -461,6 +462,20 @@ function decodeTransactionLogs(data: readonly string[], ctx: LogsDecoderContext)
       case LogType.perpChangeLeverage: {
         if (buffer.length == PerpChangeLeverageReportModel.LENGTH) {
           let report = PerpChangeLeverageReportModel.fromBuffer(buffer);
+          logs.push(report);
+        }
+        break;
+      }
+      case LogType.orcaSwap: {
+        if (buffer.length === OrcaSwapReportModel.LENGTH) {
+          const report = OrcaSwapReportModel.fromBuffer(buffer);
+          const instr = instruments.get(report.instrId);
+          if (uiNumbers && instr) {
+            const inputId = report.side === 0 ? instr.header.crncyTokenId : instr.header.assetTokenId;
+            const outputId = report.side === 0 ? instr.header.assetTokenId : instr.header.crncyTokenId;
+            report.amountIn /= tokenDec(tokens, inputId, uiNumbers);
+            report.amountOut /= tokenDec(tokens, outputId, uiNumbers);
+          }
           logs.push(report);
         }
         break;

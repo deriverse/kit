@@ -47,6 +47,46 @@ VERSION=7
 
 A comprehensive example is available at [deriverse/kit-example](https://github.com/deriverse/kit-example).
 
+### Orca swap
+
+After initializing the engine and connecting a funded Deriverse client with `setSigner`, prepare each Whirlpool once:
+
+```ts
+import { address } from '@solana/kit';
+
+const whirlpool = address('YOUR_WHIRLPOOL_ADDRESS');
+await engine.prepareOrcaSwap({ instrId: 1, whirlpool });
+
+// Synchronous: returns an Instruction without RPC requests or pool decoding.
+const instruction = engine.orcaSwapInstruction({
+  instrId: 1,
+  whirlpool,
+  price: 150, // Current Whirlpool price: UI currency per one asset.
+  crncyInput: false, // Sell asset for currency; true sells currency for asset.
+  amount: 1,
+  minAmountOut: 149,
+  tickArrayCount: 5, // Required: 3 directional arrays, or 5 with two supplemental arrays.
+});
+```
+
+Supply an updated pool `price` on each build. It is always in UI units, including when `uiNumbers` is `false`,
+and is used only to select tick arrays. Five-array mode uses the current array and two on either side.
+With `uiNumbers: true` (the default), `amount` uses input-token UI units
+and `minAmountOut` uses output-token UI units; with `false`, both amounts use integer token units.
+The builder rejects amounts that cannot be represented as safe integers after conversion.
+
+Pool metadata is cached for the engine's lifetime, including across signer changes. Repeated and concurrent
+preparations share a single successful load and decode. Failed loads can be retried. Prepare a pool before building;
+the synchronous builder throws if its metadata, client, or instrument is unavailable.
+
+`engine.logsDecode(logs)` includes `OrcaSwapReportModel` (`LogType.orcaSwap`), containing `side`, `time`, `clientId`,
+`instrId`, `amountIn`, `amountOut`, and `seqNo`. Side `0` is currency to asset; side `1` is asset to currency.
+Amounts follow `uiNumbers`; without a known instrument, the decoder preserves integer token units.
+As with the SDK's other i64 reports, decoded values use JavaScript `number` and require safe-integer range for exactness.
+
+The caller supplies `minAmountOut`; no quote is calculated. Vault Mode requires the pool to be whitelisted already.
+Automatic transfer-hook account resolution is not included.
+
 ## Development
 
 ### Prerequisites

@@ -1,6 +1,6 @@
 {
   "name": "@deriverse/kit",
-  "version": "1.0.76",
+  "version": "1.0.77",
   "description": "",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -35,6 +35,8 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
+    "@noble/curves": "1.9.7",
+    "@noble/hashes": "1.8.0",
     "@solana-program/system": "^0.7.0",
     "@solana/kit": "2.1.0",
     "base64-arraybuffer": "^1.0.2",
